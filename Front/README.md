@@ -10,7 +10,7 @@ Desde la carpeta `Front/`:
 npm ci
 ```
 
-Copiá `.env.example` como `.env.local` si todavía no tenés ese archivo. Por ahora solo guarda la dirección pública del backend; la landing no hace llamadas a la API.
+Copiá `.env.example` como `.env.local` si todavía no tenés ese archivo. `NEXT_PUBLIC_API_URL` indica la dirección pública del backend; para el entorno local es `http://localhost:4000/api`. Iniciá también el backend desde `Back/` para ver las reseñas.
 
 ```sh
 npm run dev
@@ -52,8 +52,8 @@ La landing tiene menú para celular, portada a pantalla completa, franja de pala
 
 Bootstrap y React Bootstrap aportan la grilla, el menú, el acordeón, los botones y las tarjetas. React Fast Marquee mueve las palabras hacia la derecha y las pausa al pasar el cursor. Si la persona tiene activada la opción de reducir movimiento, las palabras se muestran quietas.
 
-Las reseñas también usan tarjetas de Bootstrap y React Fast Marquee. Se pausan al pasar el cursor. Con movimiento reducido se muestran quietas. Los nombres y las experiencias son ficticios y se aclara en la sección.
+Las reseñas se obtienen de `GET /api/resenas` del backend. Cada tarjeta muestra la foto de Cloudinary, el nombre y el texto guardado en Supabase. Se pausan al pasar el cursor y quedan quietas con movimiento reducido. La sección muestra un mensaje mientras carga, si no hay reseñas o si falla la conexión. Los perfiles actuales son ficticios y se aclara en la sección.
 
-`/clientes` está vacío. Las carpetas de login, registro y dashboard están reservadas para más adelante. Todavía no hay autenticación ni conexión de las páginas con el backend.
+`/clientes` está vacío. Las carpetas de login, registro y dashboard están reservadas para más adelante. Todavía no hay autenticación.
 
-Las fotos y la fuente IBM Plex Sans se guardan localmente. La licencia de la fuente está en `public/fonts/`.
+Las fotografías de la portada y la fuente IBM Plex Sans se guardan localmente. Los retratos de las reseñas se sirven desde Cloudinary. La licencia de la fuente está en `public/fonts/`.
