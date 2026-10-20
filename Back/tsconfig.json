@@ -6,6 +6,8 @@
     "lib": ["ES2022"],
     "outDir": "./dist",
     "strict": true,
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
