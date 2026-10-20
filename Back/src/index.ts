@@ -18,7 +18,7 @@ app.use("/api/auth", authRoutes);
 app.get("/api/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
-    message: "Backend InkManager corriendo correctamente en macOS",
+    message: "Backend InkManager corriendo correctamente correctamente",
   });
 });
 
