@@ -37,20 +37,22 @@ async function main() {
   });
 
   console.log('🎨 Creando artistas...');
-  const artista1 = await prisma.usuario.create({
-    data: {
-      email: 'lucas.realism@inkmanager.com',
-      nombre: 'Lucas "Realismo" Gómez',
-      alias: 'lucas_realism',
-      rol: Rol.ARTISTA,
-      telefono: '+5491122334455',
-      estudioId: estudio1.id,
-    },
-  });
+const artista1 = await prisma.usuario.create({
+  data: {
+    email: "lucas.realism@inkmanager.com",
+    password: "password123", // 👈 Campo obligatorio agregado
+    nombre: "Lucas \"Realismo\" Gómez",
+    alias: "lucas_realism",
+    rol: "ARTISTA",
+    telefono: "+5491122334455",
+    estudioId: estudio1.id,
+  },
+});
 
   const artista2 = await prisma.usuario.create({
     data: {
       email: 'sofi.fineline@inkmanager.com',
+      password: 'password123',
       nombre: 'Sofía Martínez',
       alias: 'sofi_fineline',
       rol: Rol.ARTISTA,
@@ -63,6 +65,7 @@ async function main() {
   const cliente1 = await prisma.usuario.create({
     data: {
       email: 'juan.perez@gmail.com',
+      password: 'password123',
       nombre: 'Juan Pérez',
       alias: 'juanp',
       rol: Rol.CLIENTE,
@@ -73,6 +76,7 @@ async function main() {
   const cliente2 = await prisma.usuario.create({
     data: {
       email: 'maria.lopez@gmail.com',
+      password: 'password123',
       nombre: 'María López',
       alias: 'marilopez',
       rol: Rol.CLIENTE,

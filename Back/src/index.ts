@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cloudinary from "./config/cloudinary.js";
 import { upload } from "./middlewares/multer.js";
 import { resenasRouter } from "./routes/resenas.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
 
@@ -13,12 +14,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/resenas", resenasRouter);
+app.use("/api/auth", authRoutes);
 
 // Endpoint de verificación de estado
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "Backend InkManager corriendo correctamente en macOS",
+    message: "Backend InkManager corriendo correctamente",
   });
 });
 
