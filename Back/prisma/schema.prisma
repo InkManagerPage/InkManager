@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Rol {
+  CLIENTE
+  ARTISTA
+  ESTUDIO_ADMIN
+  SUPERADMIN
+}
+
+enum GeneroCuerpo {
+  MASCULINO
+  FEMENINO
+}
+
+enum TipoColor {
+  COLOR
+  BLACK_AND_GREY
+}
+
+enum ZonaCuerpoGeneral {
+  BRAZO
+  MANO
+  PIERNA
+  TORSO
+  CABEZA_CUELLO
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  EN_COTIZACION
+  ACEPTADO
+  CANCELADO
+}
+
+model Usuario {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  nombre        String?
+  alias         String?
+  rol           Rol          @default(CLIENTE)
+  telefono      String?
+  estudioId     String?
+  estudio       Estudio?     @relation(fields: [estudioId], references: [id])
+  solicitudes   Solicitud[]  @relation("ClienteSolicitudes")
+  cotizaciones  Cotizacion[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Estudio {
+  id          String      @id @default(uuid())
+  nombre      String
+  slug        String      @unique
+  direccion   String?
+  ciudad      String?
+  pais        String?
+  usuarios    Usuario[]
+  solicitudes Solicitud[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Solicitud {
+  id                String            @id @default(uuid())
+  clienteId         String
+  cliente           Usuario           @relation("ClienteSolicitudes", fields: [clienteId], references: [id])
+  estudioId         String?
+  estudio           Estudio?          @relation(fields: [estudioId], references: [id])
+  estilo            String
+  tipoColor         TipoColor         @default(BLACK_AND_GREY)
+  generoCuerpo      GeneroCuerpo      @default(MASCULINO)
+  zonaGeneral       ZonaCuerpoGeneral
+  subZona           String
+  imagenZonaMarcada String?
+  descripcion       String?
+  referencias       String[]
+  estado            EstadoSolicitud   @default(PENDIENTE)
+  cotizaciones      Cotizacion[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Cotizacion {
+  id          String    @id @default(uuid())
+  solicitudId String
+  solicitud   Solicitud @relation(fields: [solicitudId], references: [id])
+  artistaId   String
+  artista     Usuario   @relation(fields: [artistaId], references: [id])
+  monto       Float
+  montoSena   Float
+  mensaje     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
