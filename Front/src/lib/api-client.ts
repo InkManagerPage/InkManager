@@ -1,6 +1,6 @@
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-// Base para las futuras llamadas al backend. La landing todavía no la utiliza.
+// Función común para las llamadas al backend.
 // path es la ruta a consultar; options permite indicar método, cabeceras o datos.
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   // Quitamos las barras de los extremos para no unir la URL con una doble barra.

@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- ENUMS ---
+
+enum Rol {
+  CLIENTE
+  ARTISTA
+  ESTUDIO_ADMIN
+  SUPERADMIN
+}
+
+enum GeneroCuerpo {
+  MASCULINO
+  FEMENINO
+}
+
+enum TipoColor {
+  COLOR
+  BLACK_AND_GREY
+}
+
+enum ZonaCuerpoGeneral {
+  BRAZO
+  MANO
+  PIERNA
+  TORSO
+  CABEZA_CUELLO
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  EN_COTIZACION
+  ACEPTADO
+  CANCELADO
+}
+
+enum EstadoVerificacion {
+  NO_VERIFICADO
+  PENDIENTE
+  VERIFICADO
+  RECHAZADO
+}
+
+enum TipoTrabajo {
+  ESTUDIO_PROPIO
+  RESIDENTE
+  GUEST_SPOT
+  PRIVADO
+}
+
+enum ModalidadCobro {
+  POR_HORA
+  POR_SESION
+  POR_PIEZA
+}
+
+// --- MODELOS DE DATOS ---
+
+model Usuario {
+  id                      String             @id @default(uuid())
+  email                   String             @unique
+  password                String             // Hash de contraseña para Login (bcrypt/argon2)
+  nombre                  String?            // Nombre Completo / Razón Social
+  nombreArtistico         String?            // Alias / Apodo para Artistas
+  alias                   String?
+  rol                     Rol                @default(CLIENTE)
+  telefono                String?
+  telefonoVerificado      Boolean            @default(false)
+  emailVerificado         Boolean            @default(false)
+  tokenVerificacionEmail  String?
+
+  // --- CAMPOS DE PERFIL DE ARTISTA (Onboarding) ---
+  fotoPublicId            String?
+  resena                  String?
+  fotoPerfil              String?
+  fotoTrabajando          String?
+  dniPasaporte            String?
+  documentoIdentidadUrl   String?
+  estadoVerificacion      EstadoVerificacion @default(NO_VERIFICADO)
+
+  // Ubicación y Modalidad
+  tipoTrabajo             TipoTrabajo?
+  direccion               String?
+  ciudad                  String?
+  pais                    String?
+  radioAlcanceKm          Int?               @default(20)
+  horariosAtencion        Json?              // Días y rangos horarios
+
+  // Perfil Artístico y Redes
+  estilosPrincipales      String[]           // Ej: ["Blackwork", "Realismo"]
+  instagram               String?
+  tiktok                  String?
+  sitioWeb                String?
+  anosExperiencia         Int?
+  galeria                 FotoGaleria[]
+
+  // Cotizaciones y Reglas Económicas
+  tarifaMinima            Float?             // Bajada de aguja
+  modalidadCobro          ModalidadCobro?
+  requiereSena            Boolean            @default(true)
+  montoPorcentajeSena     Float?
+  politicaCancelacion    String?
+  metodosPagoAceptados    String[]           // Ej: ["TRANSFERENCIA", "MERCADO_PAGO"]
+  cbuAliasBancario        String?
+
+  // Higiene y Licencias
+  licenciaSanitariaUrl    String?
+  numeroLicencia          String?
+  aceptaDeclaracionHigiene Boolean           @default(false)
+
+  // Preferencias / Filtros de Proyectos
+  aceptaCoverUp           Boolean            @default(true)
+  aceptaCicatrices        Boolean            @default(true)
+  aceptaRetoques          Boolean            @default(true)
+  aceptaCaraManos         Boolean            @default(false)
+  copiaDisenosInternet    Boolean            @default(false)
+  tamanoMinimoCm          Int?               @default(5)
+
+  // --- RELACIONES ---
+  // Relación con el estudio al que pertenece o administra
+  estudioId               String?
+  estudio                 Estudio?           @relation("EstudioIntegrantes", fields: [estudioId], references: [id])
+  estudiosAdministrados   Estudio[]          @relation("EstudioPropietarios")
+
+  solicitudes             Solicitud[]        @relation("ClienteSolicitudes")
+  cotizaciones            Cotizacion[]
+
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+}
+
+model FotoGaleria {
+  id            String   @id @default(uuid())
+  url           String
+  esCicatrizado Boolean  @default(false)
+  usuarioId     String
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+model Estudio {
+  id            String      @id @default(uuid())
+  nombre        String
+  slug          String      @unique
+  direccion     String?
+  ciudad        String?
+  pais          String?
+
+  // Relaciones
+  propietarioId String?
+  propietario   Usuario?    @relation("EstudioPropietarios", fields: [propietarioId], references: [id])
+  usuarios      Usuario[]   @relation("EstudioIntegrantes")
+  solicitudes   Solicitud[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Solicitud {
+  id                String            @id @default(uuid())
+  clienteId         String
+  cliente           Usuario           @relation("ClienteSolicitudes", fields: [clienteId], references: [id])
+  estudioId         String?
+  estudio           Estudio?          @relation(fields: [estudioId], references: [id])
+  estilo            String
+  tipoColor         TipoColor         @default(BLACK_AND_GREY)
+  generoCuerpo      GeneroCuerpo      @default(MASCULINO)
+  zonaGeneral       ZonaCuerpoGeneral
+  subZona           String
+  imagenZonaMarcada String?
+  descripcion       String?
+  referencias       String[]
+  estado            EstadoSolicitud   @default(PENDIENTE)
+  cotizaciones      Cotizacion[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Cotizacion {
+  id          String    @id @default(uuid())
+  solicitudId String
+  solicitud   Solicitud @relation(fields: [solicitudId], references: [id])
+  artistaId   String
+  artista     Usuario   @relation(fields: [artistaId], references: [id])
+  monto       Float
+  montoSena   Float
+  mensaje     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
