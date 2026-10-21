@@ -225,6 +225,10 @@
   font-size: 18px;
   line-height: 1.6;
 }
+.reviewAvatar {
+  flex-shrink: 0;
+  object-fit: cover;
+}
 .reviewsStatic {
   display: flex;
   flex-wrap: wrap;

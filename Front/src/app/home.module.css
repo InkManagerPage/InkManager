@@ -1,0 +1,93 @@
+.home {
+  display: flex;
+  width: 100%;
+  height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.column {
+  position: relative;
+  display: flex;
+  width: 50%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image {
+  z-index: -10;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 500ms ease-out;
+}
+
+.column:hover .image {
+  transform: scale(1.05);
+}
+
+.overlay {
+  position: absolute;
+  z-index: -10;
+  inset: 0;
+  background-color: rgb(0 0 0 / 50%);
+  transition: background-color 300ms;
+}
+
+.column:hover .overlay {
+  background-color: rgb(0 0 0 / 40%);
+}
+
+.action {
+  position: absolute;
+  z-index: 10;
+}
+
+.actionRight {
+  right: 2rem;
+}
+
+.actionLeft {
+  left: 2rem;
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 0.75rem;
+  background-color: rgb(255 255 255 / 10%);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -4px rgb(0 0 0 / 10%);
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 300ms;
+}
+
+.button:hover {
+  background-color: #fff;
+  color: #000;
+}
+
+.column:hover .button {
+  transform: scale(1.05);
+}
+
+.longButton {
+  max-width: 13.75rem;
+}
+
+@media (min-width: 768px) {
+  .actionRight {
+    right: 3rem;
+  }
+
+  .actionLeft {
+    left: 3rem;
+  }
+}

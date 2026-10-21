@@ -32,7 +32,7 @@ Las rutas de esta tabla parten de `Front/`.
 | `src/components/layout/`        | Cabeceras, pies y otras partes comunes a varias páginas                   |
 | `src/hooks/`                    | Funciones de React que reúnen comportamiento reutilizable                 |
 | `src/lib/`                      | Configuración y funciones de conexión con herramientas externas           |
-| `src/services/`                 | Futuras llamadas al backend, agrupadas por tema                           |
+| `src/services/`                 | Llamadas al backend, agrupadas por tema                                   |
 | `src/store/`                    | Datos que varias partes de la aplicación necesiten compartir              |
 | `src/types/`                    | Tipos de TypeScript que se usen en varios archivos                        |
 | `public/`                       | Archivos que el navegador puede abrir directamente                        |
@@ -51,7 +51,9 @@ En `PlansSection.tsx`, `plans` es una lista con los datos de los planes. Cada pl
 
 `plans.map(...)` recorre esa lista y crea una tarjeta por cada plan. Dentro de cada tarjeta, `plan.features.map(...)` crea un elemento por prestación. `key` permite que React identifique cada elemento de la lista.
 
-`ToolsSection.tsx`, `Marquee.tsx` y `ReviewsSection.tsx` usan la misma idea: una lista de datos y un `map` para mostrarlos. En `ReviewsSection.tsx`, `reviews` contiene los nombres, las ocupaciones y los textos ficticios de las reseñas.
+`ToolsSection.tsx`, `Marquee.tsx` y `ReviewsSection.tsx` usan la misma idea: una lista de datos y un `map` para mostrarlos. En las reseñas, la lista llega del backend en vez de estar escrita en el componente.
+
+El recorrido de las reseñas es: `ReviewsSection.tsx` usa `useReviews.ts`; el hook llama a `reviews.service.ts`, que consulta `GET /api/resenas` mediante `api-client.ts`. El tipo `Review`, en `src/types/review.ts`, describe los cuatro datos recibidos: ID, nombre, URL de la foto y reseña. El hook guarda el resultado y cancela la petición cuando se abandona la página. El componente muestra los estados de carga, error y lista vacía.
 
 ### Clases de Bootstrap y estilos propios
 
@@ -75,6 +77,6 @@ En `ReviewsSection.tsx`, React Fast Marquee desplaza las tarjetas y las pausa al
 
 Mantené cada sección junto a su página. Si después se usa en varias páginas, movela a `src/components/`. No hace falta crear un componente separado para cada título o párrafo.
 
-`src/lib/api-client.ts` reúne la dirección del backend y una función `apiFetch` para las futuras peticiones. Devuelve la respuesta de Fetch y lanza un error si el servidor responde con un estado de error. Los servicios usarán esa función y leerán los datos de la respuesta cuando se implementen operaciones reales. Hoy la landing no hace peticiones.
+`src/lib/api-client.ts` reúne la dirección del backend y una función `apiFetch` para las peticiones. Devuelve la respuesta de Fetch y lanza un error si el servidor responde con un estado de error. `reviews.service.ts` usa esa función y convierte la respuesta JSON en la lista de reseñas.
 
 Las variables de entorno se documentan en `.env.example` y se configuran localmente en `.env.local`. Las que empiezan con `NEXT_PUBLIC_` son públicas: no deben guardar contraseñas ni claves privadas.
