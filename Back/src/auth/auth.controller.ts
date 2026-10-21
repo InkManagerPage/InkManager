@@ -1,0 +1,43 @@
+import type { Request, Response } from "express";
+import { HttpError } from "../errors/http-error.js";
+import { duracionSesionSegundos, origenesPermitidos } from "../config/auth.js";
+import { iniciarSesion } from "./auth.service.js";
+
+export async function login(req: Request, res: Response): Promise<void> {
+  res.set("Cache-Control", "no-store");
+
+  try {
+    const origen = req.get("Origin");
+
+    if (origen && !origenesPermitidos.includes(origen)) {
+      throw new HttpError(403, "Origen no permitido.");
+    }
+
+    if (!req.is("application/json")) {
+      throw new HttpError(415, "El cuerpo debe enviarse como JSON.");
+    }
+
+    const { usuario, token } = await iniciarSesion(req.body);
+
+    res.cookie("inkmanager_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: duracionSesionSegundos * 1000,
+      path: "/",
+    });
+
+    res.status(200).json({
+      message: "Sesión iniciada.",
+      user: usuario,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+
+    console.error("Error al iniciar sesión.");
+    res.status(500).json({ error: "No pudimos iniciar sesión." });
+  }
+}

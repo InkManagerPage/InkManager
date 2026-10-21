@@ -16,6 +16,11 @@ El servidor usa el puerto 4000, salvo que `.env` indique otro en `PORT`.
 
 Para producción: `npm run build` y después `npm start`.
 
+El login requiere una `JWT_SECRET` privada en `Back/.env`. La configuración y los
+pendientes de sesión, permisos y frontend están en
+[estado de autenticación](../docs/estructura-backend.md#estado-de-la-rama-autenticacion).
+Las pruebas anteriores necesitan adaptar sus mocks antes de ejecutarse con una base real.
+
 ## Reseñas de artistas
 
 `GET /api/resenas` devuelve hasta 20 artistas, ordenados por nombre, que tengan foto y reseña. Cada elemento contiene únicamente:
@@ -29,9 +34,11 @@ Para producción: `npm run build` y después `npm start`.
 }
 ```
 
-Responde con un arreglo vacío si todavía no hay reseñas y con HTTP 503 si la base no está disponible. No devuelve emails, teléfonos ni claves. No permite crear o editar usuarios desde una ruta pública.
+Responde con un arreglo vacío si todavía no hay reseñas y con HTTP 503 si la base no está disponible. No devuelve emails, teléfonos ni claves. Este endpoint solo permite consultar reseñas; no permite crear o editar usuarios.
 
-La ruta está en `src/routes/resenas.routes.ts` y usa el cliente compartido de `src/config/prisma.ts`. En `Usuario`, se reutiliza `fotoPerfil` para la foto y se agregan `resena` y `fotoPublicId`. El endpoint llama `fotoUrl` a la URL pública. No se leen ni se exponen contraseñas o documentos de identidad.
+La funcionalidad está agrupada en `src/resenas/`, con su controlador, servicio, repositorio, entidad y rutas. El repositorio usa el cliente compartido de `src/config/prisma.ts`. En `Usuario`, se reutiliza `fotoPerfil` para la foto y se agregan `resena` y `fotoPublicId`. El endpoint llama `fotoUrl` a la URL pública. No se leen ni se exponen contraseñas o documentos de identidad.
+
+La estructura y el recorrido de cada endpoint están explicados en [estructura del backend](../docs/estructura-backend.md).
 
 ## Cargar los ejemplos
 
