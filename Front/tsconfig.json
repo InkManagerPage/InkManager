@@ -30,6 +30,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-  ],
+, "src/app/(auth)/Login/Login.jsx", "src/components/forms/FormikForm.jsx", "src/app/estudios/_components/LandingHeader.jsx", "src/services/users.service.js"  ],
   "exclude": ["node_modules"]
 }

@@ -20,11 +20,14 @@
   },
   "dependencies": {
     "bootstrap": "5.3.8",
+    "formik": "^2.4.9",
     "next": "16.4.2",
     "react": "19.3.1",
     "react-bootstrap": "2.10.10",
     "react-dom": "19.3.1",
-    "react-fast-marquee": "1.6.5"
+    "react-fast-marquee": "1.6.5",
+    "react-router-dom": "^7.18.4",
+    "react-toastify": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
