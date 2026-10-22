@@ -4,6 +4,7 @@ import type {
   Usuario,
   UsuarioParaLogin,
   UsuarioPublico,
+  UsuarioSesion,
 } from "./usuarios.entity.js";
 
 export function buscarUsuarioPorEmail(
@@ -93,6 +94,20 @@ export function buscarUsuarioParaLogin(
       nombre: true,
       email: true,
       password: true,
+      rol: true,
+      estudioId: true,
+    },
+  });
+}
+
+// Esta función busca un usuario por su ID y devuelve solo los campos necesarios para la sesión. El select evita que se devuelvan campos sensibles como la contraseña.
+export function buscarUsuarioPorId(id: string): Promise<UsuarioSesion | null> {
+  return prisma.usuario.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nombre: true,
+      email: true,
       rol: true,
       estudioId: true,
     },
