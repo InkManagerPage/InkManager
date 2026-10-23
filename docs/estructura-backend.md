@@ -101,6 +101,8 @@ relaciones siguen definiéndose en `schema.prisma`.
 | --- | --- | --- | --- |
 | `POST /api/auth/register` | `usuarios.controller.ts` | `usuarios.service.ts` | `usuarios.repository.ts` |
 | `POST /api/auth/login` | `auth.controller.ts` | `auth.service.ts` | `usuarios.repository.ts` |
+| `GET /api/auth/me` | `auth.controller.ts` | `auth.service.ts` | `usuarios.repository.ts` y `sesiones.repository.ts` |
+| `POST /api/auth/logout` | `auth.controller.ts` | `auth.service.ts` | `sesiones.repository.ts` |
 | `POST /api/auth/register-artist` | `usuarios.controller.ts` | `usuarios.service.ts` | `usuarios.repository.ts` |
 | `GET /api/auth/verify-email` | `usuarios.controller.ts` | `usuarios.service.ts` | `usuarios.repository.ts` |
 | `GET /api/resenas` | `resenas.controller.ts` | `resenas.service.ts` | `resenas.repository.ts` |
@@ -157,21 +159,26 @@ La clave no se versiona. Después de cambiarla, reiniciar el backend. La URL del
 frontend puede configurarse mediante `FRONTEND_URL`; por defecto se permiten
 localhost:3001 y 127.0.0.1:3001.
 
-Pendientes para continuar, en orden:
+Cada login crea una fila `Sesion`; su ID viaja en el claim `jti` del JWT.
+`requerirSesion` verifica firma, algoritmo, vencimiento, issuer, audience, `sub` y `jti`.
+Después consulta la sesión y el usuario actual: rechaza sesiones vencidas, revocadas,
+ajenas o eliminadas. `GET /api/auth/me` devuelve los datos públicos del usuario.
+`POST /api/auth/logout` revoca esa sesión en la base y elimina la cookie. Reutilizar
+el token anterior ya no permite entrar; las otras sesiones del usuario siguen vigentes.
 
-1. Implementar verificación del JWT recibido en la cookie: firma, algoritmo,
-   vencimiento, issuer, audience y `sub`. Consultar al usuario actual por ID.
-2. Exponer `GET /api/auth/me` con respuesta pública y 401 para una sesión inválida.
-3. Exponer `POST /api/auth/logout`, limpiar la cookie y documentar que eliminarla
-   no revoca un JWT ya emitido. Si se requiere revocación inmediata, agregarla.
-4. Agregar autorización por rol y pertenencia al recurso. Los roles vienen de la
-   base; no deben aceptarse del body del login. Un administrador gestiona su estudio.
-5. Limitar intentos de login y adaptar las pruebas automatizadas.
-6. Conectar registro, login y estado de sesión con la Home de Next.js.
+`requerirRoles` compara el rol actual de la base con los permitidos por cada ruta.
+Upload admite los cuatro roles, con sesión obligatoria y antes de recibir el archivo.
+Los recursos futuros de estudios, citas y solicitudes necesitarán además comprobar
+su pertenencia al negocio. El rol por sí solo no concede acceso a otro estudio.
 
-Los roles ya están definidos; los permisos todavía no están implementados.
-El envío de emails de verificación y la integración con Google quedan pendientes.
-Esta rama no modifica el esquema Prisma ni ejecuta migraciones.
+El login limita a cinco intentos fallidos por ventana de 15 minutos. Las respuestas
+personales llevan `Cache-Control: no-store`. Se comprueba el origen de las peticiones
+que modifican datos y los errores de JSON y Multer se traducen a respuestas JSON.
+La Home y las dos páginas públicas comparten el estado de sesión y el logout.
+
+El cambio de esquema para `Sesion` está en `prisma/changes/20261022_sesiones.sql`.
+Las correcciones actuales no requieren nuevas migraciones. El envío de emails de
+verificación y la integración con Google siguen pendientes.
 
 ## Comprobar el backend
 
@@ -179,12 +186,11 @@ Desde `Back/`:
 
 ```sh
 npm run build
+npm test
 ```
 
-La compilación y las comprobaciones temporales con persistencia simulada verificaron
-el registro, las credenciales, la firma del JWT y el login por HTTP con cookie.
-
-`Back/tests/endpoints.test.ts` conserva las pruebas anteriores de la estructura.
-Todavía hay que adaptar sus mocks a `findFirst` y a las transacciones, y actualizar
-las expectativas de las rutas de registro y login. No ejecutar esa suite con
-credenciales reales antes de aislar todas sus consultas y transacciones.
+`Back/tests/endpoints.test.ts` levanta un servidor temporal y reemplaza las consultas
+de Prisma y las subidas a Cloudinary con datos en memoria. Además configura una URL
+local inválida para impedir conexiones accidentales a la base real.
+`frontend-auth.test.ts` comprueba las validaciones y el cliente HTTP del frontend.
+Se prueban registros, contraseñas, cookies, roles, sesiones, logout, archivos y errores.

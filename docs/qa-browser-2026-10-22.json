@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Menú móvil abre y muestra acceso",
+    "passed": true
+  },
+  {
+    "name": "Login vacío muestra HTTP 400",
+    "passed": true
+  },
+  {
+    "name": "Login incorrecto muestra HTTP 401 y conserva modal",
+    "passed": true
+  },
+  {
+    "name": "Login correcto cierra modal",
+    "passed": true
+  },
+  {
+    "name": "Cookie de navegador permite consultar /me",
+    "passed": true
+  },
+  {
+    "name": "Cookie persiste al recargar",
+    "passed": true
+  },
+  {
+    "name": "Etiquetas de login asociadas a inputs",
+    "passed": false
+  },
+  {
+    "name": "Bloqueo de envío durante login",
+    "passed": false
+  },
+  {
+    "name": "Interfaz reconoce sesión y ofrece logout",
+    "passed": false
+  },
+  {
+    "name": "Registro cliente completo desde formulario",
+    "passed": false
+  },
+  {
+    "name": "Registro muestra el error al usuario",
+    "passed": false
+  },
+  {
+    "name": "Etiquetas del registro asociadas a inputs",
+    "passed": false
+  },
+  {
+    "name": "Artista recorre seis pasos y vuelve atrás",
+    "passed": true
+  },
+  {
+    "name": "Artista exige nombre artístico antes de avanzar",
+    "passed": false
+  },
+  {
+    "name": "Estudio llega a su cuarto paso con acción de registro",
+    "passed": true
+  },
+  {
+    "name": "Registro bloquea avance con datos obligatorios vacíos",
+    "passed": false
+  },
+  {
+    "name": "Cerrar y reabrir reinicia los pasos",
+    "passed": true
+  },
+  {
+    "name": "Error de login se limpia al cerrar",
+    "passed": true
+  },
+  {
+    "name": "Escape cierra modal",
+    "passed": true
+  },
+  {
+    "name": "Home ofrece login y registro",
+    "passed": false
+  },
+  {
+    "name": "Home carga sus dos imágenes principales",
+    "passed": true
+  },
+  {
+    "name": "Home navega al catálogo de clientes",
+    "passed": true
+  },
+  {
+    "name": "Catálogo muestra estudios y artistas",
+    "passed": true
+  },
+  {
+    "name": "Home navega a landing de estudios",
+    "passed": true
+  },
+  {
+    "name": "Landing muestra seis retratos de reseñas",
+    "passed": true
+  },
+  {
+    "name": "Planes centrados en vista móvil",
+    "passed": true
+  },
+  {
+    "name": "Sin desbordamiento horizontal en vista móvil",
+    "passed": true
+  },
+  {
+    "name": "Acordeón de herramientas responde",
+    "passed": true
+  },
+  {
+    "name": "Botones de planes conservan comportamiento sin navegación",
+    "passed": true
+  },
+  {
+    "name": "Cookie del navegador deja de autorizar tras eliminar cuenta temporal",
+    "passed": true
+  }
+]

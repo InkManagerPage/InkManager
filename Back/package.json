@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
+    "test": "tsx --test tests/*.test.ts",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:security": "prisma db execute --file prisma/changes/20261020_rls.sql --schema prisma/schema.prisma",

@@ -7,12 +7,15 @@ import {
   crearUsuario,
   marcarEmailVerificado,
 } from "./usuarios.repository.js";
-import type { RegistroArtistaDto } from "./dto/registro-artista.dto.js";
-import { validarRegistroUsuario } from "./usuarios.validation.js";
+import {
+  validarRegistroUsuario,
+  validarRegistroArtista,
+} from "./usuarios.validation.js";
 import { Rol } from "../types/roles.js";
 import { Prisma } from "@prisma/client";
 
-export async function registrarArtista(datos: RegistroArtistaDto) {
+export async function registrarArtista(entrada: unknown) {
+  const datos = validarRegistroArtista(entrada);
   const {
     // Datos obligatorios
     email,
@@ -65,16 +68,9 @@ export async function registrarArtista(datos: RegistroArtistaDto) {
     tamanoMinimoCm,
   } = datos;
 
-  if (!email || !password || !nombre || !nombreArtistico) {
-    throw new HttpError(
-      400,
-      "Los campos Email, Contraseña, Nombre y Nombre Artístico son obligatorios.",
-    );
-  }
-
   const existingUser = await buscarUsuarioPorEmail(email);
   if (existingUser) {
-    throw new HttpError(400, "El correo electrónico ya está registrado.");
+    throw new HttpError(409, "El correo electrónico ya está registrado.");
   }
 
   // Adjuntar un documento o una licencia deja la verificación pendiente.
@@ -83,85 +79,96 @@ export async function registrarArtista(datos: RegistroArtistaDto) {
       ? "PENDIENTE"
       : "NO_VERIFICADO";
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   const tokenVerificacionEmail = crypto.randomBytes(32).toString("hex");
 
-  return crearUsuario({
-    // Datos Obligatorios
-    email,
-    password: hashedPassword,
-    nombre,
-    nombreArtistico,
-    rol: "ARTISTA",
-    tokenVerificacionEmail,
-    emailVerificado: false,
-    estadoVerificacion,
+  try {
+    return await crearUsuario({
+      // Datos Obligatorios
+      email,
+      password: hashedPassword,
+      nombre,
+      nombreArtistico,
+      rol: "ARTISTA",
+      tokenVerificacionEmail,
+      emailVerificado: false,
+      estadoVerificacion,
 
-    // Datos Personales Opcionales
-    alias: alias || nombreArtistico.toLowerCase().replace(/\s+/g, "_"),
-    telefono: telefono || null,
-    dniPasaporte: dniPasaporte || null,
-    documentoIdentidadUrl: documentoIdentidadUrl || null,
-    fotoPerfil: fotoPerfil || null,
-    fotoTrabajando: fotoTrabajando || null,
+      // Datos Personales Opcionales
+      alias: alias || nombreArtistico.toLowerCase().replace(/\s+/g, "_"),
+      telefono: telefono || null,
+      dniPasaporte: dniPasaporte || null,
+      documentoIdentidadUrl: documentoIdentidadUrl || null,
+      fotoPerfil: fotoPerfil || null,
+      fotoTrabajando: fotoTrabajando || null,
 
-    // Ubicación
-    tipoTrabajo: tipoTrabajo || null,
-    direccion: direccion || null,
-    ciudad: ciudad || null,
-    pais: pais || null,
-    radioAlcanceKm: radioAlcanceKm ? parseInt(String(radioAlcanceKm)) : 20,
-    horariosAtencion: horariosAtencion || undefined,
+      // Ubicación
+      tipoTrabajo: tipoTrabajo || null,
+      direccion: direccion || null,
+      ciudad: ciudad || null,
+      pais: pais || null,
+      radioAlcanceKm:
+        radioAlcanceKm !== undefined ? Number(radioAlcanceKm) : 20,
+      horariosAtencion: horariosAtencion || undefined,
 
-    // Perfil Artístico
-    estilosPrincipales: Array.isArray(estilosPrincipales)
-      ? estilosPrincipales
-      : [],
-    instagram: instagram || null,
-    tiktok: tiktok || null,
-    sitioWeb: sitioWeb || null,
-    anosExperiencia: anosExperiencia ? parseInt(String(anosExperiencia)) : null,
+      // Perfil Artístico
+      estilosPrincipales: Array.isArray(estilosPrincipales)
+        ? estilosPrincipales
+        : [],
+      instagram: instagram || null,
+      tiktok: tiktok || null,
+      sitioWeb: sitioWeb || null,
+      anosExperiencia:
+        anosExperiencia !== undefined ? Number(anosExperiencia) : null,
 
-    // Tarifas y Reglas Económicas
-    tarifaMinima: tarifaMinima ? parseFloat(String(tarifaMinima)) : null,
-    modalidadCobro: modalidadCobro || null,
-    requiereSena: requiereSena ?? true,
-    montoPorcentajeSena: montoPorcentajeSena
-      ? parseFloat(String(montoPorcentajeSena))
-      : null,
-    politicaCancelacion: politicaCancelacion || null,
-    metodosPagoAceptados: Array.isArray(metodosPagoAceptados)
-      ? metodosPagoAceptados
-      : [],
-    cbuAliasBancario: cbuAliasBancario || null,
+      // Tarifas y Reglas Económicas
+      tarifaMinima: tarifaMinima !== undefined ? Number(tarifaMinima) : null,
+      modalidadCobro: modalidadCobro || null,
+      requiereSena: requiereSena ?? true,
+      montoPorcentajeSena:
+        montoPorcentajeSena !== undefined ? Number(montoPorcentajeSena) : null,
+      politicaCancelacion: politicaCancelacion || null,
+      metodosPagoAceptados: Array.isArray(metodosPagoAceptados)
+        ? metodosPagoAceptados
+        : [],
+      cbuAliasBancario: cbuAliasBancario || null,
 
-    // Higiene y Licencias
-    numeroLicencia: numeroLicencia || null,
-    licenciaSanitariaUrl: licenciaSanitariaUrl || null,
-    aceptaDeclaracionHigiene: aceptaDeclaracionHigiene ?? false,
+      // Higiene y Licencias
+      numeroLicencia: numeroLicencia || null,
+      licenciaSanitariaUrl: licenciaSanitariaUrl || null,
+      aceptaDeclaracionHigiene: aceptaDeclaracionHigiene ?? false,
 
-    // Preferencias de Proyecto
-    aceptaCoverUp: aceptaCoverUp ?? true,
-    aceptaCicatrices: aceptaCicatrices ?? true,
-    aceptaRetoques: aceptaRetoques ?? true,
-    aceptaCaraManos: aceptaCaraManos ?? false,
-    copiaDisenosInternet: copiaDisenosInternet ?? false,
-    tamanoMinimoCm: tamanoMinimoCm ? parseInt(String(tamanoMinimoCm)) : 5,
+      // Preferencias de Proyecto
+      aceptaCoverUp: aceptaCoverUp ?? true,
+      aceptaCicatrices: aceptaCicatrices ?? true,
+      aceptaRetoques: aceptaRetoques ?? true,
+      aceptaCaraManos: aceptaCaraManos ?? false,
+      copiaDisenosInternet: copiaDisenosInternet ?? false,
+      tamanoMinimoCm: tamanoMinimoCm !== undefined ? Number(tamanoMinimoCm) : 5,
 
-    // Galería (si la envía durante el onboarding)
-    galeria:
-      Array.isArray(galeria) && galeria.length > 0
-        ? {
-            create: galeria.map(
-              (foto: { url: string; esCicatrizado?: boolean }) => ({
-                url: foto.url,
-                esCicatrizado: foto.esCicatrizado || false,
-              }),
-            ),
-          }
-        : undefined,
-  });
+      // Galería (si la envía durante el onboarding)
+      galeria:
+        Array.isArray(galeria) && galeria.length > 0
+          ? {
+              create: galeria.map(
+                (foto: { url: string; esCicatrizado?: boolean }) => ({
+                  url: foto.url,
+                  esCicatrizado: foto.esCicatrizado || false,
+                }),
+              ),
+            }
+          : undefined,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new HttpError(409, "El correo electrónico ya está registrado.");
+    }
+    throw error;
+  }
 }
 
 export async function verificarEmail(token: unknown) {

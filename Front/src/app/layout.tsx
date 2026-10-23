@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import localFont from 'next/font/local';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
+import { AuthProvider } from '@/store/AuthProvider';
 
 const plex = localFont({
   src: [
@@ -20,7 +21,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es-AR" className={plex.variable}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
