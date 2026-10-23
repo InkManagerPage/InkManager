@@ -20,3 +20,8 @@ export type UsuarioParaLogin = Pick<
   Usuario,
   "id" | "nombre" | "email" | "password" | "rol" | "estudioId"
 >;
+
+export type UsuarioSesion = Pick<
+  Usuario,
+  "id" | "nombre" | "email" | "rol" | "estudioId"
+>;

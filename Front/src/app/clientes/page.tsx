@@ -4,6 +4,7 @@ import StudiosList from './_components/studio/StudioList';
 import { MOCK_ARTISTS } from '@/mocks/artist';
 import ArtistList from './_components/artist/ArtistList';
 import styles from './clientes.module.css';
+import { SiteHeader } from '@/components/auth/SiteHeader';
 
 const estudios: Studio[] = MOCK_STUDIOS;
 const todosLosArtistas: Artist[] = MOCK_ARTISTS;
@@ -12,7 +13,7 @@ const artistasIndie: Artist[] = todosLosArtistas.filter((a) => a.is_independent 
 const QuieroTatuarmePage = () => {
   return (
     <main className={styles.page}>
-      {/* --- HERO SECTION --- */}
+      <SiteHeader />
       <header className={styles.hero}>
         <span className={styles.eyebrow}>Encuentra tu próximo tatuaje</span>
 

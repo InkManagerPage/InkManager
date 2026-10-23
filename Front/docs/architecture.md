@@ -3,7 +3,7 @@
 ## Por dónde empezar a leer
 
 1. `src/app/layout.tsx` carga Bootstrap, la tipografía y los estilos generales. Envuelve todas las páginas.
-2. `src/app/page.tsx` lleva a la persona que entra a `/` hacia `/estudios`.
+2. `src/app/page.tsx` muestra la Home con entradas para clientes y para artistas o estudios.
 3. `src/app/estudios/page.tsx` muestra las secciones de la landing en orden.
 4. Cada archivo de `src/app/estudios/_components/` contiene una de esas secciones.
 5. `landing.module.css`, en esa misma carpeta, define su apariencia.
@@ -20,15 +20,16 @@ Las rutas de esta tabla parten de `Front/`.
 | `src/app/`                      | Páginas, rutas y estructura común de Next.js                              |
 | `src/app/estudios/`             | La página `/estudios`, con la landing para tatuadores                     |
 | `src/app/estudios/_components/` | Secciones que solo se usan en esa landing                                 |
-| `src/app/clientes/`             | La futura landing de clientes, hoy vacía                                  |
+| `src/app/clientes/`             | Catálogo de estudios y artistas con datos de ejemplo                      |
 | `src/app/clientes/_components/` | Secciones propias de la futura landing de clientes                        |
 | `src/app/(auth)/`               | Agrupar las futuras páginas de acceso. `(auth)` no forma parte de la URL  |
-| `src/app/(auth)/login/`         | Reservada para la futura página `/login`                                  |
-| `src/app/(auth)/registro/`      | Reservada para la futura página `/registro`                               |
+| `src/app/(auth)/Login/`         | Modal de inicio de sesión                                                 |
+| `src/app/(auth)/Register/`      | Modal de registro básico por rol                                          |
 | `src/app/dashboard/`            | Reservada para el área privada. Más adelante necesitará control de acceso |
 | `src/components/`               | Componentes que se usen en más de una página                              |
 | `src/components/ui/`            | Controles pequeños compartidos, como botones o campos de texto            |
 | `src/components/forms/`         | Formularios completos que se puedan reutilizar                            |
+| `src/components/auth/`          | Cabecera, controles de cuenta y estilos de acceso compartidos             |
 | `src/components/layout/`        | Cabeceras, pies y otras partes comunes a varias páginas                   |
 | `src/hooks/`                    | Funciones de React que reúnen comportamiento reutilizable                 |
 | `src/lib/`                      | Configuración y funciones de conexión con herramientas externas           |
@@ -73,7 +74,29 @@ En `LandingHeader.tsx`, `menuAbierto` guarda si el menú del celular está abier
 
 En `ReviewsSection.tsx`, React Fast Marquee desplaza las tarjetas y las pausa al pasar el cursor. La versión animada repite tarjetas para completar el recorrido; los lectores de pantalla reciben una lista sin repeticiones.
 
-## Cuando agreguemos funcionalidad
+## Acceso y registro
+
+`src/store/AuthProvider.tsx` comparte el usuario de la sesión entre las páginas.
+Al cargar la aplicación consulta `GET /api/auth/me`. El token permanece en una cookie
+HttpOnly que administra el backend; no se guarda en localStorage.
+
+`src/components/auth/AuthControls.tsx` muestra los accesos o el nombre, rol y botón de
+cierre de sesión. `SiteHeader.tsx` lo usa en Home y clientes; `LandingHeader.tsx`, en estudios.
+Los modales están en `src/app/(auth)/Login/Login.tsx` y `Register/Register.tsx`.
+Son componentes, todavía no son páginas `/login` y `/registro`.
+
+El registro pide nombre, email, contraseña y confirmación. El rol artista agrega
+nombre artístico; estudio agrega nombre del estudio. Los datos de perfil, documentos
+y tarifas quedan fuera del alta inicial. `users.service.ts` envía únicamente los datos
+que acepta `POST /api/auth/register`; al terminar se intenta iniciar sesión.
+Si el alta funciona y el login falla, se informa que la cuenta ya existe para evitar repetirla.
+
+Formik administra el formulario y su estado de envío. `AuthField.tsx` conecta labels,
+IDs, autocompletado y errores. `src/lib/auth-validation.ts` comprueba los campos en
+el navegador; el backend vuelve a validarlos porque no debe confiar en el cliente.
+Los estilos compartidos están en `src/components/auth/auth.module.css`.
+
+## Llamadas al backend
 
 Mantené cada sección junto a su página. Si después se usa en varias páginas, movela a `src/components/`. No hace falta crear un componente separado para cada título o párrafo.
 

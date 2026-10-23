@@ -19,7 +19,16 @@ Para producción: `npm run build` y después `npm start`.
 El login requiere una `JWT_SECRET` privada en `Back/.env`. La configuración y los
 pendientes de sesión, permisos y frontend están en
 [estado de autenticación](../docs/estructura-backend.md#estado-de-la-rama-autenticacion).
-Las pruebas anteriores necesitan adaptar sus mocks antes de ejecutarse con una base real.
+Para ejecutar las pruebas de regresión usá `npm test` desde `Back/`.
+La suite levanta un servidor temporal y simula Prisma y Cloudinary en memoria:
+no usa ni modifica la base real. También comprueba las validaciones y los errores HTTP del frontend.
+
+## Imágenes y sesión
+
+`POST /api/upload` requiere la cookie de sesión. Enviá un formulario multipart
+con un único archivo en el campo `imagen`: JPG, PNG o WebP, de hasta 5 MB.
+Responde 401 sin sesión, 400 si el archivo o campo no es válido y 413 si supera el límite.
+Los errores del parser JSON y de archivos también se devuelven como JSON.
 
 ## Reseñas de artistas
 

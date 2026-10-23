@@ -1,4 +1,3 @@
-
 // interfaces Studio, Portfolio y Artist hechas por Gabriel Franco para la construccion del mock, se deben actualizar si la base de datos no coincide con el formato del mock
 
 export interface Studio {
@@ -43,4 +42,3 @@ export interface Artist {
   is_verified: boolean;
   created_at: string;
 }
-

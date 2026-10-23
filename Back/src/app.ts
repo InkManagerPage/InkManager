@@ -7,10 +7,13 @@ import { healthRouter } from "./health/health.routes.js";
 import { imagenRouter } from "./imagenes/imagenes.routes.js";
 import { resenasRouter } from "./resenas/resenas.routes.js";
 import { origenesPermitidos } from "./config/auth.js";
+import { manejarErrores } from "./middlewares/errores.js";
+import { validarOrigen } from "./middlewares/origen.js";
 
 export const app = express();
 
 app.use(cors({ origin: origenesPermitidos, credentials: true }));
+app.use(validarOrigen);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -19,3 +22,8 @@ app.use("/api/auth", usuariosRoutes);
 app.use("/api/health", healthRouter);
 app.use("/api/upload", imagenRouter);
 app.use("/api/resenas", resenasRouter);
+
+app.use((_req, res) => {
+  res.status(404).json({ error: "La ruta solicitada no existe." });
+});
+app.use(manejarErrores);

@@ -1,0 +1,445 @@
+{
+  "date": "2026-10-22",
+  "scope": "Backend compilado en servidor local temporal; BD y Cloudinary reales. Rutas QA de roles y fallos simulados solo en memoria del proceso de pruebas.",
+  "results": [
+    {
+      "name": "Health",
+      "passed": true
+    },
+    {
+      "name": "Sin cookie requiere sesion",
+      "passed": true
+    },
+    {
+      "name": "Registro CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Registro ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Registro ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Email duplicado",
+      "passed": true
+    },
+    {
+      "name": "Rol SUPERADMIN publico",
+      "passed": true
+    },
+    {
+      "name": "Rol desconocido",
+      "passed": true
+    },
+    {
+      "name": "Email invalido",
+      "passed": true
+    },
+    {
+      "name": "Password corta",
+      "passed": true
+    },
+    {
+      "name": "Password mas de 72 bytes",
+      "passed": true
+    },
+    {
+      "name": "Nombre vacio",
+      "passed": true
+    },
+    {
+      "name": "Artista sin nombre artistico",
+      "passed": true
+    },
+    {
+      "name": "Estudio sin nombre",
+      "passed": true
+    },
+    {
+      "name": "Nombre demasiado largo",
+      "passed": true
+    },
+    {
+      "name": "Registro rechaza array",
+      "passed": true
+    },
+    {
+      "name": "Registro rechaza null",
+      "passed": true
+    },
+    {
+      "name": "Login CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Login ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Login ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Cookie HttpOnly SameSite Path y vencimiento",
+      "passed": true
+    },
+    {
+      "name": "Sesion persistida activa",
+      "passed": true
+    },
+    {
+      "name": "Respuestas personales no cacheables",
+      "passed": true
+    },
+    {
+      "name": "Login normaliza email",
+      "passed": true
+    },
+    {
+      "name": "Login ignora rol enviado en body",
+      "passed": true
+    },
+    {
+      "name": "Password incorrecta y cuenta inexistente mismo error",
+      "passed": true
+    },
+    {
+      "name": "Login vacio",
+      "passed": true
+    },
+    {
+      "name": "Login email invalido",
+      "passed": true
+    },
+    {
+      "name": "Login exige JSON",
+      "passed": true
+    },
+    {
+      "name": "Login rechaza Origin ajeno",
+      "passed": true
+    },
+    {
+      "name": "CORS permite frontend y credenciales",
+      "passed": true
+    },
+    {
+      "name": "CORS no autoriza Origin ajeno",
+      "passed": true
+    },
+    {
+      "name": "Token malformado",
+      "passed": true
+    },
+    {
+      "name": "Token expirado",
+      "passed": true
+    },
+    {
+      "name": "Issuer incorrecto",
+      "passed": true
+    },
+    {
+      "name": "Audience incorrecta",
+      "passed": true
+    },
+    {
+      "name": "Algoritmo HS512",
+      "passed": true
+    },
+    {
+      "name": "Token sin jti",
+      "passed": true
+    },
+    {
+      "name": "Token sin firma",
+      "passed": true
+    },
+    {
+      "name": "Firma alterada",
+      "passed": true
+    },
+    {
+      "name": "Sesion inexistente",
+      "passed": true
+    },
+    {
+      "name": "Sesion de otro usuario",
+      "passed": true
+    },
+    {
+      "name": "Sesion vencida en BD con JWT vigente",
+      "passed": true
+    },
+    {
+      "name": "Sesion revocada en BD con JWT vigente",
+      "passed": true
+    },
+    {
+      "name": "Rol actualizado en BD se refleja sin nuevo login",
+      "passed": true
+    },
+    {
+      "name": "Middleware de roles exige sesion",
+      "passed": true
+    },
+    {
+      "name": "Roles CLIENTE accede a CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Roles CLIENTE accede a ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Roles CLIENTE accede a ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles CLIENTE accede a SUPERADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles ARTISTA accede a CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Roles ARTISTA accede a ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Roles ARTISTA accede a ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles ARTISTA accede a SUPERADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles ESTUDIO_ADMIN accede a CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Roles ESTUDIO_ADMIN accede a ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Roles ESTUDIO_ADMIN accede a ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles ESTUDIO_ADMIN accede a SUPERADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles SUPERADMIN accede a CLIENTE",
+      "passed": true
+    },
+    {
+      "name": "Roles SUPERADMIN accede a ARTISTA",
+      "passed": true
+    },
+    {
+      "name": "Roles SUPERADMIN accede a ESTUDIO_ADMIN",
+      "passed": true
+    },
+    {
+      "name": "Roles SUPERADMIN accede a SUPERADMIN",
+      "passed": true
+    },
+    {
+      "name": "Logout origen ajeno no revoca sesion",
+      "passed": true
+    },
+    {
+      "name": "Logout revoca y borra cookie",
+      "passed": true
+    },
+    {
+      "name": "Reutilizacion de cookie revocada",
+      "passed": true
+    },
+    {
+      "name": "Otra sesion permanece activa",
+      "passed": true
+    },
+    {
+      "name": "Logout repetido",
+      "passed": true
+    },
+    {
+      "name": "Logout sin cookie",
+      "passed": true
+    },
+    {
+      "name": "Logout con token expirado limpia cookie",
+      "passed": true
+    },
+    {
+      "name": "Cookie Secure en produccion",
+      "passed": true
+    },
+    {
+      "name": "Limite de intentos HTTP 429",
+      "passed": true
+    },
+    {
+      "name": "Resenas publicas con formato esperado",
+      "passed": true,
+      "reviews": 6
+    },
+    {
+      "name": "Upload sin archivo",
+      "passed": true
+    },
+    {
+      "name": "Upload PNG y limpieza Cloudinary",
+      "passed": true
+    },
+    {
+      "name": "Upload de mas de 5MB devuelve 413",
+      "passed": false,
+      "status": 500,
+      "expected": 413,
+      "json": false
+    },
+    {
+      "name": "Upload de campo incorrecto devuelve 400",
+      "passed": false,
+      "status": 500,
+      "expected": 400,
+      "json": false
+    },
+    {
+      "name": "Registro con payload actual de la interfaz",
+      "passed": false,
+      "status": 400,
+      "expected": 201,
+      "error": "Los campos Email, Contraseña, Nombre y Nombre Artístico son obligatorios."
+    },
+    {
+      "name": "Usuario eliminado pierde acceso",
+      "passed": true
+    },
+    {
+      "name": "RLS activado en Sesion",
+      "passed": true
+    },
+    {
+      "name": "Registro antiguo rechaza password corta",
+      "passed": false,
+      "status": 201,
+      "expected": 400
+    },
+    {
+      "name": "Registro antiguo valida email",
+      "passed": false,
+      "status": 201,
+      "expected": 400
+    },
+    {
+      "name": "Registro antiguo maneja tipos invalidos",
+      "passed": false,
+      "status": 500,
+      "expected": 400
+    },
+    {
+      "name": "Registro general ignora campos privilegiados",
+      "passed": true
+    },
+    {
+      "name": "Registro concurrente de mismo email",
+      "passed": true,
+      "statuses": [
+        201,
+        409
+      ]
+    },
+    {
+      "name": "Cuenta del intento UI creada",
+      "passed": false,
+      "count": 0,
+      "expected": 1
+    },
+    {
+      "name": "Login maneja caida de BD",
+      "passed": true,
+      "status": 500,
+      "expected": 500
+    },
+    {
+      "name": "Me maneja caida de BD",
+      "passed": true,
+      "status": 500,
+      "expected": 500
+    },
+    {
+      "name": "Logout maneja caida de BD",
+      "passed": true,
+      "status": 500,
+      "expected": 500
+    },
+    {
+      "name": "Resenas manejan caida de BD",
+      "passed": true,
+      "status": 503,
+      "expected": 503
+    },
+    {
+      "name": "Upload maneja caida de Cloudinary",
+      "passed": true,
+      "status": 500,
+      "expected": 500
+    },
+    {
+      "name": "JSON malformado devuelve error JSON",
+      "passed": false,
+      "status": 400,
+      "json": false
+    },
+    {
+      "name": "Email inicia sin verificar y con token",
+      "passed": true
+    },
+    {
+      "name": "Verificar email exige token",
+      "passed": true
+    },
+    {
+      "name": "Verificar email rechaza token vacio",
+      "passed": true
+    },
+    {
+      "name": "Verificar email rechaza token repetido como array",
+      "passed": true
+    },
+    {
+      "name": "Verificar email rechaza token inexistente",
+      "passed": true
+    },
+    {
+      "name": "Verificar email actualiza BD y elimina token",
+      "passed": true
+    },
+    {
+      "name": "Token de email no puede reutilizarse",
+      "passed": true
+    },
+    {
+      "name": "Verificacion email maneja caida de BD",
+      "passed": true
+    }
+  ],
+  "cleanup": {
+    "usersRemoved": 6,
+    "studiosRemoved": 1,
+    "sessionsRemoved": 11,
+    "remainingUsers": 0,
+    "remainingSessions": 0,
+    "cloudinaryTestImageDeleted": true,
+    "emailVerificationUserDeleted": true
+  }
+}

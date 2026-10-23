@@ -65,76 +65,78 @@ enum ModalidadCobro {
 // --- MODELOS DE DATOS ---
 
 model Usuario {
-  id                      String             @id @default(uuid())
-  email                   String             @unique
-  password                String             // Hash de contraseña para Login (bcrypt/argon2)
-  nombre                  String?            // Nombre Completo / Razón Social
-  nombreArtistico         String?            // Alias / Apodo para Artistas
-  alias                   String?
-  rol                     Rol                @default(CLIENTE)
-  telefono                String?
-  telefonoVerificado      Boolean            @default(false)
-  emailVerificado         Boolean            @default(false)
-  tokenVerificacionEmail  String?
+  id                     String  @id @default(uuid())
+  email                  String  @unique
+  password               String // Hash de contraseña para Login (bcrypt/argon2)
+  nombre                 String? // Nombre Completo / Razón Social
+  nombreArtistico        String? // Alias / Apodo para Artistas
+  alias                  String?
+  rol                    Rol     @default(CLIENTE)
+  telefono               String?
+  telefonoVerificado     Boolean @default(false)
+  emailVerificado        Boolean @default(false)
+  tokenVerificacionEmail String?
 
   // --- CAMPOS DE PERFIL DE ARTISTA (Onboarding) ---
-  fotoPublicId            String?
-  resena                  String?
-  fotoPerfil              String?
-  fotoTrabajando          String?
-  dniPasaporte            String?
-  documentoIdentidadUrl   String?
-  estadoVerificacion      EstadoVerificacion @default(NO_VERIFICADO)
+  fotoPublicId          String?
+  resena                String?
+  fotoPerfil            String?
+  fotoTrabajando        String?
+  dniPasaporte          String?
+  documentoIdentidadUrl String?
+  estadoVerificacion    EstadoVerificacion @default(NO_VERIFICADO)
 
   // Ubicación y Modalidad
-  tipoTrabajo             TipoTrabajo?
-  direccion               String?
-  ciudad                  String?
-  pais                    String?
-  radioAlcanceKm          Int?               @default(20)
-  horariosAtencion        Json?              // Días y rangos horarios
+  tipoTrabajo      TipoTrabajo?
+  direccion        String?
+  ciudad           String?
+  pais             String?
+  radioAlcanceKm   Int?         @default(20)
+  horariosAtencion Json? // Días y rangos horarios
 
   // Perfil Artístico y Redes
-  estilosPrincipales      String[]           // Ej: ["Blackwork", "Realismo"]
-  instagram               String?
-  tiktok                  String?
-  sitioWeb                String?
-  anosExperiencia         Int?
-  galeria                 FotoGaleria[]
+  estilosPrincipales String[] // Ej: ["Blackwork", "Realismo"]
+  instagram          String?
+  tiktok             String?
+  sitioWeb           String?
+  anosExperiencia    Int?
+  galeria            FotoGaleria[]
 
   // Cotizaciones y Reglas Económicas
-  tarifaMinima            Float?             // Bajada de aguja
-  modalidadCobro          ModalidadCobro?
-  requiereSena            Boolean            @default(true)
-  montoPorcentajeSena     Float?
-  politicaCancelacion    String?
-  metodosPagoAceptados    String[]           // Ej: ["TRANSFERENCIA", "MERCADO_PAGO"]
-  cbuAliasBancario        String?
+  tarifaMinima         Float? // Bajada de aguja
+  modalidadCobro       ModalidadCobro?
+  requiereSena         Boolean         @default(true)
+  montoPorcentajeSena  Float?
+  politicaCancelacion  String?
+  metodosPagoAceptados String[] // Ej: ["TRANSFERENCIA", "MERCADO_PAGO"]
+  cbuAliasBancario     String?
 
   // Higiene y Licencias
-  licenciaSanitariaUrl    String?
-  numeroLicencia          String?
-  aceptaDeclaracionHigiene Boolean           @default(false)
+  licenciaSanitariaUrl     String?
+  numeroLicencia           String?
+  aceptaDeclaracionHigiene Boolean @default(false)
 
   // Preferencias / Filtros de Proyectos
-  aceptaCoverUp           Boolean            @default(true)
-  aceptaCicatrices        Boolean            @default(true)
-  aceptaRetoques          Boolean            @default(true)
-  aceptaCaraManos         Boolean            @default(false)
-  copiaDisenosInternet    Boolean            @default(false)
-  tamanoMinimoCm          Int?               @default(5)
+  aceptaCoverUp        Boolean @default(true)
+  aceptaCicatrices     Boolean @default(true)
+  aceptaRetoques       Boolean @default(true)
+  aceptaCaraManos      Boolean @default(false)
+  copiaDisenosInternet Boolean @default(false)
+  tamanoMinimoCm       Int?    @default(5)
 
   // --- RELACIONES ---
   // Relación con el estudio al que pertenece o administra
-  estudioId               String?
-  estudio                 Estudio?           @relation("EstudioIntegrantes", fields: [estudioId], references: [id])
-  estudiosAdministrados   Estudio[]          @relation("EstudioPropietarios")
+  estudioId             String?
+  estudio               Estudio?  @relation("EstudioIntegrantes", fields: [estudioId], references: [id])
+  estudiosAdministrados Estudio[] @relation("EstudioPropietarios")
 
-  solicitudes             Solicitud[]        @relation("ClienteSolicitudes")
-  cotizaciones            Cotizacion[]
+  solicitudes  Solicitud[]  @relation("ClienteSolicitudes")
+  cotizaciones Cotizacion[]
 
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
+  sesiones Sesion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model FotoGaleria {
@@ -147,12 +149,12 @@ model FotoGaleria {
 }
 
 model Estudio {
-  id            String      @id @default(uuid())
-  nombre        String
-  slug          String      @unique
-  direccion     String?
-  ciudad        String?
-  pais          String?
+  id        String  @id @default(uuid())
+  nombre    String
+  slug      String  @unique
+  direccion String?
+  ciudad    String?
+  pais      String?
 
   // Relaciones
   propietarioId String?
@@ -160,8 +162,8 @@ model Estudio {
   usuarios      Usuario[]   @relation("EstudioIntegrantes")
   solicitudes   Solicitud[]
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Solicitud {
@@ -195,4 +197,16 @@ model Cotizacion {
   mensaje     String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model Sesion {
+  id         String    @id @default(uuid())
+  usuarioId  String
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraAt   DateTime
+  revocadaAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([usuarioId])
+  @@index([expiraAt])
 }
