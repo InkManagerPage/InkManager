@@ -4,6 +4,7 @@ import {
   registrarArtista,
   registrarUsuario,
   verificarEmail,
+  obtenerArtistasFiltrados
 } from "./usuarios.service.js";
 
 export async function registerArtist(
@@ -63,6 +64,30 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     res.status(500).json({
       error: "Ocurrió un error al procesar el registro.",
+    });
+  }
+}
+
+export async function filtrarArtistas (req: Request, res: Response): Promise<void>{
+  try {
+    const artistasFiltrados = await obtenerArtistasFiltrados(req.query);
+
+    res.status(200).json({
+      message: 'Estos artistas cumplen con tus filtros',
+      artistas: artistasFiltrados
+    })
+  }catch(error){
+    if (error instanceof HttpError) {
+      res.status(error.status).json({
+        error: error.message,
+      });
+      return;
+    }
+
+    console.error("Error al fitlrar artistas.");
+
+    res.status(500).json({
+      error: "Ocurrió un error al procesar los filtros",
     });
   }
 }

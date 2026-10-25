@@ -6,6 +6,7 @@ import type {
   UsuarioPublico,
   UsuarioSesion,
 } from "./usuarios.entity.js";
+import { log } from "node:console";
 
 export function buscarUsuarioPorEmail(
   email: string,
@@ -112,4 +113,32 @@ export function buscarUsuarioPorId(id: string): Promise<UsuarioSesion | null> {
       estudioId: true,
     },
   });
+}
+
+export async function filtrarArtista (filtros: {estilos?: string[], ciudad?: string, alcance?:number   }): Promise<Usuario[]>{
+  
+  const where: any = {
+    rol: "ARTISTA",
+  }
+
+  if(filtros.estilos){
+    where.estilosPrincipales = {
+      hasSome: filtros.estilos,
+    };
+  }
+  if(filtros.ciudad){
+    where.ciudad = {
+      contains: filtros.ciudad,
+      mode: "insensitive"
+    };
+  }
+  if(filtros.alcance){
+    where.radioAlcanceKm = {
+      lte: filtros.alcance,
+    };
+  }
+
+  const artistasFiltrados = await prisma.usuario.findMany({where})
+
+  return artistasFiltrados
 }
