@@ -85,6 +85,12 @@ cierre de sesión. `SiteHeader.tsx` lo usa en Home y clientes; `LandingHeader.ts
 Los modales están en `src/app/(auth)/Login/Login.tsx` y `Register/Register.tsx`.
 Son componentes, todavía no son páginas `/login` y `/registro`.
 
+Cada cabecera indica un `contextoRegistro`: `cliente` en `/clientes`, `profesional`
+en `/estudios` y `general` en la Home. `AuthControls.tsx` lo pasa al modal.
+En clientes se usa `CLIENTE` sin mostrar un selector. En profesionales solo se
+elige Artista o Estudio. En la Home primero se pregunta para qué se quiere usar
+InkManager. `src/lib/registro.ts` prepara los valores iniciales de cada formulario.
+
 El registro pide nombre, email, contraseña y confirmación. El rol artista agrega
 nombre artístico; estudio agrega nombre del estudio. Los datos de perfil, documentos
 y tarifas quedan fuera del alta inicial. `users.service.ts` envía únicamente los datos

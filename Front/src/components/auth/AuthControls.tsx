@@ -4,13 +4,22 @@ import { LoginModal } from '@/app/(auth)/Login/Login';
 import { RegisterModal } from '@/app/(auth)/Register/Register';
 import { useAuth } from '@/store/AuthProvider';
 import styles from './auth.module.css';
+import type { ContextoRegistro } from '@/types/forms';
 const nombresRol = {
   CLIENTE: 'Cliente',
   ARTISTA: 'Artista',
   ESTUDIO_ADMIN: 'Estudio',
   SUPERADMIN: 'Administración',
 };
-export function AuthControls({ light = false, onOpen }: { light?: boolean; onOpen?: () => void }) {
+export function AuthControls({
+  light = false,
+  onOpen,
+  contextoRegistro = 'general',
+}: {
+  light?: boolean;
+  onOpen?: () => void;
+  contextoRegistro?: ContextoRegistro;
+}) {
   const { usuario, cargando, error, reintentar, logout } = useAuth();
   const [modal, setModal] = useState<'login' | 'register' | null>(null);
   const [saliendo, setSaliendo] = useState(false);
@@ -68,7 +77,12 @@ export function AuthControls({ light = false, onOpen }: { light?: boolean; onOpe
         <LoginModal show onHide={() => setModal(null)} onSwitch={() => setModal('register')} />
       )}
       {modal === 'register' && (
-        <RegisterModal show onHide={() => setModal(null)} onSwitch={() => setModal('login')} />
+        <RegisterModal
+          show
+          contexto={contextoRegistro}
+          onHide={() => setModal(null)}
+          onSwitch={() => setModal('login')}
+        />
       )}
     </div>
   );

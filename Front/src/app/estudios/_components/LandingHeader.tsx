@@ -27,7 +27,7 @@ export function LandingHeader() {
               <Nav.Link href="#herramientas">Herramientas</Nav.Link>
               <Nav.Link href="#planes">Planes</Nav.Link>
             </Nav>
-            <AuthControls light onOpen={cerrarMenu} />
+            <AuthControls light contextoRegistro="profesional" onOpen={cerrarMenu} />
           </Navbar.Collapse>
         </div>
       </Navbar>
