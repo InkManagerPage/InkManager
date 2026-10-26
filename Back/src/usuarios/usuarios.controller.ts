@@ -3,9 +3,9 @@ import { HttpError } from "../errors/http-error.js";
 import {
   registrarArtista,
   registrarUsuario,
-  verificarEmail,
   obtenerArtistasFiltrados
 } from "./usuarios.service.js";
+import { origenesPermitidos } from "../config/auth.js";
 
 export async function registerArtist(
   req: Request,
@@ -30,10 +30,13 @@ export async function registerArtist(
 
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
   try {
-    await verificarEmail(req.query.token);
-    res
-      .status(200)
-      .json({ message: "Correo electrónico verificado exitosamente." });
+    if (typeof req.query.token !== "string" || !/^[a-f0-9]{64}$/.test(req.query.token)) {
+      throw new HttpError(400, "El enlace de verificación no es válido.");
+    }
+    // Los lectores automáticos de correo pueden abrir enlaces: confirmar requiere un POST.
+    const destino = new URL("/verificar-email", origenesPermitidos[0]);
+    destino.hash = req.query.token;
+    res.set("Cache-Control", "no-store").set("Referrer-Policy", "no-referrer").redirect(303, destino.toString());
   } catch (error) {
     if (error instanceof HttpError) {
       res.status(error.status).json({ error: error.message });

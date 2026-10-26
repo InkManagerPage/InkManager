@@ -108,6 +108,17 @@
   background: #fff;
   box-shadow: 0 18px 80px #0002;
 }
+.googleNotice {
+  position: fixed;
+  top: 90px;
+  right: 16px;
+  z-index: 1040;
+  width: min(400px, calc(100vw - 32px));
+  border: 1px solid #cccec7;
+  box-shadow: 0 6px 24px #0002;
+  color: #202320;
+  font-size: 14px;
+}
 .modalHeader {
   padding: 32px 32px 0;
   border: 0;
@@ -166,6 +177,70 @@
   line-height: 1.5;
   color: #62665f;
 }
+.passwordInput {
+  position: relative;
+}
+.passwordInput input,
+.passwordInput input:global(.is-invalid) {
+  padding-right: 50px;
+  background-image: none;
+}
+.passwordToggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #62665f;
+}
+.passwordToggle:hover {
+  background: #f1f2ee;
+  color: #202320;
+}
+.passwordToggle:focus-visible {
+  outline: 2px solid #202320;
+  outline-offset: -3px;
+}
+.recoveryLink {
+  display: block;
+  margin: 16px 0;
+  color: #373c35;
+  font-size: 13px;
+  text-align: right;
+  text-underline-offset: 3px;
+}
+.accountPage {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 32px 20px;
+  background: #f6f6f2;
+}
+.accountCard {
+  width: min(100%, 460px);
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid #e0e2db;
+  border-radius: 12px;
+  background: #fff;
+}
+.accountCard h1 {
+  margin: 14px 0;
+  font-size: 32px;
+  letter-spacing: -1px;
+}
+.success {
+  padding: 14px;
+  border-left: 3px solid #49633e;
+  background: #f0f5ed;
+  font-size: 14px;
+  color: #30442a;
+}
 .submit {
   width: 100%;
   min-height: 48px;
@@ -208,7 +283,7 @@
 }
 .roles {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 22px;
 }
@@ -248,6 +323,34 @@
 .role input:focus-visible + span {
   outline: 3px solid #879380;
   outline-offset: 3px;
+}
+.publicos {
+  display: grid;
+  gap: 12px;
+}
+.publico {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 18px;
+  border: 1px solid #cccec7;
+  border-radius: 5px;
+  background: white;
+  color: #202320;
+  text-align: left;
+}
+.publico:hover {
+  background: #f1f2ef;
+  border-color: #202320;
+}
+.publico strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.publico small {
+  font-size: 13px;
+  color: #62665f;
 }
 @media (max-width: 575px) {
   .siteHeader {

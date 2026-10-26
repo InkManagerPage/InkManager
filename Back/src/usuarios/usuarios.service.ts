@@ -3,9 +3,7 @@ import crypto from "node:crypto";
 import { HttpError } from "../errors/http-error.js";
 import {
   buscarUsuarioPorEmail,
-  buscarUsuarioPorToken,
   crearUsuario,
-  marcarEmailVerificado,
   filtrarArtista
 } from "./usuarios.repository.js";
 import {
@@ -14,6 +12,7 @@ import {
 } from "./usuarios.validation.js";
 import { Rol } from "../types/roles.js";
 import { Prisma } from "@prisma/client";
+import { notificarRegistro } from "../tokens-cuenta/tokens-cuenta.service.js";
 
 export async function registrarArtista(entrada: unknown) {
   const datos = validarRegistroArtista(entrada);
@@ -82,17 +81,14 @@ export async function registrarArtista(entrada: unknown) {
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  const tokenVerificacionEmail = crypto.randomBytes(32).toString("hex");
-
   try {
-    return await crearUsuario({
+    const usuario = await crearUsuario({
       // Datos Obligatorios
       email,
       password: hashedPassword,
       nombre,
       nombreArtistico,
       rol: "ARTISTA",
-      tokenVerificacionEmail,
       emailVerificado: false,
       estadoVerificacion,
 
@@ -161,6 +157,8 @@ export async function registrarArtista(entrada: unknown) {
             }
           : undefined,
     });
+    await notificarRegistro(usuario);
+    return usuario;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -170,22 +168,6 @@ export async function registrarArtista(entrada: unknown) {
     }
     throw error;
   }
-}
-
-export async function verificarEmail(token: unknown) {
-  if (!token || typeof token !== "string") {
-    throw new HttpError(
-      400,
-      "Token de verificación no proporcionado o inválido.",
-    );
-  }
-
-  const usuario = await buscarUsuarioPorToken(token);
-  if (!usuario) {
-    throw new HttpError(404, "Token de verificación inválido o expirado.");
-  }
-
-  await marcarEmailVerificado(usuario.id);
 }
 
 // Paso 1: Validar los datos de entrada y verificar si el correo electrónico ya está registrado
@@ -202,7 +184,6 @@ export async function registrarUsuario(entrada: unknown) {
   }
 
   const passwordHash = await bcrypt.hash(datos.password, 12);
-  const tokenVerificacionEmail = crypto.randomBytes(32).toString("hex");
 
   const estudio =
     datos.rol === Rol.ESTUDIO_ADMIN && datos.nombreEstudio
@@ -213,7 +194,7 @@ export async function registrarUsuario(entrada: unknown) {
       : undefined;
 
   try {
-    return await crearUsuario(
+    const usuario = await crearUsuario(
       {
         nombre: datos.nombre,
         email: datos.email,
@@ -223,10 +204,11 @@ export async function registrarUsuario(entrada: unknown) {
         estilosPrincipales: [],
         metodosPagoAceptados: [],
         emailVerificado: false,
-        tokenVerificacionEmail,
       },
       estudio,
     );
+    await notificarRegistro(usuario);
+    return usuario;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

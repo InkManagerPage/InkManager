@@ -5,8 +5,8 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-101',
     artist_id: 'art-001',
-    image_url: 'https://images.unsplash.com/photo-1568515045052-f9a854d7a618?w=800',
-    caption: 'Cráneo con flora silvestre en antebrazo',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTZSfTnQCOvB-xNDpcZt685Dhu0qTnoFv-ocX9vtYICNA&s=10',
+    caption: 'Manga completa en estilo blackwork con patrones geométricos y mandalas intrincados.',
     style: 'Blackwork',
     is_featured: true,
     created_at: '2026-03-20T10:00:00Z',
@@ -41,7 +41,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-105',
     artist_id: 'art-001',
-    image_url: 'https://images.unsplash.com/photo-1590246814885-568b1c61e541?w=800',
+    image_url: 'https://www.avantgardetattoo.es/wp-content/uploads/2026/09/microrealismo-marta-3-scaled-e1709904952876.jpeg',
     caption: 'Retrato en microrealismo de mascota',
     style: 'Microrealismo',
     is_featured: false,
@@ -52,7 +52,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-201',
     artist_id: 'art-002',
-    image_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ5nq3ZjGvBQt0j6-f0Ng2SWSrH9lxklt_fIIvd1cF73g&s=10',
     caption: 'Ramillete de orquídeas en costillas',
     style: 'Botánico',
     is_featured: true,
@@ -61,7 +61,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-202',
     artist_id: 'art-002',
-    image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800',
+    image_url: 'https://lamanozurda.es/wp-content/uploads/2026/01/LA-MANO-ZURDA-MADRID-PULLULY-TATUAJE-PROFESIONAL-ACUARELA-FULL-COLOR-REALISMO-VALENCIA1.jpeg',
     caption: 'Colibrí en técnica acuarela saturada',
     style: 'Acuarela',
     is_featured: true,
@@ -70,7 +70,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-203',
     artist_id: 'art-002',
-    image_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRO0l-53SKBckwqGMHwlbzqcR0j0oYPJ_wc5A3LbhkJIZl0_G6GEA6Ddvgv&s=10',
     caption: 'Ramita de lavanda en trazo ultrafino',
     style: 'Fine Line',
     is_featured: false,
@@ -79,7 +79,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-204',
     artist_id: 'art-002',
-    image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    image_url: 'https://i.pinimg.com/originals/42/b4/d2/42b4d2bc8069b0fe88122c350ae910ef.jpg',
     caption: 'Mariposa con mancha astronómica de acuarela',
     style: 'Acuarela',
     is_featured: false,
@@ -88,7 +88,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-205',
     artist_id: 'art-002',
-    image_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800',
+    image_url: 'https://i.pinimg.com/564x/e8/75/56/e8755600a5fa435df03d86882b9028df.jpg',
     caption: 'Composición botánica en clavícula',
     style: 'Botánico',
     is_featured: false,
@@ -99,7 +99,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-301',
     artist_id: 'art-003',
-    image_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800',
+    image_url: 'https://i.pinimg.com/736x/dd/ff/1c/ddff1c2978bca6d6024d67c7f5da6710.jpg',
     caption: 'Mandala ornamental expansivo en espalda',
     style: 'Ornamental',
     is_featured: true,
@@ -108,7 +108,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-302',
     artist_id: 'art-003',
-    image_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800',
+    image_url: 'https://requiemtattooalicante.com/wp-content/uploads/2022/10/are-dotwork-tattoos-less-painful-1.jpeg',
     caption: 'Cubo de Metatrón en puntillismo denso',
     style: 'Puntillismo',
     is_featured: true,
@@ -117,7 +117,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-303',
     artist_id: 'art-003',
-    image_url: 'https://images.unsplash.com/photo-1568515045052-f9a854d7a618?w=800',
+    image_url: 'https://cdntattoofilter.com/tattoo/31389/l.jpg',
     caption: 'Brazalete geométrico simétrico',
     style: 'Geométrico',
     is_featured: false,
@@ -126,7 +126,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-304',
     artist_id: 'art-003',
-    image_url: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=800',
+    image_url: 'https://static.tatship.com/idea-page-posts/9c05759f-6f08-4e22-8677-aa364961fcc3.jpg',
     caption: 'Flor de la vida en codo',
     style: 'Puntillismo',
     is_featured: false,
@@ -135,7 +135,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-305',
     artist_id: 'art-003',
-    image_url: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=800',
+    image_url: 'https://requiemtattooalicante.com/wp-content/uploads/2022/10/geometric-tattoo.jpeg',
     caption: 'Composición fractal en gemelo',
     style: 'Geométrico',
     is_featured: false,
@@ -146,7 +146,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-401',
     artist_id: 'art-004',
-    image_url: 'https://images.unsplash.com/photo-1590246814885-568b1c61e541?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSugwu6wM77jQuQmbp34dM-2Q-XRL9ziRiG9hOWz7GbhgLWLh2u8TcUIBfH&s=10',
     caption: 'Zorro Neotradicional en muslo con marco dorado',
     style: 'Neotradicional',
     is_featured: true,
@@ -155,7 +155,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-402',
     artist_id: 'art-004',
-    image_url: 'https://images.unsplash.com/photo-1562962230-16e4623d36e6?w=800',
+    image_url: 'https://hustlebuttertattoogallery.com/wp-content/uploads/2024/12/anime_goku-hustlbutter-819x1024.jpg',
     caption: 'Personaje Anime Full Color en brazo',
     style: 'Anime',
     is_featured: true,
@@ -164,7 +164,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-403',
     artist_id: 'art-004',
-    image_url: 'https://images.unsplash.com/photo-1568515045052-f9a854d7a618?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSu3BnVhTR5kaifyP_GuScJTQoUiBS05Y_pk-awUAqVVT--DghwkaEezxg&s=10',
     caption: 'Búho Neotradicional con joya rubí',
     style: 'Neotradicional',
     is_featured: false,
@@ -173,7 +173,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-404',
     artist_id: 'art-004',
-    image_url: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=800',
+    image_url: 'https://i.pinimg.com/736x/8f/15/45/8f1545917984d90af5bfcb4115dc2a31.jpg',
     caption: 'Máscara Hannya Neotradicional',
     style: 'Full Color',
     is_featured: false,
@@ -182,7 +182,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-405',
     artist_id: 'art-004',
-    image_url: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRn5KaGxcywYuF1jDkYSbNKKqQz_NfCwuxnvOVZAmO5--MyhWcufSfqE-c&s=10',
     caption: 'Daga Neotradicional envuelta en peonías',
     style: 'Neotradicional',
     is_featured: false,
@@ -193,7 +193,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-501',
     artist_id: 'art-005',
-    image_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800',
+    image_url: 'https://cdn.prod.website-files.com/64ea53398f3236f85b471900/6507ba3903c64193d31e47d2_IMG_6411.jpeg',
     caption: 'Retrato realista de León en antebrazo',
     style: 'Realismo',
     is_featured: true,
@@ -202,7 +202,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-502',
     artist_id: 'art-005',
-    image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSCNm_EaI6W3A3XTF3gbbnAsdn-P3X-F8FkagUDU7rAcb6294ahnyRRFFvn&s=10',
     caption: 'Catrina Chicana con rosas en sombra suave',
     style: 'Chicano',
     is_featured: true,
@@ -211,7 +211,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-503',
     artist_id: 'art-005',
-    image_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6YTzzLm_GvLg_nyWQAIIqcNNgQwhNy0YfqEIhBOa7bmZw2OfdBmo8XLA&s=10',
     caption: 'Estatua griega Poseidón en sombras',
     style: 'Sombra',
     is_featured: false,
@@ -220,7 +220,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-504',
     artist_id: 'art-005',
-    image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    image_url: 'https://www.tonyblacktattoo.com/wp-content/uploads/2025/06/tatuajes-ojos-realistas-barcelona-574x1024.webp',
     caption: 'Ojo realista con paisaje reflejado',
     style: 'Realismo',
     is_featured: false,
@@ -229,7 +229,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-505',
     artist_id: 'art-005',
-    image_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYQxYKf6e9em2QuMgBP_oj_PLEs7gMo41u0oA8BqZ5IbSl_WtNmE-OVI22&s=10',
     caption: 'Reloj de arena realista con calavera',
     style: 'Sombra',
     is_featured: false,
@@ -240,7 +240,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-601',
     artist_id: 'art-006',
-    image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    image_url: 'https://i.pinimg.com/736x/3a/ae/3a/3aae3a1d5e9ef34f0a0126946f844502.jpg',
     caption: 'Ilustración de alquimia estilo grabado medieval',
     style: 'Grabado',
     is_featured: true,
@@ -249,7 +249,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-602',
     artist_id: 'art-006',
-    image_url: 'https://images.unsplash.com/photo-1568515045052-f9a854d7a618?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9QrHTGPQF0zZEhfcI2I4dZHIz1O9vPmBju7UL6hY0PhATDAWktL6Wji5R&s=10',
     caption: 'Calamar gigante en darkwork',
     style: 'Darkwork',
     is_featured: true,
@@ -258,7 +258,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-603',
     artist_id: 'art-006',
-    image_url: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlBy2oYOZmfGBW6UrP3ZUDoV6NrR0xyKLfK5CADspJJ4QrwQGP2Jxs0VA&s=10',
     caption: 'Barco fantasma grabado en costillar',
     style: 'Grabado',
     is_featured: false,
@@ -267,7 +267,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-604',
     artist_id: 'art-006',
-    image_url: 'https://images.unsplash.com/photo-1590246814885-568b1c61e541?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStv0UFXMMO7OlHqYy2UHv18uA8rf9Gbi4XL_Orkz66PHFvBW9NwpA9t6M&s=10',
     caption: 'Cuervo con runas nórdicas',
     style: 'Blackwork',
     is_featured: false,
@@ -276,7 +276,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-605',
     artist_id: 'art-006',
-    image_url: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5e74Opm-Z6RksdcMESf4YUD_lx2wBZ045W6BgIjVQOZBzgxqj8urbR1g&s=10',
     caption: 'Gárgola medieval en hombro',
     style: 'Darkwork',
     is_featured: false,
@@ -287,7 +287,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-701',
     artist_id: 'art-007',
-    image_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTssa4vyK8aHu0LGqCQ0husGsPkM0uhx650_f5v_54b9NroHYfH-pqexsRI&s=10',
     caption: 'La Creación de Adán en microrealismo',
     style: 'Arte Clásico',
     is_featured: true,
@@ -296,7 +296,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-702',
     artist_id: 'art-007',
-    image_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdGxtjFx9u6otSEfkW2zNSvw42Fh3Erpnq_nvpLwZJmlVuVWA4A2MbTDo&s=10',
     caption: 'Catedral gótica miniatura en antebrazo',
     style: 'Microrealismo',
     is_featured: true,
@@ -305,7 +305,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-703',
     artist_id: 'art-007',
-    image_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3a49osokSsiQ-nX5XIriMLAkvMVUsz_ExqfUxZQ2Gp0VcIzxKbzF9HR0&s=10',
     caption: 'Busto de Venus de Milo Fine Line',
     style: 'Fine Line',
     is_featured: false,
@@ -314,7 +314,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-704',
     artist_id: 'art-007',
-    image_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQj-UCbXY2mOFkeHkTKEWmnqmF1pKnhyYimkEsBHJhUMtvmYw0VaQloO70&s=10',
     caption: "Microrealismo de 'La Joven de la Perla'",
     style: 'Microrealismo',
     is_featured: false,
@@ -323,7 +323,7 @@ export const MOCK_PORTFOLIO: PortfolioImage[] = [
   {
     id: 'img-705',
     artist_id: 'art-007',
-    image_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800',
+    image_url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAQ-hDYbacubIpqSnd-f0Y6FIo7g_tYVSZ22__uw6vbqdRltldhNk74oM&s=10',
     caption: 'Detalle de escultura de El David',
     style: 'Arte Clásico',
     is_featured: false,

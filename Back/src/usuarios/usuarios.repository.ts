@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import crypto from "node:crypto";
 import { prisma } from "../config/prisma.js";
+import type { PerfilRegistroDto } from "./dto/registro-usuario.dto.js";
 import type {
   Usuario,
   UsuarioParaLogin,
@@ -58,25 +60,6 @@ export function crearUsuario(
     }
 
     return usuario;
-  });
-}
-
-export function buscarUsuarioPorToken(
-  token: string,
-): Promise<Pick<Usuario, "id"> | null> {
-  return prisma.usuario.findFirst({
-    where: { tokenVerificacionEmail: token },
-    select: { id: true },
-  });
-}
-
-export function marcarEmailVerificado(
-  id: string,
-): Promise<Pick<Usuario, "id">> {
-  return prisma.usuario.update({
-    where: { id },
-    data: { emailVerificado: true, tokenVerificacionEmail: null },
-    select: { id: true },
   });
 }
 
@@ -141,4 +124,76 @@ export async function filtrarArtista (filtros: {estilos?: string[], ciudad?: str
   const artistasFiltrados = await prisma.usuario.findMany({where})
 
   return artistasFiltrados
+}
+
+// Esta función busca un usuario por su Google ID y devuelve solo los campos necesarios para la sesión. El select evita que se devuelvan campos sensibles como la contraseña.
+export function buscarUsuarioPorGoogleId(
+  googleId: string,
+): Promise<UsuarioSesion | null> {
+  return prisma.usuario.findUnique({
+    where: { googleId },
+    select: {
+      id: true,
+      nombre: true,
+      email: true,
+      rol: true,
+      estudioId: true,
+    },
+  });
+}
+
+export function crearUsuarioGoogle(datos: {
+  googleId: string;
+  email: string;
+  nombre: string;
+  registro: PerfilRegistroDto;
+}): Promise<UsuarioSesion> {
+  return prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.create({
+      data: {
+        googleId: datos.googleId,
+        email: datos.email,
+        nombre: datos.nombre,
+        password: null,
+        rol: datos.registro.rol,
+        nombreArtistico:
+          datos.registro.rol === "ARTISTA"
+            ? datos.registro.nombreArtistico
+            : null,
+        emailVerificado: true,
+        estilosPrincipales: [],
+        metodosPagoAceptados: [],
+      },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        estudioId: true,
+      },
+    });
+
+    if (datos.registro.rol !== "ESTUDIO_ADMIN") return usuario;
+
+    const estudio = await tx.estudio.create({
+      data: {
+        nombre: datos.registro.nombreEstudio,
+        slug: `estudio-${crypto.randomUUID()}`,
+        propietarioId: usuario.id,
+      },
+      select: { id: true },
+    });
+
+    return tx.usuario.update({
+      where: { id: usuario.id },
+      data: { estudioId: estudio.id },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        estudioId: true,
+      },
+    });
+  });
 }

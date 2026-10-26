@@ -67,7 +67,8 @@ enum ModalidadCobro {
 model Usuario {
   id                     String  @id @default(uuid())
   email                  String  @unique
-  password               String // Hash de contraseña para Login (bcrypt/argon2)
+  password String? // Puede no tener contraseña si se registra con Google
+  googleId String? @unique // Identificador de su cuenta de Google
   nombre                 String? // Nombre Completo / Razón Social
   nombreArtistico        String? // Alias / Apodo para Artistas
   alias                  String?
@@ -134,6 +135,7 @@ model Usuario {
   cotizaciones Cotizacion[]
 
   sesiones Sesion[]
+  tokensCuenta TokenCuenta[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -208,5 +210,24 @@ model Sesion {
   createdAt  DateTime  @default(now())
 
   @@index([usuarioId])
+  @@index([expiraAt])
+}
+
+enum TipoTokenCuenta {
+  PASSWORD
+  VERIFICAR_EMAIL
+}
+
+model TokenCuenta {
+  id String @id @default(uuid())
+  usuarioId String
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo TipoTokenCuenta
+  tokenHash String @unique
+  expiraAt DateTime
+  usadoAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([usuarioId, tipo])
   @@index([expiraAt])
 }

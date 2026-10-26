@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import localFont from 'next/font/local';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { AuthProvider } from '@/store/AuthProvider';
+import { GoogleAuthNotice } from '@/components/auth/GoogleAuthNotice';
 
 const plex = localFont({
   src: [
@@ -22,7 +23,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es-AR" className={plex.variable}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Suspense fallback={null}>
+            <GoogleAuthNotice />
+          </Suspense>
+        </AuthProvider>
       </body>
     </html>
   );

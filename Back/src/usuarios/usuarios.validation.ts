@@ -1,6 +1,9 @@
 import { Rol } from "../types/roles.js";
 import { HttpError } from "../errors/http-error.js";
-import type { RegistroUsuarioDto } from "./dto/registro-usuario.dto.js";
+import type {
+  PerfilRegistroDto,
+  RegistroUsuarioDto,
+} from "./dto/registro-usuario.dto.js";
 import bcrypt from "bcryptjs";
 import { ModalidadCobro, TipoTrabajo } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
@@ -67,7 +70,7 @@ export function validarPassword(valor: unknown): string {
   return valor;
 }
 
-export function validarRegistroUsuario(entrada: unknown): RegistroUsuarioDto {
+export function validarPerfilRegistro(entrada: unknown): PerfilRegistroDto {
   if (
     typeof entrada !== "object" ||
     entrada === null ||
@@ -78,22 +81,29 @@ export function validarRegistroUsuario(entrada: unknown): RegistroUsuarioDto {
 
   const datos = entrada as Record<string, unknown>;
 
-  const registro: RegistroUsuarioDto = {
+  const rol = validarRolRegistro(datos.rol);
+
+  if (rol === Rol.ARTISTA) {
+    return { rol, nombreArtistico: validarNombre(datos.nombreArtistico) };
+  }
+
+  if (rol === Rol.ESTUDIO_ADMIN) {
+    return { rol, nombreEstudio: validarNombre(datos.nombreEstudio) };
+  }
+
+  return { rol };
+}
+
+export function validarRegistroUsuario(entrada: unknown): RegistroUsuarioDto {
+  const perfil = validarPerfilRegistro(entrada);
+  const datos = entrada as Record<string, unknown>;
+
+  return {
     nombre: validarNombre(datos.nombre),
     email: validarEmail(datos.email),
     password: validarPassword(datos.password),
-    rol: validarRolRegistro(datos.rol),
+    ...perfil,
   };
-
-  if (registro.rol === Rol.ARTISTA) {
-    registro.nombreArtistico = validarNombre(datos.nombreArtistico);
-  }
-
-  if (registro.rol === Rol.ESTUDIO_ADMIN) {
-    registro.nombreEstudio = validarNombre(datos.nombreEstudio);
-  }
-
-  return registro;
 }
 
 export function validarRegistroArtista(entrada: unknown) {
