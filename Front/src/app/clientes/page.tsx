@@ -62,7 +62,7 @@ const QuieroTatuarmePage = async ({searchParams}: QuieroTatuarmePageProps) => {
 
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-bs-theme="light">
 	<SiteHeader contextoRegistro="cliente" />
       {/* --- HERO SECTION --- */}
       <header className={styles.hero}>

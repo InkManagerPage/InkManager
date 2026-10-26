@@ -25,7 +25,7 @@ const ArtistCard = ({ artist }: ArtistCardProps) => {
 
         {/* Nombre del Artista */}
         <div className={styles.artistName}>
-          <h2>{artist.stage_name}</h2>
+          <h3>{artist.stage_name}</h3>
         </div>
 
         {/* Overlay con la Bio al hacer Hover */}
