@@ -5,6 +5,7 @@ import {
   validarRegistro,
 } from "../../Front/src/lib/auth-validation.js";
 import { apiFetch, ApiError } from "../../Front/src/lib/api-client.js";
+import { crearValoresRegistro } from "../../Front/src/lib/registro.js";
 
 const registro = {
   nombre: "Ana",
@@ -15,6 +16,14 @@ const registro = {
   nombreArtistico: "",
   nombreEstudio: "",
 };
+test("frontend: clientes empiezan como CLIENTE y profesionales como ARTISTA", () => {
+  assert.equal(crearValoresRegistro("cliente").rol, "CLIENTE");
+  assert.equal(crearValoresRegistro("profesional").rol, "ARTISTA");
+  assert.notEqual(
+    crearValoresRegistro("cliente"),
+    crearValoresRegistro("cliente"),
+  );
+});
 test("frontend: login requiere email válido y contraseña", () => {
   assert.deepEqual(validarLogin({ email: "", password: "" }), {
     email: "Ingresá un email válido.",

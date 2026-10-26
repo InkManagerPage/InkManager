@@ -13,7 +13,7 @@ const artistasIndie: Artist[] = todosLosArtistas.filter((a) => a.is_independent 
 const QuieroTatuarmePage = () => {
   return (
     <main className={styles.page}>
-      <SiteHeader />
+      <SiteHeader contextoRegistro="cliente" />
       <header className={styles.hero}>
         <span className={styles.eyebrow}>Encuentra tu próximo tatuaje</span>
 

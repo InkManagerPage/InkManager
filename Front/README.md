@@ -1,6 +1,6 @@
 # InkManager · Frontend
 
-Frontend con Next.js, React, TypeScript y Bootstrap. La landing para tatuadores está en `/estudios`; la dirección `/` lleva a esa página.
+Frontend con Next.js, React, TypeScript y Bootstrap. La Home está en `/`, la landing para tatuadores en `/estudios` y el catálogo de clientes en `/clientes`.
 
 ## Empezar
 
@@ -10,13 +10,13 @@ Desde la carpeta `Front/`:
 npm ci
 ```
 
-Copiá `.env.example` como `.env.local` si todavía no tenés ese archivo. `NEXT_PUBLIC_API_URL` indica la dirección pública del backend; para el entorno local es `http://localhost:4000/api`. Iniciá también el backend desde `Back/` para ver las reseñas.
+Copiá `.env.example` como `.env.local` si todavía no tenés ese archivo. `NEXT_PUBLIC_API_URL` indica la dirección pública del backend; para el entorno local es `http://127.0.0.1:4000/api`. Iniciá también el backend desde `Back/` para usar el acceso y ver las reseñas.
 
 ```sh
 npm run dev
 ```
 
-Abrí [http://localhost:3001](http://localhost:3001).
+Abrí [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
 ## Dónde hacer cambios
 
@@ -54,6 +54,8 @@ Bootstrap y React Bootstrap aportan la grilla, el menú, el acordeón, los boton
 
 Las reseñas se obtienen de `GET /api/resenas` del backend. Cada tarjeta muestra la foto de Cloudinary, el nombre y el texto guardado en Supabase. Se pausan al pasar el cursor y quedan quietas con movimiento reducido. La sección muestra un mensaje mientras carga, si no hay reseñas o si falla la conexión. Los perfiles actuales son ficticios y se aclara en la sección.
 
-`/clientes` está vacío. Las carpetas de login, registro y dashboard están reservadas para más adelante. Todavía no hay autenticación.
+El registro y el login se abren en modales desde la cabecera. En `/clientes` se crea una cuenta de cliente sin elegir rol; en `/estudios` se elige entre artista y estudio. La Home pregunta primero qué tipo de cuenta se necesita. El backend administra las sesiones mediante una cookie HttpOnly. El catálogo de `/clientes` todavía usa datos de ejemplo y el dashboard está reservado para más adelante.
+
+El login y el registro incluyen botones de Google. El backend valida la identidad y crea nuestra sesión; el registro conserva el perfil elegido en la landing. Si se cancela o falla el acceso, se vuelve a la Home con un aviso. [El detalle del registro por landing](../docs/registro-por-landing.md) explica el recorrido y la configuración local.
 
 Las fotografías de la portada y la fuente IBM Plex Sans se guardan localmente. Los retratos de las reseñas se sirven desde Cloudinary. La licencia de la fuente está en `public/fonts/`.

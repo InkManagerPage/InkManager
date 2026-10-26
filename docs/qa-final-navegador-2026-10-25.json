@@ -1,0 +1,21 @@
+{
+  "fecha": "2026-10-25",
+  "ok": true,
+  "checks": [
+    "Registro de estudio desde formulario",
+    "Inicio automático después del registro",
+    "Rol Estudio visible",
+    "Sesión persistente después de recargar",
+    "Logout desde el navegador",
+    "Login con email y contraseña",
+    "Sesión conservada al navegar a Home",
+    "Logout persistente después de recargar",
+    "Consola sin errores"
+  ],
+  "limpieza": {
+    "usuarios": 1,
+    "estudios": 1,
+    "sesiones": 2,
+    "sinRegistrosTemporales": true
+  }
+}

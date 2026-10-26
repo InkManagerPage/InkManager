@@ -85,6 +85,12 @@ cierre de sesión. `SiteHeader.tsx` lo usa en Home y clientes; `LandingHeader.ts
 Los modales están en `src/app/(auth)/Login/Login.tsx` y `Register/Register.tsx`.
 Son componentes, todavía no son páginas `/login` y `/registro`.
 
+Cada cabecera indica un `contextoRegistro`: `cliente` en `/clientes`, `profesional`
+en `/estudios` y `general` en la Home. `AuthControls.tsx` lo pasa al modal.
+En clientes se usa `CLIENTE` sin mostrar un selector. En profesionales solo se
+elige Artista o Estudio. En la Home primero se pregunta para qué se quiere usar
+InkManager. `src/lib/registro.ts` prepara los valores iniciales de cada formulario.
+
 El registro pide nombre, email, contraseña y confirmación. El rol artista agrega
 nombre artístico; estudio agrega nombre del estudio. Los datos de perfil, documentos
 y tarifas quedan fuera del alta inicial. `users.service.ts` envía únicamente los datos
@@ -95,6 +101,14 @@ Formik administra el formulario y su estado de envío. `AuthField.tsx` conecta l
 IDs, autocompletado y errores. `src/lib/auth-validation.ts` comprueba los campos en
 el navegador; el backend vuelve a validarlos porque no debe confiar en el cliente.
 Los estilos compartidos están en `src/components/auth/auth.module.css`.
+
+`auth.service.ts` también inicia el login y el registro con Google. El registro envía
+solamente el rol y, si corresponde, el nombre artístico o del estudio; el email y el
+nombre personal vienen de Google. El backend valida todo y vuelve a la Home con la
+misma cookie de sesión que usa el login con contraseña. Al volver, `AuthProvider`
+consulta `/auth/me` y muestra el usuario. `GoogleAuthNotice.tsx` presenta los avisos
+de cancelación o error; se monta dentro de `Suspense` en el layout porque lee los
+parámetros de la URL.
 
 ## Llamadas al backend
 

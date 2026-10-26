@@ -67,7 +67,8 @@ enum ModalidadCobro {
 model Usuario {
   id                     String  @id @default(uuid())
   email                  String  @unique
-  password               String // Hash de contraseña para Login (bcrypt/argon2)
+  password String? // Puede no tener contraseña si se registra con Google
+  googleId String? @unique // Identificador de su cuenta de Google
   nombre                 String? // Nombre Completo / Razón Social
   nombreArtistico        String? // Alias / Apodo para Artistas
   alias                  String?
