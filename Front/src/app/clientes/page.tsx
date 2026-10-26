@@ -6,7 +6,7 @@ import ArtistList from './_components/artist/ArtistList';
 import styles from './clientes.module.css';
 import { MOCK_PORTFOLIO } from "@/mocks/portfolios"
 import PortfolioList from './_components/portfolio/PortfolioList';
-import CombinableFilters from './_components/combinableFliters/combinableFilters';
+import CombinableFilters from './_components/combinableFilters/combinableFilters';
 import { SiteHeader } from '@/components/auth/SiteHeader';
 
 interface QuieroTatuarmePageProps {
