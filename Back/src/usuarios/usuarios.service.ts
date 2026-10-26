@@ -4,6 +4,7 @@ import { HttpError } from "../errors/http-error.js";
 import {
   buscarUsuarioPorEmail,
   crearUsuario,
+  filtrarArtista
 } from "./usuarios.repository.js";
 import {
   validarRegistroUsuario,
@@ -214,6 +215,27 @@ export async function registrarUsuario(entrada: unknown) {
       error.code === "P2002"
     ) {
       throw new HttpError(409, "Ya existe un registro con esos datos");
+    }
+    throw error;
+  }
+}
+
+export async function obtenerArtistasFiltrados(query: { estilos?: string | string[]; ciudad?: string; alcance?: string }) {
+  const filtrosListos = {
+    estilos: query.estilos ? (Array.isArray(query.estilos) ? query.estilos : [query.estilos]) : undefined,
+    ciudad: query.ciudad,
+    alcance: query.alcance ? Number(query.alcance) : undefined,
+  };
+  
+  try {
+    const resultado = await filtrarArtista(filtrosListos)
+    return resultado
+  }catch(error){
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new HttpError(500, "Hubo un error al intentar filtrar artistas");
     }
     throw error;
   }

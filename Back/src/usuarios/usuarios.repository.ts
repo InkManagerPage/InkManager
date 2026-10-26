@@ -8,6 +8,7 @@ import type {
   UsuarioPublico,
   UsuarioSesion,
 } from "./usuarios.entity.js";
+import { log } from "node:console";
 
 export function buscarUsuarioPorEmail(
   email: string,
@@ -96,6 +97,35 @@ export function buscarUsuarioPorId(id: string): Promise<UsuarioSesion | null> {
     },
   });
 }
+
+export async function filtrarArtista (filtros: {estilos?: string[], ciudad?: string, alcance?:number   }): Promise<Usuario[]>{
+  
+  const where: any = {
+    rol: "ARTISTA",
+  }
+
+  if(filtros.estilos){
+    where.estilosPrincipales = {
+      hasSome: filtros.estilos,
+    };
+  }
+  if(filtros.ciudad){
+    where.ciudad = {
+      contains: filtros.ciudad,
+      mode: "insensitive"
+    };
+  }
+  if(filtros.alcance){
+    where.radioAlcanceKm = {
+      lte: filtros.alcance,
+    };
+  }
+
+  const artistasFiltrados = await prisma.usuario.findMany({where})
+
+  return artistasFiltrados
+}
+
 // Esta función busca un usuario por su Google ID y devuelve solo los campos necesarios para la sesión. El select evita que se devuelvan campos sensibles como la contraseña.
 export function buscarUsuarioPorGoogleId(
   googleId: string,
