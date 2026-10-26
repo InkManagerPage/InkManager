@@ -18,7 +18,7 @@ const StudioCard = ({ estudio }: StudioCardProps) => {
 
         {/* Título sobre la imagen (siempre legible) */}
         <div className={styles.studioName}>
-          <h2>{estudio.name}</h2>
+          <h3>{estudio.name}</h3>
         </div>
 
         {/* Overlay con la descripción al hacer Hover */}
