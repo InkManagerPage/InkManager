@@ -9,6 +9,7 @@ import { resenasRouter } from "./resenas/resenas.routes.js";
 import { origenesPermitidos } from "./config/auth.js";
 import { manejarErrores } from "./middlewares/errores.js";
 import { validarOrigen } from "./middlewares/origen.js";
+import { tokensCuentaRouter } from "./tokens-cuenta/tokens-cuenta.routes.js";
 
 export const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", tokensCuentaRouter);
 app.use("/api/auth", usuariosRoutes);
 app.use("/api/health", healthRouter);
 app.use("/api/upload", imagenRouter);

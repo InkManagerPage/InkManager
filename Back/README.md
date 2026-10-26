@@ -1,10 +1,10 @@
 # Backend de InkManager
 
-API con Express, TypeScript y Prisma. Los datos están en PostgreSQL de Supabase y las fotos en Cloudinary.
+API con Express, TypeScript y Prisma. PostgreSQL en Supabase almacena datos, Cloudinary almacena imágenes y Resend envía correos. InkManager administra sus propios usuarios, roles y sesiones.
 
-## Ejecutar
+## Ejecución
 
-Desde `Back/`, con las credenciales configuradas en `.env`:
+Desde `Back/`, con `.env` configurado según `.env.example`:
 
 ```sh
 npm ci
@@ -12,60 +12,55 @@ npm run db:generate
 npm run dev
 ```
 
-El servidor usa el puerto 4000, salvo que `.env` indique otro en `PORT`.
+El servidor escucha en el puerto `4000`, configurable mediante `PORT`. El frontend local usa `http://127.0.0.1:3001`.
 
-Para producción: `npm run build` y después `npm start`.
+| Comando               | Función                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| `npm run dev`         | Ejecuta el servidor y recarga cambios de `src/` y `.env`.    |
+| `npm run build`       | Compila TypeScript en `dist/`.                               |
+| `npm start`           | Ejecuta la compilación de producción.                        |
+| `npm test`            | Ejecuta las pruebas automatizadas con proveedores simulados. |
+| `npm run db:generate` | Genera el cliente Prisma a partir del esquema.               |
 
-El login requiere una `JWT_SECRET` privada en `Back/.env`. La configuración y los
-pendientes de sesión, permisos y frontend están en
-[estado de autenticación](../docs/estructura-backend.md#estado-de-la-rama-autenticacion).
-Para ejecutar las pruebas de regresión usá `npm test` desde `Back/`.
-La suite levanta un servidor temporal y simula Prisma y Cloudinary en memoria:
-no usa ni modifica la base real. También comprueba las validaciones y los errores HTTP del frontend.
+## Configuración
 
-## Imágenes y sesión
+| Variables                                                              | Uso                                                     |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| `DATABASE_URL`, `DIRECT_URL`                                           | Conexiones de PostgreSQL utilizadas por Prisma.         |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                            | Configuración del cliente privado de Supabase.          |
+| `JWT_SECRET`                                                           | Clave privada de al menos 32 bytes para tokens propios. |
+| `FRONTEND_URL`                                                         | Origen permitido y destino de los enlaces de cuenta.    |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`      | Cliente OAuth y callback de Google.                     |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Almacenamiento de imágenes.                             |
+| `MAIL_TRANSPORT`, `RESEND_API_KEY`, `MAIL_FROM`                        | Transporte, credencial y remitente de correo.           |
 
-`POST /api/upload` requiere la cookie de sesión. Enviá un formulario multipart
-con un único archivo en el campo `imagen`: JPG, PNG o WebP, de hasta 5 MB.
-Responde 401 sin sesión, 400 si el archivo o campo no es válido y 413 si supera el límite.
-Los errores del parser JSON y de archivos también se devuelven como JSON.
+Las credenciales son privadas y los archivos `.env` están excluidos de Git. `prisma/schema.prisma` define el esquema de datos y `prisma/changes/` contiene los scripts SQL de la base.
 
-## Reseñas de artistas
+## Funcionalidades
 
-`GET /api/resenas` devuelve hasta 20 artistas, ordenados por nombre, que tengan foto y reseña. Cada elemento contiene únicamente:
+- Registro de clientes, artistas y administradores de estudio.
+- Login con contraseña y Google, consulta de usuario y cierre de sesión.
+- Sesiones persistidas y permisos según el rol actual.
+- Bienvenida, verificación de email y recuperación de contraseña por correo.
+- Carga autenticada de imágenes en Cloudinary.
+- Consulta pública de reseñas de artistas.
 
-```json
-{
-  "id": "id-del-artista",
-  "nombre": "Nombre del artista",
-  "fotoUrl": "https://res.cloudinary.com/...",
-  "resena": "Texto de la reseña"
-}
-```
+La [estructura del backend](../docs/estructura-backend.md) documenta las capas, módulos y endpoints. [Registro y acceso](../docs/registro-por-landing.md) describe los roles y Google; [correos y recuperación](../docs/correos-y-recuperacion.md), el envío y los enlaces de cuenta.
 
-Responde con un arreglo vacío si todavía no hay reseñas y con HTTP 503 si la base no está disponible. No devuelve emails, teléfonos ni claves. Este endpoint solo permite consultar reseñas; no permite crear o editar usuarios.
+## Imágenes y reseñas
 
-La funcionalidad está agrupada en `src/resenas/`, con su controlador, servicio, repositorio, entidad y rutas. El repositorio usa el cliente compartido de `src/config/prisma.ts`. En `Usuario`, se reutiliza `fotoPerfil` para la foto y se agregan `resena` y `fotoPublicId`. El endpoint llama `fotoUrl` a la URL pública. No se leen ni se exponen contraseñas o documentos de identidad.
+`POST /api/upload` requiere sesión y recibe un único archivo `imagen` por multipart: JPG, PNG o WebP, de hasta 5 MB. Responde `401` sin sesión, `400` ante datos inválidos y `413` si supera el límite.
 
-La estructura y el recorrido de cada endpoint están explicados en [estructura del backend](../docs/estructura-backend.md).
+`GET /api/resenas` devuelve hasta veinte artistas con foto y reseña, ordenados por nombre. Cada elemento contiene `id`, `nombre`, `fotoUrl` y `resena`. No expone email, contraseña ni documentos. Una lista sin resultados devuelve `[]`; un error de base devuelve `503`.
 
-## Cargar los ejemplos
+## Datos de ejemplo
 
-El proyecto todavía no tiene un historial de Prisma Migrate. El cambio SQL de esta tarea agrega las columnas de foto y reseña solo si faltan, conserva los datos y mantiene las reglas RLS existentes. El esquema Prisma local refleja la estructura actual de Supabase, incluidos los campos de perfil que ya existían. Para preparar otra base que ya tenga ese esquema:
+`prisma/review-artists.ts` define perfiles ficticios. `prisma/seed-reviews.ts` sube los retratos de `assets/portraits/` a Cloudinary y guarda las URLs y reseñas. Identifica usuarios por email e imágenes por ID fijo para evitar duplicados. Los perfiles nuevos reciben un hash bcrypt de un valor aleatorio; no se guarda ni se comparte una contraseña de acceso.
 
-```sh
-npm run db:reviews
-npm run db:security
-npm run db:generate
-npm run seed:reviews
-```
+| Comando                | Función                                            |
+| ---------------------- | -------------------------------------------------- |
+| `npm run db:reviews`   | Aplica las columnas de foto y reseña si faltan.    |
+| `npm run db:security`  | Aplica las reglas RLS del script de seguridad.     |
+| `npm run seed:reviews` | Carga los perfiles, retratos y reseñas de ejemplo. |
 
-`prisma/review-artists.ts` contiene seis perfiles ficticios: los dos artistas del seed inicial y cuatro nuevos. `prisma/seed-reviews.ts` sube los retratos de `assets/portraits/` y guarda las URLs y reseñas. Usa el email para identificar perfiles y un ID fijo para cada imagen, así se puede repetir sin duplicados. No borra tablas ni usuarios.
-
-Como el modelo actual exige `password`, los perfiles nuevos reciben un hash bcrypt de un valor aleatorio que no se guarda ni se muestra. No se generan contraseñas compartidas para iniciar sesión y no se cambia la contraseña de los artistas existentes.
-
-`db:security` activa RLS en las cinco tablas de la aplicación y conserva sus políticas. El backend accede con su conexión privada; el navegador solo consulta el endpoint público, que selecciona los datos de la tarjeta. Si se agregan accesos directos desde un cliente de Supabase, necesitarán políticas propias de lectura o escritura.
-
-Los retratos fueron creados con la herramienta integrada `image_gen`. Los prompts completos de cada imagen están en `assets/portraits/prompts.json`.
-
-Este script es independiente de `prisma/seed.ts`, que reemplaza los datos de las tablas. Para agregar las reseñas usá `seed:reviews`.
+`prisma/seed.ts` reemplaza datos de tablas; `seed:reviews` es independiente y conserva los usuarios existentes.

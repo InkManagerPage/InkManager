@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import Modal from 'react-bootstrap/Modal';
 import { FormikForm } from '@/components/forms/FormikForm';
 import { GoogleButton } from '@/components/auth/GoogleButton';
@@ -40,6 +41,9 @@ export function LoginModal({ show, onHide, onSwitch }: AuthModalProps) {
       <Modal.Body className={styles.modalBody}>
         <p className={styles.intro}>Ingresá para seguir con tu próximo proyecto.</p>
         <FormikForm onSubmit={submit} error={error} />
+        <Link href="/recuperar-contrasena" className={styles.recoveryLink} onClick={onHide}>
+          ¿Olvidaste tu contraseña?
+        </Link>
         <GoogleButton onClick={iniciarLoginGoogle}>Continuar con Google</GoogleButton>
         <p className={styles.switch}>
           ¿Todavía no tenés cuenta?{' '}

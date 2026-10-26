@@ -14,6 +14,8 @@ process.env.DIRECT_URL = process.env.DATABASE_URL;
 process.env.JWT_SECRET = "solo-pruebas-aisladas-inkmanager-32-bytes";
 process.env.FRONTEND_URL = "http://127.0.0.1:3001";
 process.env.NODE_ENV = "test";
+process.env.MAIL_TRANSPORT = "resend";
+process.env.RESEND_API_KEY = "";
 const { app } = await import("../src/app.js");
 const { prisma } = await import("../src/config/prisma.js");
 const { default: cloudinary } = await import("../src/config/cloudinary.js");
@@ -628,17 +630,16 @@ test("fallo al revocar conserva la cookie y devuelve error", async (t) => {
   assert.equal(response.status, 500);
   assert.equal(response.headers.get("set-cookie"), null);
 });
-test("verificación de email y token de un solo uso", async () => {
+test("abrir un enlace de verificación no confirma la cuenta automáticamente", async () => {
   await post("/auth/register", base);
   const user = [...users.values()][0];
   assert.equal((await request("/auth/verify-email")).status, 400);
   assert.equal(
     (await request("/auth/verify-email?token=no-existe")).status,
-    404,
+    400,
   );
-  const url = `/auth/verify-email?token=${user.tokenVerificacionEmail}`;
-  assert.equal((await request(url)).status, 200);
-  assert.equal(user.emailVerificado, true);
-  assert.equal(user.tokenVerificacionEmail, null);
-  assert.equal((await request(url)).status, 404);
+  const response = await request(`/auth/verify-email?token=${"a".repeat(64)}`, { redirect: "manual" });
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("location"), `http://127.0.0.1:3001/verificar-email#${"a".repeat(64)}`);
+  assert.equal(user.emailVerificado, false);
 });

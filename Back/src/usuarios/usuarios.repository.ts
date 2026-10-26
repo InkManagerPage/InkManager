@@ -62,25 +62,6 @@ export function crearUsuario(
   });
 }
 
-export function buscarUsuarioPorToken(
-  token: string,
-): Promise<Pick<Usuario, "id"> | null> {
-  return prisma.usuario.findFirst({
-    where: { tokenVerificacionEmail: token },
-    select: { id: true },
-  });
-}
-
-export function marcarEmailVerificado(
-  id: string,
-): Promise<Pick<Usuario, "id">> {
-  return prisma.usuario.update({
-    where: { id },
-    data: { emailVerificado: true, tokenVerificacionEmail: null },
-    select: { id: true },
-  });
-}
-
 export function buscarUsuarioParaLogin(
   email: string,
 ): Promise<UsuarioParaLogin | null> {

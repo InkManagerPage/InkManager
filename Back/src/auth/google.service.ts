@@ -18,6 +18,7 @@ import {
 import type { UsuarioSesion } from "../usuarios/usuarios.entity.js";
 import { abrirSesion } from "../sesiones/sesiones.service.js";
 import { crearToken } from "./auth.tokens.js";
+import { notificarRegistro } from "../tokens-cuenta/tokens-cuenta.service.js";
 
 export const duracionFlujoGoogleSegundos = 10 * 60;
 
@@ -189,7 +190,9 @@ export async function resolverUsuarioGoogle(
 
   const registro = validarPerfilRegistro(identidad.registro);
   try {
-    return await crearUsuarioGoogle({ ...identidad, registro });
+    const nuevoUsuario = await crearUsuarioGoogle({ ...identidad, registro });
+    await notificarRegistro(nuevoUsuario, true);
+    return nuevoUsuario;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
