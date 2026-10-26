@@ -2,9 +2,12 @@
 import { useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import { FormikForm } from '@/components/forms/FormikForm';
+import { GoogleButton } from '@/components/auth/GoogleButton';
 import { useAuth } from '@/store/AuthProvider';
 import type { AuthModalProps, LoginValues } from '@/types/forms';
 import styles from '@/components/auth/auth.module.css';
+import { iniciarLoginGoogle } from '@/services/auth.service';
+
 export function LoginModal({ show, onHide, onSwitch }: AuthModalProps) {
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -22,6 +25,7 @@ export function LoginModal({ show, onHide, onSwitch }: AuthModalProps) {
       show={show}
       onHide={onHide}
       centered
+      scrollable
       contentClassName={styles.modal}
       aria-labelledby="login-title"
     >
@@ -36,6 +40,7 @@ export function LoginModal({ show, onHide, onSwitch }: AuthModalProps) {
       <Modal.Body className={styles.modalBody}>
         <p className={styles.intro}>Ingresá para seguir con tu próximo proyecto.</p>
         <FormikForm onSubmit={submit} error={error} />
+        <GoogleButton onClick={iniciarLoginGoogle}>Continuar con Google</GoogleButton>
         <p className={styles.switch}>
           ¿Todavía no tenés cuenta?{' '}
           <button type="button" onClick={onSwitch}>

@@ -19,9 +19,9 @@ Artista pide nombre artístico. Estudio pide nombre del estudio y crea la relaci
 
 El contexto también se conserva al pasar de «Iniciar sesión» a «Crear cuenta» dentro de una landing. Cerrar y volver a abrir el modal reinicia el formulario.
 
-## Preparación para Google
+## Acceso con Google
 
-El acceso con Google sigue en desarrollo. Esta modificación prepara los perfiles de registro; todavía faltan el callback HTTP, la apertura de sesión propia desde ese callback y los botones del frontend.
+El login y el registro tienen botones de Google. En el registro, un cliente puede continuar sin completar otros campos. Un profesional debe indicar su nombre artístico o el del estudio. El nombre personal y el email se obtienen de Google; no se pide una contraseña local para este método.
 
 `GET /api/auth/google` inicia un login sin pedir ni aceptar un rol por query.
 
@@ -39,7 +39,7 @@ El acceso con Google sigue en desarrollo. Esta modificación prepara los perfile
 { "rol": "ESTUDIO_ADMIN", "nombreEstudio": "Estudio Ana" }
 ```
 
-Devuelve `{ "url": "..." }` y guarda la cookie temporal HttpOnly `inkmanager_google_oauth`. Cuando agreguemos el botón de Google, el frontend deberá enviar este JSON con `credentials: 'include'` y navegar a la URL recibida. Este endpoint no crea una cuenta por sí solo.
+Devuelve `{ "url": "..." }` y guarda la cookie temporal HttpOnly `inkmanager_google_oauth`. El frontend envía este JSON con `apiFetch`, que incluye las cookies, y navega a la URL recibida. Este endpoint no crea una cuenta por sí solo.
 
 El recorrido del backend es:
 
@@ -50,14 +50,32 @@ El recorrido del backend es:
 5. **Service:** `resolverUsuarioGoogle` recupera una cuenta existente por su `googleId` sin cambiar su rol. Si es nueva, exige un perfil de registro. Si ya existe otra cuenta con ese email, pide usar el método habitual; no vincula cuentas automáticamente.
 6. **Repository:** `crearUsuarioGoogle` guarda el rol elegido y el nombre artístico o estudio. Para estudios, crea y vincula ambos registros en una transacción. Devuelve únicamente los datos públicos necesarios para la sesión.
 
-El próximo paso guiado es conectar estas funciones con `GET /api/auth/google/callback`, crear la sesión propia y volver al frontend. El callback deberá tomar el perfil del flujo verificado, nunca de un `rol` recibido en su URL.
+`GET /api/auth/google/callback` conecta estas funciones. `iniciarSesionGoogle` valida la identidad, resuelve la cuenta, abre una fila en `Sesion` y genera nuestro JWT. El controller guarda la cookie HttpOnly `inkmanager_session`, borra la cookie temporal y vuelve a la Home. El perfil se toma del flujo firmado; un `rol` enviado en la URL del callback no modifica la cuenta.
+
+Ante un error o una cancelación, vuelve a la Home con `google_error=fallido`, `cancelado` o `cuenta`. `GoogleAuthNotice` muestra un aviso de Bootstrap que se puede cerrar. La URL de vuelta se construye con el origen configurado en el servidor; no se acepta una dirección de retorno enviada por el navegador.
+
+## Configuración local
+
+En `Back/.env` se necesitan `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `FRONTEND_URL` y una `JWT_SECRET` propia. Las claves privadas quedan en el backend. Los ejemplos están en los archivos `.env.example`.
+
+- Frontend: `http://127.0.0.1:3001`.
+- API: `http://127.0.0.1:4000/api`.
+- Callback autorizado en Google: `http://127.0.0.1:4000/api/auth/google/callback`.
+
+Usar el mismo host `127.0.0.1` en todos estos lugares evita mezclar las cookies de `localhost` y `127.0.0.1`. La base debe tener aplicados `prisma/changes/20261024_google_auth.sql` y el cliente Prisma regenerado.
+
+Para verificarlo con una cuenta real: abrir Crear cuenta desde la landing correspondiente, completar el nombre artístico o estudio si aplica y elegir Registrarme con Google. Después de confirmar en Google, la Home debe mostrar el nombre, rol y Cerrar sesión. Luego se puede volver a entrar con Continuar con Google desde el login.
 
 ## Verificaciones
 
-- `Back`: compilación correcta y 79 pruebas automáticas aprobadas. Cubren también el registro tradicional, sesiones y permisos existentes.
+- `Back`: compilación correcta y 89 pruebas automáticas aprobadas. Cubren también el registro tradicional, sesiones y permisos existentes.
 - Las pruebas nuevas verifican los tres perfiles, cookies, firma y vencimiento del flujo, state, nonce, PKCE, datos del estudio, conservación de roles, conflicto de email y altas simultáneas.
-- Las pruebas de Google y persistencia usan servicios simulados y credenciales ficticias. No confirman un acceso real con una cuenta de Google; ese recorrido se comprobará al implementar el callback.
-- `Front`: ESLint, tipos y compilación de producción correctos. El chequeo de formato de los archivos modificados también pasa. El comando global `npm run check` se detiene en `format:check` por diferencias de formato previas en otros 19 archivos; las comprobaciones de tipos y compilación se ejecutaron por separado.
+- Las pruebas HTTP del callback cubren alta y sesión para los tres perfiles, consulta de `/me`, revocación con logout, cookies seguras en producción, cancelación, flujo inválido, conflictos y fallo de almacenamiento. Google y la persistencia se simulan: no se crean cuentas en la base real.
+- `Front`: `npm run check` completo aprobado: ESLint, formato global, tipos y compilación de producción. En la revisión final se ordenaron con Prettier los 15 archivos que tenían diferencias de formato pendientes.
 - Navegador: registro directo de clientes, dos opciones profesionales, campo de estudio, validación de formularios vacíos, ambos recorridos de Home, cambio entre login y registro y reinicio al cerrar. Se revisaron escritorio y anchos de celular, incluido 320 px sin desborde horizontal del modal. No se crearon cuentas reales durante estas comprobaciones.
 
-Capturas: [cliente](registro-cliente-2026-10-24.jpg), [artista](registro-profesional-2026-10-24.jpg) y [estudio](registro-estudio-movil-2026-10-24.jpg).
+El 25/10 se comprobó en el navegador que el registro de cliente y estudio, y el botón de login, abren la selección de cuenta de Google real. Se verificaron los errores por nombre artístico o estudio vacío, el aviso del callback inválido y su cierre. El registro se revisó en celular de 390 px sin desborde horizontal. La confirmación final con una cuenta real de Google queda para el usuario: no se eligió ninguna cuenta ni se otorgó consentimiento durante estas pruebas.
+
+Capturas actuales: [registro con Google](google-registro-2026-10-25.jpg) y [aviso de error](google-aviso-2026-10-25.jpg). Las capturas del registro anterior se conservan en los archivos del 24/10.
+
+La [verificación final de autenticación](qa-final-autenticacion-2026-10-25.md) documenta las 89 pruebas automáticas, las 37 comprobaciones de integración real y el recorrido de navegador con limpieza de los datos temporales.

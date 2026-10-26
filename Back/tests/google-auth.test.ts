@@ -33,6 +33,7 @@ type Row = Record<string, unknown>;
 type Args = { data: Row; where: Row; select?: Record<string, boolean> };
 const usuarios = new Map<string, Row>();
 const estudios = new Map<string, Row>();
+const sesiones = new Map<string, Row>();
 function seleccionar(row: Row | undefined, select?: Record<string, boolean>) {
   if (!row) return null;
   return select
@@ -59,6 +60,7 @@ function reemplazar(
 beforeEach((t) => {
   usuarios.clear();
   estudios.clear();
+  sesiones.clear();
   t.mock.method(OAuth2Client.prototype, "getToken", async () => {
     throw new Error("Google real deshabilitado en pruebas");
   });
@@ -67,7 +69,9 @@ beforeEach((t) => {
   });
   reemplazar(t, prisma.usuario, "findUnique", async ({ where, select }: Args) =>
     seleccionar(
-      [...usuarios.values()].find((row) => row.googleId === where.googleId),
+      [...usuarios.values()].find((row) =>
+        where.id ? row.id === where.id : row.googleId === where.googleId,
+      ),
       select,
     ),
   );
@@ -105,6 +109,28 @@ beforeEach((t) => {
     const row = { id: randomUUID(), ...data };
     estudios.set(row.id, row);
     return row;
+  });
+  reemplazar(t, prisma.sesion, "create", async ({ data }: Args) => {
+    const row = { id: randomUUID(), revocadaAt: null, ...data };
+    sesiones.set(row.id, row);
+    return row;
+  });
+  reemplazar(
+    t,
+    prisma.sesion,
+    "findUnique",
+    async ({ where }: Args) => sesiones.get(String(where.id)) ?? null,
+  );
+  reemplazar(t, prisma.sesion, "updateMany", async ({ where, data }: Args) => {
+    const sesion = sesiones.get(String(where.id));
+    if (
+      !sesion ||
+      sesion.usuarioId !== where.usuarioId ||
+      sesion.revocadaAt !== null
+    )
+      return { count: 0 };
+    Object.assign(sesion, data);
+    return { count: 1 };
   });
   reemplazar(
     t,
@@ -393,5 +419,210 @@ test("Google: alta simultánea recupera la cuenta sin cambiar su rol", async (t)
   assert.deepEqual(
     await resolverUsuarioGoogle({ ...identidad, registro: perfiles[0] }),
     existente,
+  );
+});
+
+function simularIdentidadGoogle(t: TestContext, nonce: string) {
+  t.mock.method(OAuth2Client.prototype, "getToken", async () => ({
+    tokens: { id_token: "token-ficticio" },
+  }));
+  t.mock.method(OAuth2Client.prototype, "verifyIdToken", async () => ({
+    getPayload: () => ({
+      sub: identidad.googleId,
+      email: identidad.email,
+      name: identidad.nombre,
+      email_verified: true,
+      nonce,
+    }),
+  }));
+}
+function callbackGoogle(
+  token: string | undefined,
+  state: unknown,
+  extra: Record<string, string> = {},
+) {
+  const query = new URLSearchParams({
+    code: "codigo-ficticio",
+    state: String(state),
+    ...extra,
+  });
+  return fetch(`${baseUrl}/callback?${query}`, {
+    redirect: "manual",
+    headers: token ? { Cookie: `inkmanager_google_oauth=${token}` } : {},
+    signal: AbortSignal.timeout(10000),
+  });
+}
+function comprobarFallo(response: Response, codigo = "fallido") {
+  assert.equal(response.status, 303);
+  assert.equal(
+    response.headers.get("location"),
+    `http://127.0.0.1:3001/?google_error=${codigo}`,
+  );
+  const cookies = response.headers.getSetCookie();
+  assert.ok(
+    cookies.some(
+      (cookie) =>
+        cookie.startsWith("inkmanager_google_oauth=;") &&
+        cookie.includes("Path=/api/auth/google"),
+    ),
+  );
+  assert.ok(
+    cookies.every((cookie) => !cookie.startsWith("inkmanager_session=")),
+  );
+  assert.equal(sesiones.size, 0);
+}
+
+for (const perfil of perfiles) {
+  test(`Google callback: registro ${perfil.rol}, sesión propia, /me y logout`, async (t) => {
+    const inicio = await post(perfil);
+    const tokenFlujo = inicio.headers
+      .getSetCookie()[0]
+      .split(";")[0]
+      .split("=")[1];
+    const flujo = leerFlujo(tokenFlujo);
+    simularIdentidadGoogle(t, flujo.nonce);
+    const response = await callbackGoogle(tokenFlujo, flujo.state, {
+      rol: "SUPERADMIN",
+      returnTo: "https://ajeno.example",
+    });
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "http://127.0.0.1:3001/");
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(sesiones.size, 1);
+    const cookies = response.headers.getSetCookie();
+    assert.ok(
+      cookies.some((cookie) => cookie.startsWith("inkmanager_google_oauth=;")),
+    );
+    const cookieSesion = cookies.find((cookie) =>
+      cookie.startsWith("inkmanager_session="),
+    )!;
+    assert.match(cookieSesion, /HttpOnly/);
+    assert.match(cookieSesion, /SameSite=Lax/);
+    assert.match(cookieSesion, /Max-Age=3600/);
+    assert.match(cookieSesion, /Path=\//);
+    const cookie = cookieSesion.split(";")[0];
+    const payload = jwt.verify(cookie.split("=")[1], process.env.JWT_SECRET!, {
+      algorithms: ["HS256"],
+      issuer: "inkmanager-api",
+      audience: "inkmanager-web",
+    }) as jwt.JwtPayload;
+    assert.equal(payload.rol, undefined);
+    assert.equal(payload.jti, [...sesiones.keys()][0]);
+    const me = await fetch(baseUrl.replace("/auth/google", "/auth/me"), {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(me.status, 200);
+    const { user } = await me.json();
+    assert.equal(user.rol, perfil.rol);
+    assert.equal(user.id, payload.sub);
+    assert.deepEqual(Object.keys(user).sort(), [
+      "email",
+      "estudioId",
+      "id",
+      "nombre",
+      "rol",
+    ]);
+    if (perfil.rol === "ESTUDIO_ADMIN") assert.ok(user.estudioId);
+    const logout = await fetch(
+      baseUrl.replace("/auth/google", "/auth/logout"),
+      { method: "POST", headers: { Cookie: cookie } },
+    );
+    assert.equal(logout.status, 200);
+    assert.equal(
+      (
+        await fetch(baseUrl.replace("/auth/google", "/auth/me"), {
+          headers: { Cookie: cookie },
+        })
+      ).status,
+      401,
+    );
+  });
+}
+test("Google callback: login existente conserva rol aunque el registro solicite otro", async (t) => {
+  const original = await resolverUsuarioGoogle({
+    ...identidad,
+    registro: perfiles[2],
+  });
+  const { flujoToken } = await prepararAccesoGoogle(perfiles[0]);
+  const flujo = leerFlujo(flujoToken);
+  simularIdentidadGoogle(t, flujo.nonce);
+  assert.equal((await callbackGoogle(flujoToken, flujo.state)).status, 303);
+  const guardado = usuarios.get(original.id)!;
+  assert.equal(guardado.rol, "ESTUDIO_ADMIN");
+  assert.equal(guardado.estudioId, original.estudioId);
+  assert.equal(usuarios.size, 1);
+});
+test("Google callback: cancelación válida vuelve al frontend sin abrir sesión", async () => {
+  const { flujoToken } = await prepararAccesoGoogle();
+  const flujo = leerFlujo(flujoToken);
+  comprobarFallo(
+    await callbackGoogle(flujoToken, flujo.state, { error: "access_denied" }),
+    "cancelado",
+  );
+  comprobarFallo(
+    await callbackGoogle(flujoToken, "state-ajeno", { error: "access_denied" }),
+  );
+});
+test("Google callback: rechaza cookie ausente, state ajeno, firma alterada y flujo vencido", async () => {
+  const { flujoToken } = await prepararAccesoGoogle(perfiles[0]);
+  const flujo = leerFlujo(flujoToken);
+  comprobarFallo(await callbackGoogle(undefined, flujo.state));
+  comprobarFallo(await callbackGoogle(flujoToken, "state-ajeno"));
+  comprobarFallo(
+    await callbackGoogle(flujoToken.slice(0, -5) + "xxxxx", flujo.state),
+  );
+  const vencido = jwt.sign({ ...flujo, exp: 1 }, process.env.JWT_SECRET!);
+  comprobarFallo(await callbackGoogle(vencido, flujo.state));
+  assert.equal(usuarios.size, 0);
+});
+test("Google callback: rechazo de Google no crea usuarios ni sesiones", async () => {
+  const { flujoToken } = await prepararAccesoGoogle(perfiles[0]);
+  comprobarFallo(await callbackGoogle(flujoToken, leerFlujo(flujoToken).state));
+  assert.equal(usuarios.size, 0);
+});
+test("Google callback: cuenta desconocida durante login y email ya registrado vuelven con aviso", async (t) => {
+  const { flujoToken } = await prepararAccesoGoogle();
+  const flujo = leerFlujo(flujoToken);
+  simularIdentidadGoogle(t, flujo.nonce);
+  comprobarFallo(await callbackGoogle(flujoToken, flujo.state), "cuenta");
+  usuarios.set("local", {
+    id: "local",
+    email: identidad.email,
+    googleId: null,
+    rol: "ARTISTA",
+  });
+  const registro = await prepararAccesoGoogle(perfiles[0]);
+  const datos = leerFlujo(registro.flujoToken);
+  simularIdentidadGoogle(t, datos.nonce);
+  comprobarFallo(
+    await callbackGoogle(registro.flujoToken, datos.state),
+    "cuenta",
+  );
+  assert.equal(usuarios.get("local")!.googleId, null);
+});
+test("Google callback: error de almacenamiento no emite cookie de sesión", async (t) => {
+  const { flujoToken } = await prepararAccesoGoogle(perfiles[0]);
+  const flujo = leerFlujo(flujoToken);
+  simularIdentidadGoogle(t, flujo.nonce);
+  reemplazar(t, prisma.sesion, "create", async () => {
+    throw new Error("Fallo simulado");
+  });
+  comprobarFallo(await callbackGoogle(flujoToken, flujo.state));
+});
+test("Google callback: cookie Secure en producción", async (t) => {
+  const { flujoToken } = await prepararAccesoGoogle(perfiles[0]);
+  const flujo = leerFlujo(flujoToken);
+  simularIdentidadGoogle(t, flujo.nonce);
+  process.env.NODE_ENV = "production";
+  t.after(() => {
+    process.env.NODE_ENV = "test";
+  });
+  const response = await callbackGoogle(flujoToken, flujo.state);
+  assert.equal(response.status, 303);
+  assert.ok(
+    response.headers
+      .getSetCookie()
+      .every((cookie) => cookie.includes("Secure")),
   );
 });

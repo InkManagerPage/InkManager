@@ -56,6 +56,6 @@ Las reseñas se obtienen de `GET /api/resenas` del backend. Cada tarjeta muestra
 
 El registro y el login se abren en modales desde la cabecera. En `/clientes` se crea una cuenta de cliente sin elegir rol; en `/estudios` se elige entre artista y estudio. La Home pregunta primero qué tipo de cuenta se necesita. El backend administra las sesiones mediante una cookie HttpOnly. El catálogo de `/clientes` todavía usa datos de ejemplo y el dashboard está reservado para más adelante.
 
-El acceso con Google está en desarrollo: el backend prepara el flujo y conserva el perfil de registro firmado, pero faltan el callback y los botones del frontend. [El detalle del registro por landing](../docs/registro-por-landing.md) explica cómo continuar.
+El login y el registro incluyen botones de Google. El backend valida la identidad y crea nuestra sesión; el registro conserva el perfil elegido en la landing. Si se cancela o falla el acceso, se vuelve a la Home con un aviso. [El detalle del registro por landing](../docs/registro-por-landing.md) explica el recorrido y la configuración local.
 
 Las fotografías de la portada y la fuente IBM Plex Sans se guardan localmente. Los retratos de las reseñas se sirven desde Cloudinary. La licencia de la fuente está en `public/fonts/`.

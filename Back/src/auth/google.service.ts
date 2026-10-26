@@ -16,6 +16,9 @@ import {
   crearUsuarioGoogle,
 } from "../usuarios/usuarios.repository.js";
 import type { UsuarioSesion } from "../usuarios/usuarios.entity.js";
+import { abrirSesion } from "../sesiones/sesiones.service.js";
+import { crearToken } from "./auth.tokens.js";
+
 export const duracionFlujoGoogleSegundos = 10 * 60;
 
 export async function prepararAccesoGoogle(registro?: unknown) {
@@ -202,4 +205,20 @@ export async function resolverUsuarioGoogle(
     }
     throw error;
   }
+}
+
+export async function iniciarSesionGoogle(
+  code: unknown,
+  flujoToken: unknown,
+  state: unknown,
+) {
+  const identidad = await obtenerIdentidadGoogle(code, flujoToken, state);
+
+  const usuario = await resolverUsuarioGoogle(identidad);
+
+  const sesion = await abrirSesion(usuario.id);
+
+  const token = crearToken(usuario.id, sesion.id);
+
+  return { usuario, token };
 }

@@ -102,6 +102,14 @@ IDs, autocompletado y errores. `src/lib/auth-validation.ts` comprueba los campos
 el navegador; el backend vuelve a validarlos porque no debe confiar en el cliente.
 Los estilos compartidos están en `src/components/auth/auth.module.css`.
 
+`auth.service.ts` también inicia el login y el registro con Google. El registro envía
+solamente el rol y, si corresponde, el nombre artístico o del estudio; el email y el
+nombre personal vienen de Google. El backend valida todo y vuelve a la Home con la
+misma cookie de sesión que usa el login con contraseña. Al volver, `AuthProvider`
+consulta `/auth/me` y muestra el usuario. `GoogleAuthNotice.tsx` presenta los avisos
+de cancelación o error; se monta dentro de `Suspense` en el layout porque lee los
+parámetros de la URL.
+
 ## Llamadas al backend
 
 Mantené cada sección junto a su página. Si después se usa en varias páginas, movela a `src/components/`. No hace falta crear un componente separado para cada título o párrafo.

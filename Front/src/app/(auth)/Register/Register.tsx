@@ -3,12 +3,20 @@ import { useState } from 'react';
 import { Form, Formik } from 'formik';
 import Modal from 'react-bootstrap/Modal';
 import { AuthField } from '@/components/forms/AuthField';
+import { GoogleButton } from '@/components/auth/GoogleButton';
 import { registrarUsuario } from '@/services/users.service';
 import { useAuth } from '@/store/AuthProvider';
 import { validarRegistro } from '@/lib/auth-validation';
 import { crearValoresRegistro } from '@/lib/registro';
-import type { PublicoRegistro, RegisterModalProps, RegisterValues } from '@/types/forms';
+import type {
+  PublicoRegistro,
+  RegisterModalProps,
+  RegisterValues,
+  PerfilRegistroGoogle,
+} from '@/types/forms';
 import styles from '@/components/auth/auth.module.css';
+import { iniciarRegistroGoogle } from '@/services/auth.service';
+
 const rolesProfesionales = [
   { value: 'ARTISTA', title: 'Artista', description: 'Trabajo por mi cuenta.' },
   { value: 'ESTUDIO_ADMIN', title: 'Estudio', description: 'Gestiono un equipo.' },
@@ -19,6 +27,7 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
   );
   const [error, setError] = useState('');
   const [cuentaCreada, setCuentaCreada] = useState(false);
+  const [conectandoGoogle, setConectandoGoogle] = useState(false);
   const { login } = useAuth();
   async function submit(values: RegisterValues) {
     setError('');
@@ -33,6 +42,47 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
       onHide();
     } catch {
       setCuentaCreada(true);
+    }
+  }
+
+  async function registroConGoogle(values: RegisterValues) {
+    setError('');
+
+    const errores = validarRegistro(values);
+    let perfil: PerfilRegistroGoogle = { rol: 'CLIENTE' };
+
+    if (publico === 'profesional' && values.rol === 'ARTISTA') {
+      if (errores.nombreArtistico) {
+        setError(errores.nombreArtistico);
+        return;
+      }
+
+      perfil = {
+        rol: 'ARTISTA',
+        nombreArtistico: values.nombreArtistico.trim(),
+      };
+    } else if (publico === 'profesional' && values.rol === 'ESTUDIO_ADMIN') {
+      if (errores.nombreEstudio) {
+        setError(errores.nombreEstudio);
+        return;
+      }
+
+      perfil = {
+        rol: 'ESTUDIO_ADMIN',
+        nombreEstudio: values.nombreEstudio.trim(),
+      };
+    }
+
+    setConectandoGoogle(true);
+
+    try {
+      await iniciarRegistroGoogle(perfil);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'No pudimos iniciar el registro con Google.',
+      );
+    } finally {
+      setConectandoGoogle(false);
     }
   }
   return (
@@ -100,7 +150,7 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
             >
               {({ values, isSubmitting, handleChange }) => (
                 <Form noValidate>
-                  <fieldset disabled={isSubmitting}>
+                  <fieldset disabled={isSubmitting || conectandoGoogle}>
                     <legend className={publico === 'cliente' ? 'visually-hidden' : styles.legend}>
                       {publico === 'cliente' ? 'Cuenta de cliente' : 'Tu forma de trabajar'}
                     </legend>
@@ -175,6 +225,17 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
                     <button type="submit" className={styles.submit} disabled={isSubmitting}>
                       {isSubmitting ? 'Creando tu cuenta…' : 'Crear cuenta'}
                     </button>
+                    <p className={styles.hint}>
+                      {publico === 'profesional'
+                        ? 'Para Google, completá solamente el nombre artístico o del estudio.'
+                        : 'Con Google usaremos el nombre y el email de tu cuenta.'}
+                    </p>
+                    <GoogleButton
+                      onClick={() => registroConGoogle(values)}
+                      loading={conectandoGoogle}
+                    >
+                      Registrarme con Google
+                    </GoogleButton>
                   </fieldset>
                 </Form>
               )}

@@ -20,3 +20,8 @@ export interface RegisterValues extends LoginValues {
   nombreArtistico: string;
   nombreEstudio: string;
 }
+
+export type PerfilRegistroGoogle =
+  | { rol: 'CLIENTE' }
+  | { rol: 'ARTISTA'; nombreArtistico: string }
+  | { rol: 'ESTUDIO_ADMIN'; nombreEstudio: string };

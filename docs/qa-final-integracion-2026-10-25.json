@@ -1,0 +1,162 @@
+{
+  "fecha": "2026-10-25",
+  "alcance": "API local, base PostgreSQL y Cloudinary reales; datos temporales",
+  "checks": [
+    {
+      "caso": "Health real",
+      "ok": true
+    },
+    {
+      "caso": "Upload sin sesión rechazado",
+      "ok": true
+    },
+    {
+      "caso": "Registro real CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Respuesta pública CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Hash válido CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Duplicado rechazado CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Login real CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Cookie de sesión CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Sesión y rol desde BD CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "CORS con cookies CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Registro real ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Respuesta pública ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Hash válido ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Nombre artístico persistido",
+      "ok": true
+    },
+    {
+      "caso": "Duplicado rechazado ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Login real ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Cookie de sesión ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Sesión y rol desde BD ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "CORS con cookies ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Registro real ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Respuesta pública ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Hash válido ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Estudio vinculado a su administrador",
+      "ok": true
+    },
+    {
+      "caso": "Duplicado rechazado ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Login real ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Cookie de sesión ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Sesión y rol desde BD ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "CORS con cookies ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Upload autenticado a Cloudinary real",
+      "ok": true
+    },
+    {
+      "caso": "Logout real CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Sesión revocada rechazada CLIENTE",
+      "ok": true
+    },
+    {
+      "caso": "Logout real ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Sesión revocada rechazada ARTISTA",
+      "ok": true
+    },
+    {
+      "caso": "Logout real ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Sesión revocada rechazada ESTUDIO_ADMIN",
+      "ok": true
+    },
+    {
+      "caso": "Alta pública SUPERADMIN rechazada",
+      "ok": true
+    },
+    {
+      "caso": "BD admite Google sin contraseña y sus tres roles; rollback completo",
+      "ok": true
+    }
+  ],
+  "limpieza": {
+    "usuarios": 3,
+    "estudios": 1,
+    "sesiones": 3,
+    "imagen": true,
+    "sinUsuariosTemporales": true
+  },
+  "ok": true
+}
