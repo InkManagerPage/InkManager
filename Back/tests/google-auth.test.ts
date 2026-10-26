@@ -17,6 +17,8 @@ process.env.GOOGLE_CLIENT_SECRET = "secreto-ficticio";
 process.env.GOOGLE_REDIRECT_URI =
   "http://127.0.0.1:4000/api/auth/google/callback";
 process.env.NODE_ENV = "test";
+process.env.MAIL_TRANSPORT = "resend";
+process.env.RESEND_API_KEY = "";
 
 const { app } = await import("../src/app.js");
 const { prisma } = await import("../src/config/prisma.js");

@@ -156,3 +156,9 @@ front/.env.local
 *.log
 .DS_Store
 .vscode/
+
+# Correos de desarrollo: contienen enlaces privados de un solo uso.
+.mail-preview/
+
+# Informes, capturas de pruebas y notas de trabajo locales.
+/docs-local/
