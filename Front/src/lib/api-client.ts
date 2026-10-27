@@ -1,22 +1,35 @@
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-
-// Función común para las llamadas al backend.
-// path es la ruta a consultar; options permite indicar método, cabeceras o datos.
+export const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api';
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  // Quitamos las barras de los extremos para no unir la URL con una doble barra.
-  const baseUrl = apiUrl.replace(/\/+$/, '');
-  const endpoint = path.replace(/^\/+/, '');
   const headers = new Headers(options.headers);
-
-  if (!headers.has('Accept')) {
-    headers.set('Accept', 'application/json');
+  headers.set('Accept', 'application/json');
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`, {
+      credentials: 'include',
+      ...options,
+      signal: options.signal ?? AbortSignal.timeout(15000),
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    throw new Error('No pudimos conectar con InkManager. Intentá nuevamente.');
   }
-
-  const response = await fetch(`${baseUrl}/${endpoint}`, { ...options, headers });
-
   if (!response.ok) {
-    throw new Error(`La API respondió con el estado HTTP ${response.status}.`);
+    const body: unknown = await response.json().catch(() => null);
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : 'No pudimos completar la operación. Intentá nuevamente.';
+    throw new ApiError(message, response.status);
   }
-
   return response;
 }

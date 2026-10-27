@@ -1,0 +1,43 @@
+import type { ModalidadCobro, Prisma, TipoTrabajo } from "@prisma/client";
+
+export interface RegistroArtistaDto {
+  email?: string;
+  password?: string;
+  nombre?: string;
+  nombreArtistico?: string;
+  alias?: string;
+  telefono?: string;
+  dniPasaporte?: string;
+  tipoTrabajo?: TipoTrabajo;
+  direccion?: string;
+  ciudad?: string | null;
+  ciudadId?: number | null;
+  pais?: string | null;
+  radioAlcanceKm?: number | string;
+  horariosAtencion?: Prisma.InputJsonValue;
+  estilosPrincipales?: string[];
+  instagram?: string;
+  tiktok?: string;
+  sitioWeb?: string;
+  anosExperiencia?: number | string;
+  galeria?: { url: string; esCicatrizado?: boolean }[];
+  tarifaMinima?: number | string;
+  modalidadCobro?: ModalidadCobro;
+  requiereSena?: boolean;
+  montoPorcentajeSena?: number | string;
+  politicaCancelacion?: string;
+  metodosPagoAceptados?: string[];
+  cbuAliasBancario?: string;
+  numeroLicencia?: string;
+  licenciaSanitariaUrl?: string;
+  documentoIdentidadUrl?: string;
+  fotoPerfil?: string;
+  fotoTrabajando?: string;
+  aceptaDeclaracionHigiene?: boolean;
+  aceptaCoverUp?: boolean;
+  aceptaCicatrices?: boolean;
+  aceptaRetoques?: boolean;
+  aceptaCaraManos?: boolean;
+  copiaDisenosInternet?: boolean;
+  tamanoMinimoCm?: number | string;
+}

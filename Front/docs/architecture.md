@@ -1,82 +1,90 @@
-# Guía de carpetas y código
+# Estructura y funcionamiento del frontend
 
-## Por dónde empezar a leer
+El frontend usa Next.js App Router, React, TypeScript, Bootstrap y React Bootstrap. Las rutas se definen en `src/app/` y las secciones propias de cada página permanecen junto a ella.
 
-1. `src/app/layout.tsx` carga Bootstrap, la tipografía y los estilos generales. Envuelve todas las páginas.
-2. `src/app/page.tsx` lleva a la persona que entra a `/` hacia `/estudios`.
-3. `src/app/estudios/page.tsx` muestra las secciones de la landing en orden.
-4. Cada archivo de `src/app/estudios/_components/` contiene una de esas secciones.
-5. `landing.module.css`, en esa misma carpeta, define su apariencia.
-
-Un componente es una función que devuelve una parte de la página. Por ejemplo, `Hero()` devuelve la portada. En `page.tsx`, escribir `<Hero />` coloca esa portada en la página.
-
-## Qué hace cada carpeta
+## Carpetas
 
 Las rutas de esta tabla parten de `Front/`.
 
-| Carpeta                         | Qué guardar allí                                                          |
-| ------------------------------- | ------------------------------------------------------------------------- |
-| `src/`                          | Todo el código de la aplicación                                           |
-| `src/app/`                      | Páginas, rutas y estructura común de Next.js                              |
-| `src/app/estudios/`             | La página `/estudios`, con la landing para tatuadores                     |
-| `src/app/estudios/_components/` | Secciones que solo se usan en esa landing                                 |
-| `src/app/clientes/`             | La futura landing de clientes, hoy vacía                                  |
-| `src/app/clientes/_components/` | Secciones propias de la futura landing de clientes                        |
-| `src/app/(auth)/`               | Agrupar las futuras páginas de acceso. `(auth)` no forma parte de la URL  |
-| `src/app/(auth)/login/`         | Reservada para la futura página `/login`                                  |
-| `src/app/(auth)/registro/`      | Reservada para la futura página `/registro`                               |
-| `src/app/dashboard/`            | Reservada para el área privada. Más adelante necesitará control de acceso |
-| `src/components/`               | Componentes que se usen en más de una página                              |
-| `src/components/ui/`            | Controles pequeños compartidos, como botones o campos de texto            |
-| `src/components/forms/`         | Formularios completos que se puedan reutilizar                            |
-| `src/components/layout/`        | Cabeceras, pies y otras partes comunes a varias páginas                   |
-| `src/hooks/`                    | Funciones de React que reúnen comportamiento reutilizable                 |
-| `src/lib/`                      | Configuración y funciones de conexión con herramientas externas           |
-| `src/services/`                 | Llamadas al backend, agrupadas por tema                                   |
-| `src/store/`                    | Datos que varias partes de la aplicación necesiten compartir              |
-| `src/types/`                    | Tipos de TypeScript que se usen en varios archivos                        |
-| `public/`                       | Archivos que el navegador puede abrir directamente                        |
-| `public/images/`                | Fotografías e imágenes                                                    |
-| `public/fonts/`                 | Tipografías locales y sus licencias                                       |
-| `public/icons/`                 | Iconos guardados como archivos                                            |
-| `docs/`                         | Explicaciones para quienes trabajen en el proyecto                        |
+| Carpeta                                  | Responsabilidad                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| `src/app/`                               | Páginas, rutas, layout y estilos generales.                               |
+| `src/app/estudios/`                      | Landing para artistas y estudios.                                         |
+| `src/app/estudios/_components/`          | Secciones y estilos de esa landing.                                       |
+| `src/app/clientes/`                      | Catálogo público para clientes.                                           |
+| `src/app/clientes/_components/`          | Componentes propios del catálogo.                                         |
+| `src/app/artista/`                       | Panel privado: Mis trabajos y Mi perfil.                                  |
+| `src/app/artista/_components/`           | Navegación, galería y formularios del artista.                            |
+| `src/app/(auth)/`                        | Grupo de componentes y páginas de cuenta; no agrega un segmento a la URL. |
+| `src/app/(auth)/Login/`                  | Modal de inicio de sesión.                                                |
+| `src/app/(auth)/Register/`               | Modal de registro por público y rol.                                      |
+| `src/app/(auth)/recuperar-contrasena/`   | Página para solicitar un enlace de contraseña.                            |
+| `src/app/(auth)/restablecer-contrasena/` | Página para definir la nueva contraseña.                                  |
+| `src/app/(auth)/verificar-email/`        | Página de confirmación del email.                                         |
+| `src/app/dashboard/`                     | Carpeta reservada, sin página publicada.                                  |
+| `src/components/`                        | Componentes compartidos entre páginas.                                    |
+| `src/components/auth/`                   | Cabeceras, controles y presentación de cuenta.                            |
+| `src/components/forms/`                  | Formularios y campos compartidos.                                         |
+| `src/components/ui/`                     | Carpeta reservada para controles de interfaz.                             |
+| `src/components/layout/`                 | Carpeta reservada para componentes de layout.                             |
+| `src/hooks/`                             | Hooks de consulta y comportamiento de interfaz.                           |
+| `src/lib/`                               | Cliente HTTP, validadores y funciones auxiliares.                         |
+| `src/services/`                          | Llamadas al backend por funcionalidad.                                    |
+| `src/store/`                             | Estado compartido de la aplicación.                                       |
+| `src/types/`                             | Tipos e interfaces de TypeScript.                                         |
+| `src/mocks/`                             | Datos de ejemplo del catálogo.                                            |
+| `public/`                                | Recursos estáticos.                                                       |
+| `public/images/`                         | Fotografías.                                                              |
+| `public/fonts/`                          | Tipografías locales y licencias.                                          |
+| `public/icons/`                          | Iconos y documentación de sus recursos.                                   |
+| `docs/`                                  | Documentación técnica del frontend.                                       |
 
-Las carpetas reservadas contienen un `.gitkeep` vacío para que Git las conserve. No hace falta llenarlas hasta que las necesitemos.
+Las carpetas reservadas utilizan `.gitkeep` para conservarse en Git.
 
-## Cómo leer la landing
+## Páginas y estilos
 
-### Datos y listas
+`src/app/layout.tsx` carga Bootstrap, tipografía, estilos globales y `AuthProvider`. La Home está en `src/app/page.tsx`; `/estudios` y `/clientes` tienen sus propias páginas.
 
-En `PlansSection.tsx`, `plans` es una lista con los datos de los planes. Cada plan tiene `name` (nombre), `description` (descripción) y `features` (prestaciones). Para editar esos textos, cambiá la lista del principio del archivo.
+La landing ordena las secciones en `src/app/estudios/page.tsx`. Cada componente de `_components/` representa una sección, y `landing.module.css` contiene sus estilos. Los archivos `.module.css` aíslan los nombres de clase. Las clases de Bootstrap aportan grilla, espaciado, tarjetas, modales y acordeón.
 
-`plans.map(...)` recorre esa lista y crea una tarjeta por cada plan. Dentro de cada tarjeta, `plan.features.map(...)` crea un elemento por prestación. `key` permite que React identifique cada elemento de la lista.
+Los componentes que necesitan eventos, estado o APIs del navegador usan `'use client'`. `LandingHeader` controla el menú móvil. `useReducedMotion` consulta la preferencia de movimiento; las franjas y reseñas muestran una versión estática cuando está activada. React Fast Marquee mueve el contenido y lo pausa al pasar el cursor; la lista accesible evita repeticiones para lectores de pantalla.
 
-`ToolsSection.tsx`, `Marquee.tsx` y `ReviewsSection.tsx` usan la misma idea: una lista de datos y un `map` para mostrarlos. En las reseñas, la lista llega del backend en vez de estar escrita en el componente.
+## Reseñas
 
-El recorrido de las reseñas es: `ReviewsSection.tsx` usa `useReviews.ts`; el hook llama a `reviews.service.ts`, que consulta `GET /api/resenas` mediante `api-client.ts`. El tipo `Review`, en `src/types/review.ts`, describe los cuatro datos recibidos: ID, nombre, URL de la foto y reseña. El hook guarda el resultado y cancela la petición cuando se abandona la página. El componente muestra los estados de carga, error y lista vacía.
+`ReviewsSection` utiliza `useReviews`, que consulta `reviews.service.ts` y `GET /api/resenas` mediante `apiFetch`. El tipo `Review` describe ID, nombre, foto y reseña. El hook conserva el resultado y cancela la petición al abandonar la página. La sección contempla carga, error y lista vacía.
 
-### Clases de Bootstrap y estilos propios
+Las reseñas proceden del backend y las fotos se sirven desde Cloudinary. En `/clientes`, la galería de trabajos procede de `GET /api/catalogo`. Al seleccionar una foto, un modal de React Bootstrap presenta el trabajo y los datos públicos de su artista. Los filtros comparten la lista de estilos del backend.
 
-En `className="col-md-6"`, la clase viene de Bootstrap: ocupa media fila desde el tamaño mediano y toda la fila en celulares. `row` crea una fila, `g-4` agrega separación y `text-center` centra el texto.
+## Panel del artista
 
-En `className={styles.plan}`, la clase viene de `landing.module.css`. Un archivo `.module.css` mantiene sus clases separadas de las de otras páginas. Para combinar una clase de Bootstrap con una propia se usan acentos graves y `${styles.nombreDeClase}`, como en las tarjetas de planes.
+`ArtistShell` comprueba la sesión y el rol antes de montar las pantallas. Su menú lateral se puede ocultar y la cabecera muestra nombre y email de la cuenta. `ArtistProfileProvider` comparte el perfil entre la navegación y el formulario para actualizar el indicador de campos pendientes al guardar. `WorkGallery` administra la lista y los estados de publicación; `WorkForm` edita un trabajo en un modal de React Bootstrap. `ProfileEditor` permite completar el perfil. `PhotoField` y `StylePicker` se comparten entre ambos formularios. `lib/comprimir-imagen.ts` prepara las imágenes antes de enviarlas. Los estilos propios del panel están en `panel.module.css`.
 
-`:global(.accordion-button)` dentro del CSS permite modificar una clase que crea Bootstrap. Los bloques `@media` ajustan la apariencia según el ancho de pantalla.
+`artistas.service.ts` realiza las peticiones privadas con cookies de sesión; `catalogo.service.ts` consulta los datos públicos sin caché. Los contratos están en `types/artista.ts`. Las reglas del perfil y de publicación se describen en [Panel del artista](../../docs/panel-artista.md).
 
-### Interacción
+`LocationFields` presenta selectores dependientes de país, provincia y ciudad. Consulta las opciones mediante `ubicaciones.service.ts`, descarta respuestas de selecciones anteriores y recuerda el país en `localStorage`. El perfil envía el ID de ciudad, que se valida en el backend.
 
-`'use client'` al principio de un archivo permite usar eventos, estado y funciones del navegador. Lo necesitan el menú, el acordeón, la franja animada y las reseñas. Las demás secciones solo muestran contenido.
+## Sesión y registro
 
-En `LandingHeader.tsx`, `menuAbierto` guarda si el menú del celular está abierto. `setMenuAbierto` cambia ese valor y `cerrarMenu()` lo pone en `false` cuando se elige un enlace.
+`AuthProvider` consulta `GET /api/auth/me` al cargar la aplicación y comparte el usuario de la sesión. El backend administra el token en una cookie HttpOnly; el frontend no lo guarda en localStorage.
 
-`useReducedMotion.ts` consulta si la persona prefiere menos animaciones. Usa `useSyncExternalStore`, una función de React para leer un valor externo y actualizarlo cuando cambia. `Marquee.tsx` y `ReviewsSection.tsx` usan ese resultado para elegir entre contenido quieto o en movimiento.
+`AuthControls` muestra login y registro, o el nombre, rol y cierre de sesión. `SiteHeader` lo usa en Home y clientes; `LandingHeader`, en estudios. Login y registro son modales, sin rutas `/login` ni `/registro`.
 
-En `ReviewsSection.tsx`, React Fast Marquee desplaza las tarjetas y las pausa al pasar el cursor. La versión animada repite tarjetas para completar el recorrido; los lectores de pantalla reciben una lista sin repeticiones.
+El contexto de registro es `cliente` en `/clientes`, `profesional` en `/estudios` y `general` en Home. `RegisterModal` presenta los campos correspondientes y `src/lib/registro.ts` define sus valores iniciales. El comportamiento por rol y el acceso con Google se describen en [registro y acceso](../../docs/registro-por-landing.md).
 
-## Cuando agreguemos funcionalidad
+Formik administra los valores, errores y envío de formularios. `AuthField` conecta label, ID, autocompletado y validación, e incorpora el botón para mostrar u ocultar cada contraseña de forma independiente. `src/lib/auth-validation.ts` valida en el navegador; el backend valida nuevamente los datos.
 
-Mantené cada sección junto a su página. Si después se usa en varias páginas, movela a `src/components/`. No hace falta crear un componente separado para cada título o párrafo.
+El nombre personal admite solo letras y espacios entre 2 y 20 caracteres. `validarNuevaPassword` comparte las reglas de contraseña entre registro y recuperación: mínimo 9 caracteres, mayúscula, número, símbolo y máximo 72 bytes. El login admite contraseñas existentes y valida presencia y límite de bytes.
 
-`src/lib/api-client.ts` reúne la dirección del backend y una función `apiFetch` para las peticiones. Devuelve la respuesta de Fetch y lanza un error si el servidor responde con un estado de error. `reviews.service.ts` usa esa función y convierte la respuesta JSON en la lista de reseñas.
+`GoogleButton` comparte la apariencia entre login y registro. `GoogleAuthNotice` muestra avisos del callback y se monta dentro de `Suspense` porque consulta los parámetros de la URL.
 
-Las variables de entorno se documentan en `.env.example` y se configuran localmente en `.env.local`. Las que empiezan con `NEXT_PUBLIC_` son públicas: no deben guardar contraseñas ni claves privadas.
+## Recuperación de acceso
+
+`AccountCard` presenta las páginas de cuenta. `RequestEmailForm` solicita enlaces, `ResetPasswordForm` permite definir la contraseña y `VerifyEmail` confirma el correo. Los enlaces llegan en el fragmento de la URL y se envían al backend al confirmar el formulario.
+
+Los estilos de cuenta están en `src/components/auth/auth.module.css`. El envío y la persistencia de tokens pertenecen al backend; el frontend no conoce las claves de Resend. El flujo se describe en [correos y recuperación](../../docs/correos-y-recuperacion.md).
+
+## Cliente HTTP y configuración
+
+`src/lib/api-client.ts` define `apiFetch`, la URL del backend, inclusión de cookies, tiempo de espera y manejo de errores HTTP. Los archivos de `src/services/` convierten las respuestas en los datos de cada funcionalidad.
+
+`Front/.env.local` configura `NEXT_PUBLIC_API_URL`. Las variables con prefijo `NEXT_PUBLIC_` son públicas y no contienen credenciales privadas. `.env.example` documenta las variables necesarias.

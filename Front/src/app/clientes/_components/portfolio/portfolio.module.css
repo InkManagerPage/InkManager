@@ -1,0 +1,148 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px 22px;
+}
+.card {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+}
+.card:focus-visible {
+  outline: 2px solid #202320;
+  outline-offset: 5px;
+}
+.imageFrame {
+  position: relative;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f4f4f0;
+}
+.image {
+  object-fit: cover;
+  transition: transform 200ms;
+}
+.card:hover .image {
+  transform: scale(1.025);
+}
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+}
+.cardInfo > span {
+  font-size: 14px;
+  font-weight: 500;
+}
+.cardInfo small {
+  color: #666b63;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.modalBody {
+  padding: 0;
+}
+.detailLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr);
+}
+.expandedImage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: #f4f4f0;
+}
+.expandedImage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 75vh;
+  object-fit: contain;
+}
+.detailInfo {
+  padding: 32px;
+  overflow-wrap: anywhere;
+}
+.artist {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.artist img {
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.artist strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+}
+.artist span {
+  font-size: 13px;
+  color: #666b63;
+}
+.description {
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tags span {
+  padding: 4px 8px;
+  border: 1px solid #e0e2db;
+  border-radius: 4px;
+  color: #666b63;
+  font-size: 12px;
+}
+.biography {
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid #e0e2db;
+  color: #666b63;
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 800px) {
+  .detailLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .expandedImage img {
+    max-height: 55vh;
+  }
+  .detailInfo {
+    padding: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+  .card:hover .image {
+    transform: none;
+  }
+}
