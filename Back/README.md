@@ -44,12 +44,22 @@ Las credenciales son privadas y los archivos `.env` están excluidos de Git. `pr
 - Bienvenida, verificación de email y recuperación de contraseña por correo.
 - Carga autenticada de imágenes en Cloudinary.
 - Consulta pública de reseñas de artistas.
+- Perfil privado del artista y portafolio con borradores y publicación manual.
+- Catálogo público de artistas completos y trabajos publicados, con estilos comunes.
 
 La [estructura del backend](../docs/estructura-backend.md) documenta las capas, módulos y endpoints. [Registro y acceso](../docs/registro-por-landing.md) describe los roles y Google; [correos y recuperación](../docs/correos-y-recuperacion.md), el envío y los enlaces de cuenta.
 
+El [panel del artista](../docs/panel-artista.md) documenta perfil, portafolio y visibilidad pública. En una base que aún no tenga estas columnas, su esquema se aplica desde `Back/` con:
+
+```sh
+npx prisma db execute --file prisma/changes/20261026_panel_artista.sql --schema prisma/schema.prisma
+npx prisma db execute --file prisma/changes/20261027_ciudad_validada.sql --schema prisma/schema.prisma
+npm run db:generate
+```
+
 ## Imágenes y reseñas
 
-`POST /api/upload` requiere sesión y recibe un único archivo `imagen` por multipart: JPG, PNG o WebP, de hasta 5 MB. Responde `401` sin sesión, `400` ante datos inválidos y `413` si supera el límite.
+`POST /api/upload` requiere sesión y recibe un único archivo `imagen` por multipart: JPG, PNG o WebP, de hasta 2 MB. Responde `401` sin sesión, `400` ante datos inválidos y `413` si supera el límite.
 
 `GET /api/resenas` devuelve hasta veinte artistas con foto y reseña, ordenados por nombre. Cada elemento contiene `id`, `nombre`, `fotoUrl` y `resena`. No expone email, contraseña ni documentos. Una lista sin resultados devuelve `[]`; un error de base devuelve `503`.
 

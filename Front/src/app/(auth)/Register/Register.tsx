@@ -6,7 +6,7 @@ import { AuthField } from '@/components/forms/AuthField';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { registrarUsuario } from '@/services/users.service';
 import { useAuth } from '@/store/AuthProvider';
-import { validarRegistro } from '@/lib/auth-validation';
+import { requisitosPassword, validarRegistro } from '@/lib/auth-validation';
 import { crearValoresRegistro } from '@/lib/registro';
 import type {
   PublicoRegistro,
@@ -178,6 +178,8 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
                       name="nombre"
                       label="Tu nombre"
                       autoComplete="name"
+                      minLength={2}
+                      maxLength={20}
                     />
                     {values.rol === 'ARTISTA' && (
                       <AuthField
@@ -208,7 +210,7 @@ export function RegisterModal({ show, onHide, onSwitch, contexto }: RegisterModa
                       label="Contraseña"
                       type="password"
                       autoComplete="new-password"
-                      hint="Usá una frase de al menos 15 caracteres."
+                      hint={requisitosPassword}
                     />
                     <AuthField
                       prefix="register"

@@ -6,6 +6,7 @@ import { Form, Formik } from 'formik';
 import { AuthField } from './AuthField';
 import { restablecerContrasena } from '@/services/auth.service';
 import { useAuth } from '@/store/AuthProvider';
+import { requisitosPassword, validarNuevaPassword } from '@/lib/auth-validation';
 import styles from '@/components/auth/auth.module.css';
 
 export function ResetPasswordForm() {
@@ -21,21 +22,10 @@ export function ResetPasswordForm() {
     );
   return (
     <>
-      <p className={styles.intro}>
-        Elegí una frase de al menos 15 caracteres. Este enlace se puede usar una sola vez.
-      </p>
+      <p className={styles.intro}>{requisitosPassword}</p>
       <Formik
         initialValues={{ password: '', confirmPassword: '' }}
-        validate={({ password, confirmPassword }) => {
-          const errores: { password?: string; confirmPassword?: string } = {};
-          if (password.length < 15 || !password.trim())
-            errores.password = 'Usá una frase de al menos 15 caracteres.';
-          else if (new TextEncoder().encode(password).length > 72)
-            errores.password = 'Tu contraseña es demasiado larga.';
-          if (!confirmPassword || password !== confirmPassword)
-            errores.confirmPassword = 'Las contraseñas deben coincidir.';
-          return errores;
-        }}
+        validate={validarNuevaPassword}
         onSubmit={async ({ password, confirmPassword }, { resetForm }) => {
           setError('');
           try {

@@ -163,7 +163,7 @@ await once(server, "listening");
 const address = server.address();
 assert.ok(address && typeof address === "object");
 const baseUrl = `http://127.0.0.1:${address.port}/api`;
-const password = "Una frase segura para probar";
+const password = "Una frase segura 1!";
 const base = {
   nombre: "Ana",
   email: "ana@example.com",
@@ -248,6 +248,9 @@ for (const rol of ["CLIENTE", "ARTISTA", "ESTUDIO_ADMIN"]) {
 for (const [name, changes] of [
   ["nombre numérico", { nombre: 42 }],
   ["nombre corto", { nombre: "a" }],
+  ["nombre con números", { nombre: "Ana123" }],
+  ["nombre con símbolos", { nombre: "Ana!" }],
+  ["nombre largo", { nombre: "a".repeat(21) }],
   ["email inválido", { email: "correo" }],
   ["contraseña corta", { password: "123" }],
   ["contraseña en blanco", { password: " ".repeat(20) }],
@@ -352,6 +355,18 @@ test("login, cookie segura, claims y /me sin datos sensibles", async () => {
     "nombre",
     "rol",
   ]);
+});
+
+test("login conserva el acceso a una contraseña anterior a la nueva política", async () => {
+  await post("/auth/register", base);
+  const user = [...users.values()][0];
+  user.password = await bcrypt.hash("clave-anterior", 4);
+  const response = await post("/auth/login", {
+    email: base.email,
+    password: "clave-anterior",
+  });
+  assert.equal(response.status, 200);
+  assert.ok(response.headers.get("set-cookie"));
 });
 test("error uniforme para contraseña y usuario inexistente", async () => {
   await post("/auth/register", base);
@@ -530,12 +545,12 @@ test("upload sin archivo, campo incorrecto, tipo y firma inválidos: 400 JSON", 
   }
   assert.equal(uploads, 0);
 });
-test("upload mayor a 5 MB devuelve 413 JSON", async () => {
+test("upload mayor a 2 MB devuelve 413 JSON", async () => {
   const cookie = await login();
   const response = await upload(
     cookie,
     "imagen",
-    new Uint8Array(5 * 1024 * 1024 + 1),
+    new Uint8Array(2 * 1024 * 1024 + 1),
   );
   assert.equal(response.status, 413);
   assert.match(response.headers.get("content-type")!, /json/);
@@ -638,8 +653,13 @@ test("abrir un enlace de verificación no confirma la cuenta automáticamente", 
     (await request("/auth/verify-email?token=no-existe")).status,
     400,
   );
-  const response = await request(`/auth/verify-email?token=${"a".repeat(64)}`, { redirect: "manual" });
+  const response = await request(`/auth/verify-email?token=${"a".repeat(64)}`, {
+    redirect: "manual",
+  });
   assert.equal(response.status, 303);
-  assert.equal(response.headers.get("location"), `http://127.0.0.1:3001/verificar-email#${"a".repeat(64)}`);
+  assert.equal(
+    response.headers.get("location"),
+    `http://127.0.0.1:3001/verificar-email#${"a".repeat(64)}`,
+  );
   assert.equal(user.emailVerificado, false);
 });

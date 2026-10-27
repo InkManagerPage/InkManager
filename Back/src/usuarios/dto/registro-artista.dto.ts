@@ -1,4 +1,4 @@
-import type { ModalidadCobro, Prisma, TipoTrabajo } from '@prisma/client';
+import type { ModalidadCobro, Prisma, TipoTrabajo } from "@prisma/client";
 
 export interface RegistroArtistaDto {
   email?: string;
@@ -10,8 +10,9 @@ export interface RegistroArtistaDto {
   dniPasaporte?: string;
   tipoTrabajo?: TipoTrabajo;
   direccion?: string;
-  ciudad?: string;
-  pais?: string;
+  ciudad?: string | null;
+  ciudadId?: number | null;
+  pais?: string | null;
   radioAlcanceKm?: number | string;
   horariosAtencion?: Prisma.InputJsonValue;
   estilosPrincipales?: string[];

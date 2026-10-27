@@ -10,8 +10,19 @@ interface Props {
   type?: HTMLInputTypeAttribute;
   autoComplete?: string;
   hint?: string;
+  minLength?: number;
+  maxLength?: number;
 }
-export function AuthField({ name, label, prefix, type = 'text', autoComplete, hint }: Props) {
+export function AuthField({
+  name,
+  label,
+  prefix,
+  type = 'text',
+  autoComplete,
+  hint,
+  minLength,
+  maxLength,
+}: Props) {
   const [field, meta] = useField<string>(name);
   const [visible, setVisible] = useState(false);
   const esPassword = type === 'password';
@@ -28,6 +39,8 @@ export function AuthField({ name, label, prefix, type = 'text', autoComplete, hi
           id={id}
           type={esPassword && visible ? 'text' : type}
           autoComplete={autoComplete}
+          minLength={minLength ?? (esPassword && autoComplete === 'new-password' ? 9 : undefined)}
+          maxLength={maxLength ?? (esPassword ? 72 : undefined)}
           required
           className={`form-control ${error ? 'is-invalid' : ''}`}
           aria-invalid={Boolean(error)}

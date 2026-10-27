@@ -9,6 +9,11 @@ Back/
 ├── src/
 │   ├── auth/             # Login, logout, JWT y acceso con Google
 │   ├── usuarios/         # Registro y persistencia de usuarios
+│   ├── artistas/         # Edición del perfil del artista autenticado
+│   ├── trabajos/         # Portafolio propio, borradores y publicación
+│   ├── estilos/          # Lista común y validación de estilos
+│   ├── catalogo/         # Consulta pública de artistas y trabajos publicados
+│   ├── ubicaciones/      # Países, provincias y ciudades del catálogo geográfico
 │   ├── sesiones/         # Creación, consulta y revocación de sesiones
 │   ├── tokens-cuenta/    # Recuperación de contraseña y verificación de email
 │   ├── correos/          # Plantillas, envío y errores de correo
@@ -71,6 +76,15 @@ El acceso con Google valida identidad, state, nonce y PKCE, conserva el rol de u
 | `GET /api/resenas`                   | Consultar reseñas públicas                 | `resenas`           |
 | `POST /api/upload`                   | Subir imagen con sesión válida             | `imagenes`          |
 | `GET /api/health`                    | Consultar estado del servidor              | `health`            |
+| `GET /api/estilos`                   | Consultar los estilos disponibles          | `estilos`           |
+| `GET /api/catalogo`                  | Artistas y trabajos públicos               | `catalogo`          |
+| `GET /api/auth/filter-artists`       | Filtrar perfiles públicos de artistas      | `usuarios`          |
+| `GET /api/artistas/perfil`           | Consultar el perfil propio                 | `artistas`          |
+| `PUT /api/artistas/perfil`           | Guardar perfil y foto                      | `artistas`          |
+| `GET /api/trabajos`                  | Consultar el portafolio propio             | `trabajos`          |
+| `POST /api/trabajos`                 | Crear un trabajo                           | `trabajos`          |
+| `PATCH /api/trabajos/:id`            | Editar, publicar o pasar a borrador        | `trabajos`          |
+| `DELETE /api/trabajos/:id`           | Eliminar trabajo y foto                    | `trabajos`          |
 
 Los errores esperados usan `HttpError` y se devuelven como JSON. Los middlewares comprueban el origen de peticiones que modifican datos y traducen errores de JSON y Multer. El login tiene un límite de cinco intentos fallidos por cada quince minutos. Las respuestas de sesión utilizan `Cache-Control: no-store`.
 
@@ -78,7 +92,15 @@ Los errores esperados usan `HttpError` y se devuelven como JSON. Los middlewares
 
 El repositorio de reseñas selecciona artistas con foto y reseña. El servicio transforma `fotoPerfil` en `fotoUrl`; el controlador devuelve ID, nombre, foto y texto, sin datos privados. La consulta devuelve hasta veinte perfiles ordenados por nombre, un arreglo vacío si no hay resultados y HTTP 503 si falla el acceso a la base.
 
-La carga de imágenes requiere sesión y acepta un único archivo `imagen` de tipo JPG, PNG o WebP, de hasta 5 MB. Cloudinary devuelve la referencia de la imagen almacenada.
+La carga de imágenes requiere sesión y acepta un único archivo `imagen` de tipo JPG, PNG o WebP, de hasta 2 MB. Cloudinary devuelve la referencia de la imagen almacenada.
+
+## Perfil y portafolio del artista
+
+`artistas` y `trabajos` requieren sesión con rol `ARTISTA`. El ID del propietario se obtiene de la sesión; las consultas y modificaciones de trabajos incluyen ese ID. Un trabajo ajeno responde 404. El catálogo público selecciona únicamente los campos públicos del artista y sus trabajos publicados.
+
+El perfil utiliza `Usuario` y los trabajos utilizan `FotoGaleria`. Los estilos se validan contra una lista común, sin repositorio ni tabla propia. Las reglas y formatos de entrada están en [Panel del artista](panel-artista.md).
+
+`ubicaciones` consulta un catálogo local de países, provincias y ciudades. Publica `GET /api/ubicaciones/paises`, `GET /api/ubicaciones/provincias?pais=AR` y `GET /api/ubicaciones/ciudades?pais=AR&provincia=3641`. El perfil guarda `ciudadId`; el backend obtiene la ciudad y el país del catálogo. El detalle y la atribución de los datos están en [Ubicaciones](ubicaciones.md).
 
 ## Correos y enlaces de cuenta
 

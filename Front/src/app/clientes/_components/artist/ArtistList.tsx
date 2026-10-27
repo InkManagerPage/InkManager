@@ -19,7 +19,7 @@ const ArtistList = ({ artist }: ArtistListProps) => {
     <div className={styles.list}>
       <div className={styles.grid}>
         {artist.map((artista) => (
-          <ArtistCard key={artista.stage_name} artist={artista} />
+          <ArtistCard key={artista.id} artist={artista} />
         ))}
       </div>
     </div>

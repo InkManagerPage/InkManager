@@ -71,6 +71,7 @@ model Usuario {
   googleId String? @unique // Identificador de su cuenta de Google
   nombre                 String? // Nombre Completo / Razón Social
   nombreArtistico        String? // Alias / Apodo para Artistas
+  biografia              String?
   alias                  String?
   rol                    Rol     @default(CLIENTE)
   telefono               String?
@@ -91,6 +92,7 @@ model Usuario {
   tipoTrabajo      TipoTrabajo?
   direccion        String?
   ciudad           String?
+  ciudadId         Int?
   pais             String?
   radioAlcanceKm   Int?         @default(20)
   horariosAtencion Json? // Días y rangos horarios
@@ -144,10 +146,22 @@ model Usuario {
 model FotoGaleria {
   id            String   @id @default(uuid())
   url           String
+  publicId      String?
+  descripcion   String @default("")
+  estilos       String[] @default([])
+  estado        EstadoPublicacion @default(BORRADOR)
   esCicatrizado Boolean  @default(false)
   usuarioId     String
   usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@index([usuarioId, estado])
+}
+
+enum EstadoPublicacion {
+  BORRADOR
+  PUBLICADO
 }
 
 model Estudio {

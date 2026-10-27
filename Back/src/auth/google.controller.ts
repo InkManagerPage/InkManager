@@ -66,11 +66,12 @@ export async function callbackGoogle(
         req.query.error === "access_denied" ? "cancelado" : "fallido",
       );
     } else {
-      const { token } = await iniciarSesionGoogle(
+      const { token, usuario } = await iniciarSesionGoogle(
         req.query.code,
         flujoToken,
         req.query.state,
       );
+      if (usuario.rol === "ARTISTA") destino.pathname = "/artista/trabajos";
       res.cookie("inkmanager_session", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

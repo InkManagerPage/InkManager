@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { LoginModal } from '@/app/(auth)/Login/Login';
 import { RegisterModal } from '@/app/(auth)/Register/Register';
 import { useAuth } from '@/store/AuthProvider';
@@ -54,6 +55,11 @@ export function AuthControls({
             <strong>{usuario.nombre || usuario.email}</strong>
             <small>{nombresRol[usuario.rol]}</small>
           </span>
+          {usuario.rol === 'ARTISTA' && (
+            <Link href="/artista/trabajos" className={styles.linkButton} onClick={onOpen}>
+              Mi panel
+            </Link>
+          )}
           <button className={styles.outline} onClick={salir} disabled={saliendo}>
             {saliendo ? 'Cerrando…' : 'Cerrar sesión'}
           </button>

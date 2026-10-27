@@ -488,7 +488,12 @@ for (const perfil of perfiles) {
       returnTo: "https://ajeno.example",
     });
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("location"), "http://127.0.0.1:3001/");
+    assert.equal(
+      response.headers.get("location"),
+      perfil.rol === "ARTISTA"
+        ? "http://127.0.0.1:3001/artista/trabajos"
+        : "http://127.0.0.1:3001/",
+    );
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(response.headers.get("referrer-policy"), "no-referrer");
     assert.equal(sesiones.size, 1);

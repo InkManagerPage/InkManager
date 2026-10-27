@@ -10,8 +10,8 @@ import { crearValoresRegistro } from "../../Front/src/lib/registro.js";
 const registro = {
   nombre: "Ana",
   email: "ana@example.com",
-  password: "Una frase segura para probar",
-  confirmPassword: "Una frase segura para probar",
+  password: "Una frase segura 1!",
+  confirmPassword: "Una frase segura 1!",
   rol: "CLIENTE" as const,
   nombreArtistico: "",
   nombreEstudio: "",
