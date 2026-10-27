@@ -87,4 +87,6 @@ Los estilos de cuenta están en `src/components/auth/auth.module.css`. El envío
 
 `src/lib/api-client.ts` define `apiFetch`, la URL del backend, inclusión de cookies, tiempo de espera y manejo de errores HTTP. Los archivos de `src/services/` convierten las respuestas en los datos de cada funcionalidad.
 
-`Front/.env.local` configura `NEXT_PUBLIC_API_URL`. Las variables con prefijo `NEXT_PUBLIC_` son públicas y no contienen credenciales privadas. `.env.example` documenta las variables necesarias.
+El navegador consulta `/api` en el mismo dominio de la página. `next.config.ts` reenvía esas peticiones al backend, incluyendo las cookies y las respuestas de Google. Esto permite usar una cookie HttpOnly con `SameSite=Lax` aunque frontend y backend estén alojados en proveedores distintos.
+
+`Front/.env.local` configura `API_URL`, la URL absoluta del backend con `/api`. Las consultas desde el servidor también usan esa dirección. Se admite `NEXT_PUBLIC_API_URL` como alternativa para instalaciones anteriores, pero el navegador siempre usa `/api`. La configuración de producción está en [Despliegue](../../docs/despliegue.md).

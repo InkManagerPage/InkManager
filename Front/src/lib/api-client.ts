@@ -1,4 +1,7 @@
-export const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api';
+// En el navegador usamos el mismo dominio para conservar la cookie de sesión.
+export const apiUrl = '/api';
+const serverApiUrl =
+  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api';
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -13,7 +16,8 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   headers.set('Accept', 'application/json');
   let response: Response;
   try {
-    response = await fetch(`${apiUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`, {
+    const baseUrl = typeof window === 'undefined' ? serverApiUrl : apiUrl;
+    response = await fetch(`${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`, {
       credentials: 'include',
       ...options,
       signal: options.signal ?? AbortSignal.timeout(15000),
