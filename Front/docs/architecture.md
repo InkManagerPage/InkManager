@@ -13,6 +13,8 @@ Las rutas de esta tabla parten de `Front/`.
 | `src/app/estudios/_components/`          | Secciones y estilos de esa landing.                                       |
 | `src/app/clientes/`                      | Catálogo público para clientes.                                           |
 | `src/app/clientes/_components/`          | Componentes propios del catálogo.                                         |
+| `src/app/artista/`                       | Panel privado: Mis trabajos y Mi perfil.                                  |
+| `src/app/artista/_components/`           | Navegación, galería y formularios del artista.                            |
 | `src/app/(auth)/`                        | Grupo de componentes y páginas de cuenta; no agrega un segmento a la URL. |
 | `src/app/(auth)/Login/`                  | Modal de inicio de sesión.                                                |
 | `src/app/(auth)/Register/`               | Modal de registro por público y rol.                                      |
@@ -51,7 +53,15 @@ Los componentes que necesitan eventos, estado o APIs del navegador usan `'use cl
 
 `ReviewsSection` utiliza `useReviews`, que consulta `reviews.service.ts` y `GET /api/resenas` mediante `apiFetch`. El tipo `Review` describe ID, nombre, foto y reseña. El hook conserva el resultado y cancela la petición al abandonar la página. La sección contempla carga, error y lista vacía.
 
-Las reseñas proceden del backend y las fotos se sirven desde Cloudinary. Los datos del catálogo de `/clientes` proceden de `src/mocks/`.
+Las reseñas proceden del backend y las fotos se sirven desde Cloudinary. En `/clientes`, la galería de trabajos procede de `GET /api/catalogo`. Al seleccionar una foto, un modal de React Bootstrap presenta el trabajo y los datos públicos de su artista. Los filtros comparten la lista de estilos del backend.
+
+## Panel del artista
+
+`ArtistShell` comprueba la sesión y el rol antes de montar las pantallas. Su menú lateral se puede ocultar y la cabecera muestra nombre y email de la cuenta. `ArtistProfileProvider` comparte el perfil entre la navegación y el formulario para actualizar el indicador de campos pendientes al guardar. `WorkGallery` administra la lista y los estados de publicación; `WorkForm` edita un trabajo en un modal de React Bootstrap. `ProfileEditor` permite completar el perfil. `PhotoField` y `StylePicker` se comparten entre ambos formularios. `lib/comprimir-imagen.ts` prepara las imágenes antes de enviarlas. Los estilos propios del panel están en `panel.module.css`.
+
+`artistas.service.ts` realiza las peticiones privadas con cookies de sesión; `catalogo.service.ts` consulta los datos públicos sin caché. Los contratos están en `types/artista.ts`. Las reglas del perfil y de publicación se describen en [Panel del artista](../../docs/panel-artista.md).
+
+`LocationFields` presenta selectores dependientes de país, provincia y ciudad. Consulta las opciones mediante `ubicaciones.service.ts`, descarta respuestas de selecciones anteriores y recuerda el país en `localStorage`. El perfil envía el ID de ciudad, que se valida en el backend.
 
 ## Sesión y registro
 
@@ -62,6 +72,8 @@ Las reseñas proceden del backend y las fotos se sirven desde Cloudinary. Los da
 El contexto de registro es `cliente` en `/clientes`, `profesional` en `/estudios` y `general` en Home. `RegisterModal` presenta los campos correspondientes y `src/lib/registro.ts` define sus valores iniciales. El comportamiento por rol y el acceso con Google se describen en [registro y acceso](../../docs/registro-por-landing.md).
 
 Formik administra los valores, errores y envío de formularios. `AuthField` conecta label, ID, autocompletado y validación, e incorpora el botón para mostrar u ocultar cada contraseña de forma independiente. `src/lib/auth-validation.ts` valida en el navegador; el backend valida nuevamente los datos.
+
+El nombre personal admite solo letras y espacios entre 2 y 20 caracteres. `validarNuevaPassword` comparte las reglas de contraseña entre registro y recuperación: mínimo 9 caracteres, mayúscula, número, símbolo y máximo 72 bytes. El login admite contraseñas existentes y valida presencia y límite de bytes.
 
 `GoogleButton` comparte la apariencia entre login y registro. `GoogleAuthNotice` muestra avisos del callback y se monta dentro de `Suspense` porque consulta los parámetros de la URL.
 

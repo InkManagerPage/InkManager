@@ -32,6 +32,7 @@ export async function registrarArtista(entrada: unknown) {
     tipoTrabajo,
     direccion,
     ciudad,
+    ciudadId,
     pais,
     radioAlcanceKm,
     horariosAtencion,
@@ -104,6 +105,7 @@ export async function registrarArtista(entrada: unknown) {
       tipoTrabajo: tipoTrabajo || null,
       direccion: direccion || null,
       ciudad: ciudad || null,
+      ciudadId: ciudadId ?? null,
       pais: pais || null,
       radioAlcanceKm:
         radioAlcanceKm !== undefined ? Number(radioAlcanceKm) : 20,

@@ -1,18 +1,22 @@
 'use client';
 
+import { useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { MOCK_ARTISTS } from '@/mocks/artist';
 import styles from './combinableFilters.module.css';
 
 type FilterName = 'stylesParam' | 'isStudioParam' | 'locationParam';
 
-const stylesArray = Array.from(new Set(MOCK_ARTISTS.flatMap((artist) => artist.styles)));
-const cityArray = Array.from(new Set(MOCK_ARTISTS.map((artist) => artist.city)));
-
-export default function CombinableFilters() {
+export default function CombinableFilters({
+  stylesArray,
+  cityArray,
+}: {
+  stylesArray: string[];
+  cityArray: string[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [actualizando, startTransition] = useTransition();
 
   function setFilter(name: FilterName, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -24,11 +28,13 @@ export default function CombinableFilters() {
     }
 
     const queryString = params.toString();
-    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    startTransition(() => {
+      router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    });
   }
 
   return (
-    <section className={styles.filters} aria-label="Filtros de búsqueda">
+    <section className={styles.filters} aria-label="Filtros de búsqueda" aria-busy={actualizando}>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="style-filter">
           Estilo
@@ -36,7 +42,8 @@ export default function CombinableFilters() {
         <select
           className={styles.select}
           id="style-filter"
-          defaultValue={searchParams.get('stylesParam') ?? ''}
+          disabled={actualizando}
+          value={searchParams.get('stylesParam') ?? ''}
           onChange={(event) => setFilter('stylesParam', event.target.value)}
         >
           <option value="">Todos</option>
@@ -55,7 +62,8 @@ export default function CombinableFilters() {
         <select
           className={styles.select}
           id="studio-filter"
-          defaultValue={searchParams.get('isStudioParam') ?? ''}
+          disabled={actualizando}
+          value={searchParams.get('isStudioParam') ?? ''}
           onChange={(event) => setFilter('isStudioParam', event.target.value)}
         >
           <option value="">Todos</option>
@@ -71,7 +79,8 @@ export default function CombinableFilters() {
         <select
           className={styles.select}
           id="location-filter"
-          defaultValue={searchParams.get('locationParam') ?? ''}
+          disabled={actualizando}
+          value={searchParams.get('locationParam') ?? ''}
           onChange={(event) => setFilter('locationParam', event.target.value)}
         >
           <option value="">Todos</option>

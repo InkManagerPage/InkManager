@@ -1,0 +1,27 @@
+export const estilosCatalogo = [
+  "Acuarela",
+  "Anime",
+  "Arte Clásico",
+  "Blackwork",
+  "Botánico",
+  "Chicano",
+  "Darkwork",
+  "Fine Line",
+  "Full Color",
+  "Geométrico",
+  "Grabado",
+  "Ilustrativo",
+  "Japonés",
+  "Lettering",
+  "Microrealismo",
+  "Minimalista",
+  "Neotradicional",
+  "Ornamental",
+  "Puntillismo",
+  "Realismo",
+  "Sombra",
+  "Tradicional",
+  "Tribal",
+] as const;
+
+export type Estilo = (typeof estilosCatalogo)[number];

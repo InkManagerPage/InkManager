@@ -15,8 +15,9 @@ const ArtistCard = ({ artist }: ArtistCardProps) => {
       <div className={styles.imageFrame}>
         <Image
           src={artist.avatar_url}
-          alt={artist.slug || artist.stage_name}
+          alt={`Foto de ${artist.stage_name}`}
           fill
+          sizes="320px"
           className={styles.image}
         />
 

@@ -9,115 +9,32 @@
   color: var(--ink);
   background: #fff;
 }
-
-.page ::selection {
-  background-color: var(--ink);
-  color: #fff;
-}
-
 .hero,
 .content {
   width: 100%;
   max-width: 80rem;
   margin-inline: auto;
-  padding-inline: 1rem;
+  padding-inline: clamp(20px, 4vw, 48px);
 }
-
 .hero {
-  position: relative;
-  padding-top: clamp(4rem, 8vw, 7rem);
-  padding-bottom: clamp(3rem, 6vw, 5rem);
-  border-bottom: 1px solid var(--line);
-  text-align: center;
+  padding-top: clamp(36px, 6vw, 70px);
+  padding-bottom: 32px;
 }
-
-.page h1,
-.page h2,
-.page h3 {
-  color: var(--ink);
-  font-weight: 400;
-}
-
-.eyebrow {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: var(--muted);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
 .title {
+  max-width: 750px;
   margin: 0;
-  font-size: clamp(2.5rem, 6vw, 5.5rem);
-  line-height: 1.05;
-  letter-spacing: -0.055em;
-}
-
-.intro {
-  max-width: 42rem;
-  margin: 1rem auto 0;
-  color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.75;
-}
-
-.content {
-  padding-top: clamp(3rem, 6vw, 5rem);
-  padding-bottom: clamp(3rem, 6vw, 5rem);
-}
-
-.content > * + * {
-  margin-top: 4rem;
-}
-
-.sectionHeading {
-  margin-bottom: 2rem;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: clamp(2rem, 3.5vw, 3rem);
+  color: var(--ink);
+  font-size: clamp(32px, 4.5vw, 56px);
+  font-weight: 400;
   line-height: 1.1;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
 }
-
-.sectionDescription {
-  margin: 0.5rem 0 0;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  line-height: 1.6;
+.content {
+  padding-top: 24px;
+  padding-bottom: 64px;
 }
-
-.divider {
-  height: 0;
-  margin: 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  opacity: 1;
-}
-
 .noResultsMessage {
+  margin: 48px 0;
   color: var(--muted);
   line-height: 1.6;
-}
-
-@media (min-width: 40rem) {
-  .hero,
-  .content {
-    padding-inline: 1.5rem;
-  }
-
-  .intro {
-    font-size: 1.125rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  .hero,
-  .content {
-    padding-inline: 2rem;
-  }
 }

@@ -22,7 +22,7 @@ export const manejarErrores: ErrorRequestHandler = (
     const grande = error.code === "LIMIT_FILE_SIZE";
     res.status(grande ? 413 : 400).json({
       error: grande
-        ? "La imagen debe pesar como máximo 5 MB."
+        ? "La imagen debe pesar como máximo 2 MB."
         : "Enviá una sola imagen en el campo «imagen».",
     });
     return;

@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { ModalidadCobro, TipoTrabajo } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import type { RegistroArtistaDto } from "./dto/registro-artista.dto.js";
+import { validarCiudad } from "../ubicaciones/ubicaciones.service.js";
 
 export function validarRolRegistro(rol: unknown): RegistroUsuarioDto["rol"] {
   if (rol === Rol.CLIENTE || rol === Rol.ARTISTA || rol === Rol.ESTUDIO_ADMIN) {
@@ -17,19 +18,35 @@ export function validarRolRegistro(rol: unknown): RegistroUsuarioDto["rol"] {
 }
 
 export function validarNombre(valor: unknown): string {
-  // Valido que sea un string y que no esté vacío
   if (typeof valor !== "string") {
     throw new HttpError(400, "El nombre debe ser un texto");
   }
-
-  // Quito espacios de los extremos y compruebo la longitud
-  const nombre = valor.trim();
-
-  if (nombre.length < 2 || nombre.length > 50) {
-    throw new HttpError(400, "El nombre debe tener entre 2 y 50 caracteres");
+  const nombre = valor.trim().normalize("NFC").replace(/ +/g, " ");
+  if (
+    nombre.length < 2 ||
+    nombre.length > 20 ||
+    !/^\p{L}+(?: \p{L}+)*$/u.test(nombre)
+  ) {
+    throw new HttpError(
+      400,
+      "El nombre debe tener entre 2 y 20 caracteres, solo letras y espacios.",
+    );
   }
-
   return nombre;
+}
+
+export function validarNombrePublico(valor: unknown): string {
+  if (
+    typeof valor !== "string" ||
+    valor.trim().length < 2 ||
+    valor.trim().length > 50
+  ) {
+    throw new HttpError(
+      400,
+      "El nombre artístico o del estudio debe tener entre 2 y 50 caracteres.",
+    );
+  }
+  return valor.trim();
 }
 
 export function validarEmail(valor: unknown): string {
@@ -52,10 +69,10 @@ export function validarPassword(valor: unknown): string {
   if (typeof valor !== "string") {
     throw new HttpError(400, "La contraseña debe ser un texto");
   }
-  if (valor.length < 15 || valor.trim().length === 0) {
+  if (!/^(?=.*\p{Lu})(?=.*[0-9])(?=.*[\p{P}\p{S}]).{9,}$/su.test(valor)) {
     throw new HttpError(
       400,
-      "La contraseña debe tener al menos 15 caracteres y no puede estar vacía",
+      "Usá al menos 9 caracteres, una mayúscula, un número y un símbolo.",
     );
   }
 
@@ -84,11 +101,14 @@ export function validarPerfilRegistro(entrada: unknown): PerfilRegistroDto {
   const rol = validarRolRegistro(datos.rol);
 
   if (rol === Rol.ARTISTA) {
-    return { rol, nombreArtistico: validarNombre(datos.nombreArtistico) };
+    return {
+      rol,
+      nombreArtistico: validarNombrePublico(datos.nombreArtistico),
+    };
   }
 
   if (rol === Rol.ESTUDIO_ADMIN) {
-    return { rol, nombreEstudio: validarNombre(datos.nombreEstudio) };
+    return { rol, nombreEstudio: validarNombrePublico(datos.nombreEstudio) };
   }
 
   return { rol };
@@ -125,7 +145,7 @@ export function validarRegistroArtista(entrada: unknown) {
     nombre: validarNombre(datos.nombre),
     email: validarEmail(datos.email),
     password: validarPassword(datos.password),
-    nombreArtistico: validarNombre(datos.nombreArtistico),
+    nombreArtistico: validarNombrePublico(datos.nombreArtistico),
   };
 
   const textos = [
@@ -133,8 +153,6 @@ export function validarRegistroArtista(entrada: unknown) {
     "telefono",
     "dniPasaporte",
     "direccion",
-    "ciudad",
-    "pais",
     "instagram",
     "tiktok",
     "sitioWeb",
@@ -146,6 +164,9 @@ export function validarRegistroArtista(entrada: unknown) {
     "fotoPerfil",
     "fotoTrabajando",
   ] as const;
+  if ((datos.ciudad || datos.pais) && !datos.ciudadId)
+    throw new HttpError(400, "Elegí una ciudad de la lista.");
+  Object.assign(registro, validarCiudad(datos.ciudadId));
   for (const campo of textos) {
     const valor = datos[campo];
     if (valor === undefined || valor === null || valor === "") continue;

@@ -1,78 +1,148 @@
-.list {
-  width: 80%;
-  margin-inline: auto;
-  padding: 2rem 1rem;
-}
-
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  justify-items: center;
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px 22px;
 }
-
 .card {
-  position: relative;
+  display: block;
+  min-width: 0;
   width: 100%;
-  max-width: 20rem;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background-color: #fff;
-  box-shadow:
-    0 8px 24px -16px rgb(32 35 32 / 24%),
-    0 2px 6px -4px rgb(32 35 32 / 12%);
-  transition:
-    border-color 300ms,
-    box-shadow 300ms;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  color: inherit;
+  text-align: left;
 }
-
-.card:hover {
-  border-color: var(--line);
-  box-shadow: 0 12px 30px -16px rgb(32 35 32 / 28%);
+.card:focus-visible {
+  outline: 2px solid #202320;
+  outline-offset: 5px;
 }
-
 .imageFrame {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 4/5;
   overflow: hidden;
-  background-color: #fff;
+  border-radius: 4px;
+  background: #f4f4f0;
 }
-
 .image {
   object-fit: cover;
-  transition: transform 500ms;
+  transition: transform 200ms;
 }
-
 .card:hover .image {
-  transform: scale(1.05);
+  transform: scale(1.025);
 }
-
-.details {
+.cardInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid var(--line);
-  background-color: #fff;
+  gap: 4px;
+  padding-top: 12px;
 }
-
-.caption {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.styleTag {
-  align-self: flex-start;
-  padding: 0.125rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background-color: #fff;
-  color: var(--muted);
-  font-size: 0.75rem;
+.cardInfo > span {
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1rem;
+}
+.cardInfo small {
+  color: #666b63;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.modalBody {
+  padding: 0;
+}
+.detailLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr);
+}
+.expandedImage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: #f4f4f0;
+}
+.expandedImage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 75vh;
+  object-fit: contain;
+}
+.detailInfo {
+  padding: 32px;
+  overflow-wrap: anywhere;
+}
+.artist {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.artist img {
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.artist strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+}
+.artist span {
+  font-size: 13px;
+  color: #666b63;
+}
+.description {
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tags span {
+  padding: 4px 8px;
+  border: 1px solid #e0e2db;
+  border-radius: 4px;
+  color: #666b63;
+  font-size: 12px;
+}
+.biography {
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid #e0e2db;
+  color: #666b63;
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 800px) {
+  .detailLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .expandedImage img {
+    max-height: 55vh;
+  }
+  .detailInfo {
+    padding: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+  .card:hover .image {
+    transform: none;
+  }
 }

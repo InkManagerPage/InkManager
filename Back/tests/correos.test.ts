@@ -218,7 +218,7 @@ const post = (path: string, body: unknown) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-const password = "Una contraseña nueva y segura";
+const password = "Una contraseña nueva 1!";
 function usuario(google = false) {
   const row = {
     id: randomUUID(),
@@ -240,14 +240,14 @@ function tokenDelCorreo() {
 
 test("registro envía bienvenida con verificación, sin contraseña ni token crudo en BD", async () => {
   await registrarUsuario({
-    nombre: "<Ana & Ink>",
+    nombre: "Ana",
     email: "ana@example.com",
     password,
     rol: "CLIENTE",
   });
   assert.equal(enviados.length, 1);
   assert.equal(enviados[0].subject, "Bienvenido a InkManager");
-  assert.ok(enviados[0].html.includes("&lt;Ana &amp; Ink&gt;"));
+  assert.ok(enviados[0].html.includes("Ana"));
   assert.equal(enviados[0].text.includes(password), false);
   const token = tokenDelCorreo();
   assert.equal([...tokens.values()][0].tokenHash, hashTokenCuenta(token));

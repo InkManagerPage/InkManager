@@ -1,5 +1,13 @@
 # Registro y acceso
 
+## Validaciones de cuenta
+
+El nombre personal del registro manual admite de 2 a 20 caracteres, únicamente letras y espacios entre palabras. Se admiten tildes y otras letras Unicode, se normalizan los acentos y los espacios repetidos. Los nombres artísticos y de estudio conservan de 2 a 50 caracteres porque pueden incluir denominaciones comerciales.
+
+Registro y restablecimiento de contraseña utilizan la misma política: al menos 9 caracteres, una mayúscula, un número y un símbolo. Los espacios no cuentan como símbolos. El límite de 72 bytes evita el truncamiento de bcrypt. La confirmación debe coincidir exactamente; mostrar la contraseña no modifica estas reglas. Los enlaces de Google para crear una contraseña usan el mismo formulario de restablecimiento.
+
+El login valida email, presencia de contraseña y límite de bytes, y comprueba el hash almacenado. No exige que una contraseña anterior cumpla la nueva política de creación, para conservar el acceso de las cuentas existentes.
+
 ## Tipo de cuenta según la página
 
 | Entrada     | Registro                                                                      |
@@ -48,7 +56,7 @@ El endpoint devuelve una URL y guarda el flujo firmado durante diez minutos en l
 
 En `GET /api/auth/google/callback`, el backend valida el flujo, intercambia el código, verifica la identidad y busca la cuenta por `googleId`. Una cuenta existente conserva su rol. Una nueva requiere un perfil válido. Si el email ya pertenece a otra cuenta, se rechaza la vinculación automática y se indica usar el método habitual.
 
-El backend crea su propia sesión, establece la cookie `inkmanager_session`, borra la cookie temporal y vuelve a la Home. `AuthProvider` consulta `/api/auth/me` y muestra al usuario. Un rol enviado por query no modifica la cuenta.
+El backend crea su propia sesión, establece la cookie `inkmanager_session` y borra la cookie temporal. Los artistas van a `/artista/trabajos`; los otros roles vuelven a la Home. El login con contraseña también dirige al artista a su panel. `AuthProvider` consulta `/api/auth/me` y muestra al usuario. Un rol enviado por query no modifica la cuenta.
 
 Ante cancelación o error, la Home recibe `google_error=cancelado`, `cuenta` o `fallido`. `GoogleAuthNotice` presenta el aviso correspondiente. La dirección de retorno procede de la configuración del servidor.
 
