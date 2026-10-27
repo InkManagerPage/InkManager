@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:security": "prisma db execute --file prisma/changes/20261020_rls.sql --schema prisma/schema.prisma",
     "db:reviews": "prisma db execute --file prisma/changes/20261020_artistas_resenas.sql --schema prisma/schema.prisma",
-    "seed:reviews": "tsx prisma/seed-reviews.ts"
+    "seed:reviews": "tsx prisma/seed-reviews.ts",
+    "seed:catalogo": "tsx prisma/seed-catalogo.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
