@@ -74,3 +74,9 @@ npm run db:generate
 | `npm run seed:reviews` | Carga los perfiles, retratos y reseñas de ejemplo. |
 
 `prisma/seed.ts` reemplaza datos de tablas; `seed:reviews` es independiente y conserva los usuarios existentes.
+
+`npm run seed:catalogo` agrega 8 artistas ficticios, 2 estudios y 16 trabajos publicados para probar estilos, ubicación y artistas independientes o de estudio. Usa ciudades del catálogo y sube a Cloudinary las imágenes que ya están en el repositorio. Las fotos se reutilizan como material de prueba y no representan trabajos reales de esos perfiles. Los correos `catalogo-demo-*@example.test` están reservados para estos datos; no tienen contraseña ni acceso con Google.
+
+La carga es repetible y conserva las cuentas existentes. `npm run seed:catalogo -- --remove` elimina exclusivamente estos perfiles, los estudios de prueba que hayan quedado vacíos y sus imágenes de Cloudinary. No usa el seed general que vacía tablas.
+
+La configuración de autenticación en producción está en [Despliegue](../docs/despliegue.md).
