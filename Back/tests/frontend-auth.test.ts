@@ -4,7 +4,7 @@ import {
   validarLogin,
   validarRegistro,
 } from "../../Front/src/lib/auth-validation.js";
-import { apiFetch, ApiError } from "../../Front/src/lib/api-client.js";
+import { apiFetch, ApiError, apiUrl } from "../../Front/src/lib/api-client.js";
 import { crearValoresRegistro } from "../../Front/src/lib/registro.js";
 
 const registro = {
@@ -79,7 +79,8 @@ test("frontend: HTTP incluye cookies y acepta JSON", async (t) => {
   t.mock.method(
     globalThis,
     "fetch",
-    async (_url: unknown, options: RequestInit) => {
+    async (url: unknown, options: RequestInit) => {
+      assert.match(String(url), /^https?:\/\//);
       assert.equal(options.credentials, "include");
       assert.equal(
         new Headers(options.headers).get("Accept"),
@@ -90,6 +91,43 @@ test("frontend: HTTP incluye cookies y acepta JSON", async (t) => {
     },
   );
   assert.equal((await apiFetch("/auth/me")).status, 200);
+});
+test("frontend: el navegador consulta la API y Google desde su propio dominio", async (t) => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {},
+  });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, "window", original);
+    else Reflect.deleteProperty(globalThis, "window");
+  });
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (url: unknown, options: RequestInit) => {
+      assert.equal(url, "/api/auth/me");
+      assert.equal(options.credentials, "include");
+      return new Response("{}", { status: 200 });
+    },
+  );
+  assert.equal(apiUrl, "/api");
+  await apiFetch("/auth/me");
+});
+test("frontend: el proxy conserva rutas de API y callback de Google", async (t) => {
+  const anterior = process.env.API_URL;
+  process.env.API_URL = "https://backend.example/api/";
+  t.after(() => {
+    if (anterior === undefined) delete process.env.API_URL;
+    else process.env.API_URL = anterior;
+  });
+  const { default: config } = await import("../../Front/next.config.js");
+  assert.deepEqual(await config.rewrites!(), [
+    {
+      source: "/api/:path*",
+      destination: "https://backend.example/api/:path*",
+    },
+  ]);
 });
 test("frontend: conserva mensaje y código del backend", async (t) => {
   t.mock.method(
