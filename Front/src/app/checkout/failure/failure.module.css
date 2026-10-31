@@ -1,0 +1,136 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px;
+  color: #202320;
+  background: radial-gradient(ellipse at 50% 0, rgb(241 221 216 / 66%), transparent 48%), #f6f7f4;
+}
+
+.card {
+  width: min(100%, 560px);
+  padding: clamp(32px, 7vw, 64px);
+  border: 1px solid #e8ebe5;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(32 35 32 / 8%);
+  text-align: center;
+}
+
+.icon {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #934a3b;
+  background: #f8e6e1;
+}
+
+.icon svg {
+  width: 42px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #5f645d;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  max-width: 430px;
+  margin: 0 auto;
+  font-size: clamp(32px, 7vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+
+.description {
+  max-width: 410px;
+  margin: 18px auto 0;
+  color: #5f645d;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px;
+  border: 1px solid #202320;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.primaryButton {
+  color: #fff;
+  background: #202320;
+}
+
+.primaryButton:hover {
+  transform: translateY(-2px);
+  color: #202320;
+  background: #fff;
+}
+
+.secondaryButton {
+  color: #202320;
+  background: #fff;
+}
+
+.secondaryButton:hover {
+  transform: translateY(-2px);
+  background: #f3f4f1;
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid #934a3b;
+  outline-offset: 4px;
+}
+
+.note {
+  margin: 22px 0 0;
+  color: #777d75;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 420px) {
+  .actions {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton {
+    transition: none;
+  }
+}
