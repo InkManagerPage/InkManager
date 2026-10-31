@@ -1,3 +1,4 @@
+import CheckoutButton from './CheckoutButton';
 import styles from './landing.module.css';
 
 // Para cambiar los planes, editá los datos de esta lista.
@@ -11,6 +12,7 @@ const plans = [
       'Agenda, señas y seguimiento',
       'Portafolio y resultados propios',
     ],
+    price: 20
   },
   {
     name: 'Estudio',
@@ -22,10 +24,12 @@ const plans = [
       'Resultados del negocio y por artista',
       'Sistema de cotización competitiva entre artistas',
     ],
+    price: 50
   },
 ];
 
 export function PlansSection() {
+
   return (
     <section id="planes" className={styles.section} aria-labelledby="plans-title">
       <div className={`container-fluid ${styles.container}`}>
@@ -48,13 +52,7 @@ export function PlansSection() {
                     ))}
                   </ul>
                   {/* El botón queda preparado para agregar su acción más adelante. */}
-                  <button
-                    type="button"
-                    className={`btn btn-outline-dark ${styles.planButton}`}
-                    aria-label={`Conocer más sobre el plan ${plan.name}`}
-                  >
-                    Conocer más <span aria-hidden="true">↗</span>
-                  </button>
+                  <CheckoutButton plan={plan} />
                 </div>
               </article>
             </div>
