@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import * as auth from '@/services/auth.service';
 import type { UsuarioSesion } from '@/types/auth';
 interface AuthContextValue {
@@ -14,6 +14,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(user);
     setError('');
     setCargando(false);
-    if (user.rol === 'ARTISTA') router.replace('/artista/trabajos');
+    if (user.rol === 'ARTISTA' && !pathname.startsWith('/suscripcion')) {
+      router.replace('/artista/trabajos');
+    }
   }
   async function logout() {
     consulta.current?.abort();

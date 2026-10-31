@@ -223,6 +223,64 @@ test("health y reseñas públicas", async () => {
   assert.equal((await request("/health")).status, 200);
   assert.deepEqual(await (await request("/resenas")).json(), []);
 });
+test("crear suscripción requiere sesión y un rol profesional", async () => {
+  assert.equal(
+    (
+      await post("/pagos/crear-suscripcion", {
+        plan: "INDIVIDUAL",
+        ciclo: "MENSUAL",
+      })
+    ).status,
+    401,
+  );
+  const cookie = await login();
+  assert.equal(
+    (
+      await post(
+        "/pagos/crear-suscripcion",
+        { plan: "INDIVIDUAL", ciclo: "MENSUAL" },
+        cookie,
+      )
+    ).status,
+    403,
+  );
+});
+test("artistas no pueden crear una suscripción para el plan de estudio", async () => {
+  const artista = {
+    ...base,
+    rol: "ARTISTA",
+    nombreArtistico: "Ana Ink",
+  };
+  await post("/auth/register", artista);
+  const response = await post("/auth/login", {
+    email: artista.email,
+    password,
+  });
+  const cookie = response.headers.get("set-cookie")!.split(";")[0];
+  assert.equal(
+    (
+      await post(
+        "/pagos/crear-suscripcion",
+        { plan: "ESTUDIO", ciclo: "MENSUAL" },
+        cookie,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await post(
+        "/pagos/crear-suscripcion",
+        { plan: "INDIVIDUAL", ciclo: "SEMESTRAL" },
+        cookie,
+      )
+    ).status,
+    400,
+  );
+});
+test("cancelación de suscripción requiere sesión o token válido", async () => {
+  assert.equal((await post("/pagos/cancelar-suscripcion", {})).status, 401);
+});
 for (const rol of ["CLIENTE", "ARTISTA", "ESTUDIO_ADMIN"]) {
   test(`registro de ${rol}: datos públicos, hash y relación de estudio`, async () => {
     const response = await post("/auth/register", {

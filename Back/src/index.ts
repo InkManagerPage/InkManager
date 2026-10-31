@@ -1,10 +1,12 @@
 import "dotenv/config";
 import { app } from "./app.js";
 import { configuracionCorreo } from "./config/correos.js";
+import { iniciarAvisosVencimiento } from "./pagos/pagos.service.js";
 
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
+  iniciarAvisosVencimiento();
   console.log("Servidor ejecutándose en http://localhost:" + PORT);
   try {
     console.log("Transporte de correo: " + configuracionCorreo().transporte);
