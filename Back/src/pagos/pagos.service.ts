@@ -3,6 +3,7 @@ import {
   EstadoPagoSuscripcion,
   EstadoSuscripcion,
   PlanSuscripcion,
+  Prisma,
 } from "@prisma/client";
 import {
   createHash,
@@ -30,6 +31,10 @@ type SuscripcionMercadoPago = {
   external_reference?: unknown;
   next_payment_date?: unknown;
 };
+
+function esObjeto(valor: unknown): valor is Record<string, unknown> {
+  return valor !== null && typeof valor === "object" && !Array.isArray(valor);
+}
 
 type PagoAutorizadoMercadoPago = {
   id?: unknown;
@@ -127,8 +132,36 @@ function urlCheckout(valor: unknown): string {
 export async function crearSuscripcion(
   usuario: UsuarioSesion,
   entrada: unknown,
-): Promise<{ checkoutUrl: string }> {
+): Promise<{ checkoutUrl: string } | { paymentProcessing: true }> {
   const { plan, ciclo } = validarPlanYCiclo(entrada);
+  if (!esObjeto(entrada)) {
+    throw new HttpError(400, "Los datos del pago no son válidos.");
+  }
+  const datosEntrada = entrada;
+  const camposDeTarjeta = [
+    "card_number",
+    "cardNumber",
+    "security_code",
+    "securityCode",
+    "expiration_date",
+    "expirationDate",
+  ];
+  if (camposDeTarjeta.some((campo) => campo in datosEntrada)) {
+    throw new HttpError(
+      400,
+      "No envíes datos de tarjeta. Usá el formulario seguro de Mercado Pago.",
+    );
+  }
+  const cardTokenId = datosEntrada.card_token_id;
+  if (
+    cardTokenId !== undefined &&
+    (typeof cardTokenId !== "string" ||
+      cardTokenId.length < 8 ||
+      cardTokenId.length > 512 ||
+      cardTokenId.trim() !== cardTokenId)
+  ) {
+    throw new HttpError(400, "El token de tarjeta no es válido.");
+  }
   if (
     (plan === "INDIVIDUAL" && usuario.rol !== "ARTISTA") ||
     (plan === "ESTUDIO" && usuario.rol !== "ESTUDIO_ADMIN")
@@ -144,11 +177,7 @@ export async function crearSuscripcion(
     where: {
       usuarioId: usuario.id,
       OR: [
-        {
-          estado: {
-            in: [EstadoSuscripcion.PENDIENTE, EstadoSuscripcion.ACTIVA],
-          },
-        },
+        { estado: EstadoSuscripcion.ACTIVA },
         {
           estado: EstadoSuscripcion.CANCELADA,
           periodoHasta: { gt: ahora },
@@ -160,23 +189,95 @@ export async function crearSuscripcion(
   if (existente) {
     throw new HttpError(
       409,
-      "Ya tenés una suscripción activa, pendiente o con período abonado.",
+      "Ya tenés una suscripción activa o un período abonado.",
     );
+  }
+
+  const intentosPendientes = await prisma.suscripcion.findMany({
+    where: {
+      usuarioId: usuario.id,
+      estado: EstadoSuscripcion.PENDIENTE,
+    },
+    select: { id: true, mercadoPagoId: true },
+  });
+
+  for (const intento of intentosPendientes) {
+    if (intento.mercadoPagoId) {
+      const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
+        `/preapproval/${encodeURIComponent(intento.mercadoPagoId)}`,
+      );
+      const estadoRemoto =
+        typeof remota.status === "string" ? remota.status.toLowerCase() : "";
+      if (estadoRemoto === "authorized") {
+        throw new HttpError(
+          409,
+          "Mercado Pago está confirmando el primer pago. Esperá unos instantes antes de iniciar otro intento.",
+        );
+      }
+      if (estadoRemoto === "pending") {
+        const cancelada = await solicitarMercadoPago<SuscripcionMercadoPago>(
+          `/preapproval/${encodeURIComponent(intento.mercadoPagoId)}`,
+          { method: "PUT", body: { status: "cancelled" } },
+        );
+        const estadoCancelado =
+          typeof cancelada.status === "string"
+            ? cancelada.status.toLowerCase()
+            : "";
+        if (estadoCancelado !== "cancelled" && estadoCancelado !== "canceled") {
+          throw new HttpError(
+            502,
+            "No pudimos cerrar el intento de pago anterior. Intentá nuevamente.",
+          );
+        }
+      } else if (
+        estadoRemoto !== "cancelled" &&
+        estadoRemoto !== "canceled" &&
+        estadoRemoto !== "rejected" &&
+        estadoRemoto !== "paused"
+      ) {
+        throw new HttpError(
+          502,
+          "Mercado Pago no confirmó el estado del intento anterior.",
+        );
+      }
+    }
+
+    await prisma.suscripcion.updateMany({
+      where: {
+        id: intento.id,
+        estado: EstadoSuscripcion.PENDIENTE,
+      },
+      data: { estado: EstadoSuscripcion.ERROR },
+    });
   }
 
   const id = randomUUID();
   const monto = obtenerPrecio(plan, ciclo);
-  const suscripcion = await prisma.suscripcion.create({
-    data: {
-      id,
-      usuarioId: usuario.id,
-      plan,
-      ciclo,
-      monto,
-      moneda: "ARS",
-      referenciaExterna: id,
-    },
-  });
+  let suscripcion: Awaited<ReturnType<typeof prisma.suscripcion.create>>;
+  try {
+    suscripcion = await prisma.suscripcion.create({
+      data: {
+        id,
+        usuarioId: usuario.id,
+        plan,
+        ciclo,
+        monto,
+        moneda: "ARS",
+        referenciaExterna: id,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new HttpError(
+        409,
+        "Ya hay un intento de pago en curso. Actualizá la página e intentá nuevamente.",
+      );
+    }
+    throw error;
+  }
 
   try {
     const respuesta = await solicitarMercadoPago<SuscripcionMercadoPago>(
@@ -196,6 +297,9 @@ export async function crearSuscripcion(
           },
           back_url: urlFrontend("/suscripcion/resultado"),
           notification_url: obtenerUrlWebhookMercadoPago(),
+          ...(typeof cardTokenId === "string"
+            ? { card_token_id: cardTokenId, status: "authorized" }
+            : {}),
         },
       },
     );
@@ -206,7 +310,6 @@ export async function crearSuscripcion(
         "Mercado Pago no devolvió una identificación de suscripción válida.",
       );
     }
-    const checkoutUrl = urlCheckout(respuesta.init_point);
     await prisma.suscripcion.update({
       where: { id: suscripcion.id },
       data: {
@@ -216,6 +319,10 @@ export async function crearSuscripcion(
         ),
       },
     });
+    if (typeof cardTokenId === "string") {
+      return { paymentProcessing: true };
+    }
+    const checkoutUrl = urlCheckout(respuesta.init_point);
     return { checkoutUrl };
   } catch (error) {
     await prisma.suscripcion.update({

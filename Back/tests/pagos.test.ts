@@ -60,6 +60,7 @@ test("valida la firma HMAC del webhook y rechaza datos alterados", () => {
 test("crea checkout alojado con precio del servidor y sin datos de tarjeta", async () => {
   const restores = [
     reemplazar(prisma.suscripcion, "findFirst", async () => null),
+    reemplazar(prisma.suscripcion, "findMany", async () => []),
     reemplazar(
       prisma.suscripcion,
       "create",
@@ -143,6 +144,204 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
     restores.reverse().forEach((restore) => restore());
     for (const name of nombres) {
       const value = originalEnv.get(name);
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("cierra intentos pendientes sin pago y permite iniciar otro checkout", async () => {
+  const actualizaciones: Array<{
+    where: Record<string, unknown>;
+    data: Record<string, unknown>;
+  }> = [];
+  const restores = [
+    reemplazar(prisma.suscripcion, "findFirst", async () => null),
+    reemplazar(prisma.suscripcion, "findMany", async () => [
+      { id: "suscripcion-anterior", mercadoPagoId: "preapproval-anterior" },
+    ]),
+    reemplazar(
+      prisma.suscripcion,
+      "updateMany",
+      async ({
+        where,
+        data,
+      }: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }) => {
+        actualizaciones.push({ where, data });
+        return { count: 1 };
+      },
+    ),
+    reemplazar(
+      prisma.suscripcion,
+      "create",
+      async ({ data }: { data: Record<string, unknown> }) => data,
+    ),
+    reemplazar(
+      prisma.suscripcion,
+      "update",
+      async ({
+        where,
+        data,
+      }: {
+        where: Record<string, string>;
+        data: Record<string, unknown>;
+      }) => ({
+        id: where.id,
+        ...data,
+      }),
+    ),
+  ];
+  const originalFetch = globalThis.fetch;
+  const originalEnv = new Map(
+    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "FRONTEND_URL"].map(
+      (name) => [name, process.env[name]],
+    ),
+  );
+  process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_URL =
+    "https://hooks.example.test/mercadopago";
+  process.env.FRONTEND_URL = "https://inkmanager.example.test";
+  const requests: string[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    requests.push(`${init?.method ?? "GET"} ${url}`);
+    if (init?.method === "PUT") {
+      return new Response(JSON.stringify({ status: "cancelled" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.endsWith("/preapproval/preapproval-anterior")) {
+      return new Response(JSON.stringify({ status: "pending" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        id: "preapproval-nuevo",
+        init_point:
+          "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_id=nuevo",
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const resultado = await crearSuscripcion(
+      {
+        id: "usuario-test",
+        email: "artista@example.test",
+        nombre: "Artista",
+        rol: "ARTISTA",
+        estudioId: null,
+      },
+      { plan: "INDIVIDUAL", ciclo: "MENSUAL" },
+    );
+
+    assert.equal("checkoutUrl" in resultado, true);
+    assert.equal(actualizaciones[0]?.where.id, "suscripcion-anterior");
+    assert.equal(actualizaciones[0]?.where.estado, "PENDIENTE");
+    assert.equal(actualizaciones[0]?.data.estado, "ERROR");
+    assert.equal(
+      requests.some((request) => request.startsWith("PUT ")),
+      true,
+    );
+    assert.equal(
+      requests.some((request) => request.startsWith("POST ")),
+      true,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    restores.reverse().forEach((restore) => restore());
+    for (const [name, value] of originalEnv) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("crea una suscripción con token seguro sin enviar datos de tarjeta", async () => {
+  const restores = [
+    reemplazar(prisma.suscripcion, "findFirst", async () => null),
+    reemplazar(prisma.suscripcion, "findMany", async () => []),
+    reemplazar(
+      prisma.suscripcion,
+      "create",
+      async ({ data }: { data: Record<string, unknown> }) => data,
+    ),
+    reemplazar(
+      prisma.suscripcion,
+      "update",
+      async ({
+        where,
+        data,
+      }: {
+        where: Record<string, string>;
+        data: Record<string, unknown>;
+      }) => ({
+        id: where.id,
+        ...data,
+      }),
+    ),
+  ];
+  const originalFetch = globalThis.fetch;
+  const originalEnv = new Map(
+    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "FRONTEND_URL"].map(
+      (name) => [name, process.env[name]],
+    ),
+  );
+  process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_URL =
+    "https://hooks.example.test/mercadopago";
+  process.env.FRONTEND_URL = "https://inkmanager.example.test";
+  let cuerpo: Record<string, unknown> | undefined;
+
+  globalThis.fetch = async (_input, init) => {
+    cuerpo = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(
+      JSON.stringify({
+        id: "preapproval-card",
+        status: "authorized",
+        next_payment_date: "2026-11-30T00:00:00.000Z",
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const resultado = await crearSuscripcion(
+      {
+        id: "usuario-test",
+        email: "artista@example.test",
+        nombre: "Artista",
+        rol: "ARTISTA",
+        estudioId: null,
+      },
+      {
+        plan: "INDIVIDUAL",
+        ciclo: "MENSUAL",
+        card_token_id: "token-seguro-de-prueba",
+      },
+    );
+
+    assert.deepEqual(resultado, { paymentProcessing: true });
+    assert.equal(cuerpo?.card_token_id, "token-seguro-de-prueba");
+    assert.equal(cuerpo?.status, "authorized");
+    assert.equal("card_number" in (cuerpo ?? {}), false);
+    assert.equal("security_code" in (cuerpo ?? {}), false);
+    assert.equal(
+      (cuerpo?.auto_recurring as Record<string, unknown>)?.transaction_amount,
+      12000,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    restores.reverse().forEach((restore) => restore());
+    for (const [name, value] of originalEnv) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
