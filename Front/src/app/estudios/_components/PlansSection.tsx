@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import styles from './landing.module.css';
 
 // Para cambiar los planes, editá los datos de esta lista.
@@ -39,6 +40,11 @@ export function PlansSection() {
                 <div className="card-body d-flex flex-column">
                   <h3>{plan.name}</h3>
                   <p>{plan.description}</p>
+                  <p>
+                    {plan.name === 'Individual' ? 'ARS 12.000 por mes.' : 'ARS 35.000 por mes.'}
+                    <br />
+                    El plan anual incluye 2 meses bonificados.
+                  </p>
                   <ul>
                     {plan.features.map((feature) => (
                       <li key={feature}>
@@ -47,14 +53,13 @@ export function PlansSection() {
                       </li>
                     ))}
                   </ul>
-                  {/* El botón queda preparado para agregar su acción más adelante. */}
-                  <button
-                    type="button"
+                  <Link
+                    href={`/suscripcion?plan=${plan.name === 'Individual' ? 'INDIVIDUAL' : 'ESTUDIO'}`}
                     className={`btn btn-outline-dark ${styles.planButton}`}
-                    aria-label={`Conocer más sobre el plan ${plan.name}`}
+                    aria-label={`Elegir el plan ${plan.name}`}
                   >
-                    Conocer más <span aria-hidden="true">↗</span>
-                  </button>
+                    Elegir plan <span aria-hidden="true">↗</span>
+                  </Link>
                 </div>
               </article>
             </div>
