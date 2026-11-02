@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { ArtistShell } from './_components/ArtistShell';
 
 export const metadata: Metadata = {
-  title: 'Mi espacio | InkManager',
+  title: 'Mi panel | InkManager',
   robots: { index: false, follow: false },
 };
 

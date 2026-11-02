@@ -45,7 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(user);
     setError('');
     setCargando(false);
-    if (user.rol === 'ARTISTA') router.replace('/artista/trabajos');
+    if (user.rol === 'ARTISTA') router.replace('/artista');
+    if (user.rol === 'ESTUDIO_ADMIN') router.replace('/estudio');
   }
   async function logout() {
     consulta.current?.abort();

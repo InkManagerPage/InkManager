@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { ArtistOverview } from './_components/ArtistOverview';
 
 export default function ArtistPage() {
-  redirect('/artista/trabajos');
+  return <ArtistOverview />;
 }
