@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { AuthProvider } from '@/store/AuthProvider';
 import { GoogleAuthNotice } from '@/components/auth/GoogleAuthNotice';
+import ChatbotWidget from '../components/chatbot/ChatbotWidget'
 
 const plex = localFont({
   src: [
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Suspense fallback={null}>
             <GoogleAuthNotice />
           </Suspense>
+          <ChatbotWidget/>
         </AuthProvider>
       </body>
     </html>

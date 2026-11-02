@@ -15,6 +15,7 @@ import { trabajosRouter } from "./trabajos/trabajos.routes.js";
 import { estilosRouter } from "./estilos/estilos.routes.js";
 import { catalogoRouter } from "./catalogo/catalogo.routes.js";
 import { ubicacionesRouter } from "./ubicaciones/ubicaciones.routes.js";
+import chatBotRouter from "./chatbot/chatbot.routes.js"
 
 export const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/trabajos", trabajosRouter);
 app.use("/api/estilos", estilosRouter);
 app.use("/api/catalogo", catalogoRouter);
 app.use("/api/ubicaciones", ubicacionesRouter);
+app.use("/api/chatbot", chatBotRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "La ruta solicitada no existe." });
