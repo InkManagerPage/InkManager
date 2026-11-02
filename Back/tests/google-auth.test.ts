@@ -491,8 +491,10 @@ for (const perfil of perfiles) {
     assert.equal(
       response.headers.get("location"),
       perfil.rol === "ARTISTA"
-        ? "http://127.0.0.1:3001/artista/trabajos"
-        : "http://127.0.0.1:3001/",
+        ? "http://127.0.0.1:3001/artista"
+        : perfil.rol === "ESTUDIO_ADMIN"
+          ? "http://127.0.0.1:3001/estudio"
+          : "http://127.0.0.1:3001/",
     );
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(response.headers.get("referrer-policy"), "no-referrer");

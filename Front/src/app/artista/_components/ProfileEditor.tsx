@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { guardarMiPerfil, obtenerEstilos } from '@/services/artistas.service';
 import { camposPendientes } from '@/lib/perfil-artista';
 import type { PerfilArtista } from '@/types/artista';
@@ -9,6 +9,10 @@ import { PhotoField } from './PhotoField';
 import { StylePicker } from './StylePicker';
 import { LocationFields } from '@/components/forms/LocationFields';
 import styles from './panel.module.css';
+import { useFormikContext, type FormikErrors } from 'formik';
+import { PanelField, PanelForm } from './PanelForm';
+import { PageHeader } from './PanelUI';
+import common from '@/components/panel/workspace.module.css';
 
 export function ProfileEditor() {
   const { perfil, actualizarPerfil, error: errorPerfil, reintentar } = useArtistProfile();
@@ -30,9 +34,7 @@ export function ProfileEditor() {
   }, [intento]);
   return (
     <>
-      <header className={styles.heading}>
-        <h1>Mi perfil</h1>
-      </header>
+      <PageHeader titulo="Mi perfil" />
       {(error || errorPerfil) && (
         <div role="alert" className="alert alert-danger">
           {error || errorPerfil}
@@ -56,6 +58,14 @@ export function ProfileEditor() {
   );
 }
 
+interface ProfileValues {
+  nombreArtistico: string;
+  biografia: string;
+  ciudadId: number | null;
+  estilosPrincipales: string[];
+  foto: File | null;
+}
+
 function ProfileForm({
   perfil,
   estilos,
@@ -65,127 +75,133 @@ function ProfileForm({
   estilos: string[];
   onSaved: (perfil: PerfilArtista) => void;
 }) {
-  const [nombre, setNombre] = useState(perfil.nombreArtistico || '');
-  const [biografia, setBiografia] = useState(perfil.biografia || '');
-  const [ciudadId, setCiudadId] = useState(perfil.ciudadId);
-  const [seleccionados, setSeleccionados] = useState(perfil.estilosPrincipales);
-  const [foto, setFoto] = useState<File | null>(null);
-  const [procesando, setProcesando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState('');
+  const result = useRef<PerfilArtista | null>(null);
   const [guardado, setGuardado] = useState(false);
   const faltantes = camposPendientes(perfil);
-
-  async function guardar(event: FormEvent) {
-    event.preventDefault();
-    if (procesando || guardando) return;
-    if (perfil.ciudad && !perfil.ciudadId && !ciudadId) {
-      setError('Elegí tu ciudad de la lista para guardar el perfil.');
-      return;
-    }
-    setGuardando(true);
-    setGuardado(false);
-    setError('');
-    const datos = new FormData();
-    datos.set('nombreArtistico', nombre.trim());
-    datos.set('biografia', biografia.trim());
-    datos.set('ciudadId', ciudadId ? String(ciudadId) : '');
-    datos.set('estilosPrincipales', JSON.stringify(seleccionados));
-    if (foto) datos.set('imagen', foto);
-    try {
-      onSaved(await guardarMiPerfil(datos));
-      setFoto(null);
-      setGuardado(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No pudimos guardar tu perfil.');
-    } finally {
-      setGuardando(false);
-    }
+  function validate(values: ProfileValues) {
+    const errors: FormikErrors<ProfileValues> = {};
+    if (
+      values.nombreArtistico.trim() &&
+      (values.nombreArtistico.trim().length < 2 || values.nombreArtistico.trim().length > 50)
+    )
+      errors.nombreArtistico = 'Usá entre 2 y 50 caracteres.';
+    if (values.biografia.length > 300)
+      errors.biografia = 'La biografía puede tener hasta 300 caracteres.';
+    if (perfil.ciudad && !perfil.ciudadId && !values.ciudadId)
+      errors.ciudadId = 'Elegí tu ciudad de la lista para guardar el perfil.';
+    return errors;
   }
   return (
-    <form className={styles.profileForm} onSubmit={guardar}>
+    <PanelForm<ProfileValues>
+      className={styles.profileForm}
+      enableReinitialize
+      initialValues={{
+        nombreArtistico: perfil.nombreArtistico || '',
+        biografia: perfil.biografia || '',
+        ciudadId: perfil.ciudadId,
+        estilosPrincipales: perfil.estilosPrincipales,
+        foto: null,
+      }}
+      validate={validate}
+      onSave={async (values) => {
+        setGuardado(false);
+        const datos = new FormData();
+        datos.set('nombreArtistico', values.nombreArtistico.trim());
+        datos.set('biografia', values.biografia.trim());
+        datos.set('ciudadId', values.ciudadId ? String(values.ciudadId) : '');
+        datos.set('estilosPrincipales', JSON.stringify(values.estilosPrincipales));
+        if (values.foto) datos.set('imagen', values.foto);
+        result.current = await guardarMiPerfil(datos);
+      }}
+      onSaved={() => {
+        if (result.current) {
+          onSaved(result.current);
+          setGuardado(true);
+        }
+      }}
+    >
       {faltantes.length > 0 && (
         <p className={styles.pendingFields}>Pendiente: {faltantes.join(', ')}.</p>
       )}
-      <fieldset disabled={guardando}>
-        <div className={styles.profileFields}>
-          <PhotoField
-            key={perfil.fotoPerfil || 'sin-foto'}
-            id="profile-photo"
-            label="Foto de perfil"
-            actual={perfil.fotoPerfil}
-            onChange={setFoto}
-            onProcessing={setProcesando}
+      <ProfileFields perfil={perfil} estilos={estilos} />
+      {guardado && (
+        <p role="status" className={styles.feedback}>
+          Perfil guardado.
+        </p>
+      )}
+    </PanelForm>
+  );
+}
+
+function ProfileFields({ perfil, estilos }: { perfil: PerfilArtista; estilos: string[] }) {
+  const { values, touched, errors, setFieldValue, isSubmitting } =
+    useFormikContext<ProfileValues>();
+  const [procesando, setProcesando] = useState(false);
+  return (
+    <fieldset disabled={isSubmitting}>
+      <div className={styles.profileFields}>
+        <PhotoField
+          key={perfil.fotoPerfil || 'sin-foto'}
+          id="profile-photo"
+          label="Foto de perfil"
+          actual={perfil.fotoPerfil}
+          onChange={(file) => {
+            void setFieldValue('foto', file);
+          }}
+          onProcessing={setProcesando}
+        />
+        <div>
+          <PanelField
+            name="nombreArtistico"
+            label="Nombre artístico"
+            minLength={2}
+            maxLength={50}
+            autoComplete="nickname"
           />
-          <div>
-            <div className="mb-4">
-              <label className="form-label" htmlFor="stage-name">
-                Nombre artístico
-              </label>
-              <input
-                id="stage-name"
-                className="form-control"
-                value={nombre}
-                minLength={2}
-                maxLength={50}
-                autoComplete="nickname"
-                onChange={(event) => setNombre(event.target.value)}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="form-label" htmlFor="artist-bio">
-                Biografía
-              </label>
-              <textarea
-                id="artist-bio"
-                className="form-control"
-                rows={4}
-                maxLength={300}
-                value={biografia}
-                aria-describedby="bio-count"
-                onChange={(event) => setBiografia(event.target.value)}
-              />
-              <small
-                id="bio-count"
-                className={biografia.length > 300 ? 'text-danger' : 'text-secondary'}
-              >
-                {biografia.length}/300
-              </small>
-            </div>
+          <PanelField
+            name="biografia"
+            label="Biografía"
+            as="textarea"
+            rows={4}
+            maxLength={300}
+            hint={`${values.biografia.length}/300`}
+          />
+          <fieldset
+            tabIndex={-1}
+            aria-invalid={touched.ciudadId && errors.ciudadId ? true : undefined}
+            aria-describedby={errors.ciudadId ? 'profile-city-error' : undefined}
+          >
             <LocationFields
               key={perfil.ciudadId ?? 'sin-ciudad'}
               paisActual={perfil.pais}
               provinciaActual={perfil.provinciaId}
-              ciudadId={ciudadId}
+              ciudadId={values.ciudadId}
               ciudadAnterior={!perfil.ciudadId ? perfil.ciudad : null}
-              onChange={setCiudadId}
+              onChange={(value) => {
+                void setFieldValue('ciudadId', value);
+              }}
             />
-            <StylePicker
-              label="Estilos principales"
-              opciones={estilos}
-              seleccionados={seleccionados}
-              onChange={setSeleccionados}
-            />
-          </div>
+            {touched.ciudadId && errors.ciudadId && (
+              <p id="profile-city-error" role="alert" className="text-danger">
+                {errors.ciudadId}
+              </p>
+            )}
+          </fieldset>
+          <StylePicker
+            label="Estilos principales"
+            opciones={estilos}
+            seleccionados={values.estilosPrincipales}
+            onChange={(value) => {
+              void setFieldValue('estilosPrincipales', value);
+            }}
+          />
         </div>
-        {error && (
-          <p role="alert" className="alert alert-danger mt-4">
-            {error}
-          </p>
-        )}
-        {guardado && (
-          <p role="status" className={styles.feedback}>
-            Perfil guardado.
-          </p>
-        )}
-        <button
-          className="btn btn-dark mt-4"
-          type="submit"
-          disabled={procesando || biografia.length > 300}
-        >
-          {guardando ? 'Guardando…' : 'Guardar perfil'}
+      </div>
+      <div className={common.formActions}>
+        <button className={common.button} type="submit" disabled={procesando || isSubmitting}>
+          {isSubmitting ? 'Guardando…' : 'Guardar perfil'}
         </button>
-      </fieldset>
-    </form>
+      </div>
+    </fieldset>
   );
 }

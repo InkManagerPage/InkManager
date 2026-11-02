@@ -1,6 +1,70 @@
 # Panel del artista
 
-El panel está disponible en `/artista/trabajos` y `/artista/perfil`. El login con contraseña y el callback de Google redirigen allí a los usuarios con rol `ARTISTA`. Una sesión existente puede entrar mediante «Mi panel» en la cabecera. La API valida sesión y rol en todas las rutas privadas.
+Los artistas ingresan al resumen de `/artista` después de iniciar sesión con contraseña o Google. Una sesión existente puede entrar mediante «Mi panel» en la cabecera. La API valida sesión y rol en todas las rutas privadas. El menú lateral se puede contraer en escritorio; en móvil se abre como un panel de Bootstrap con cierre y navegación por teclado.
+
+## Vistas de gestión
+
+| Ruta                      | Función                                                                                                    |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/artista`                | Resumen operativo de consultas pendientes, próximos turnos, confirmaciones y mensajes.                     |
+| `/artista/estadisticas`   | Métricas mensuales de sesiones, importes realizados, clientes y canales de recepción.                      |
+| `/artista/consultas`      | Búsqueda y filtros por estado, detalle con referencias, notas privadas y preparación de presupuestos.      |
+| `/artista/agenda`         | Vistas semanal y de lista, creación y edición de sesiones, estados y control de superposición de horarios. |
+| `/artista/clientes`       | Directorio de contactos reales y acceso a sus consultas.                                                   |
+| `/artista/mensajes`       | Conversaciones, lectura y composición de mensajes de ejemplo.                                              |
+| `/artista/estudio`        | Modalidad y equipo consultados desde la BD.                                                                |
+| `/artista/notificaciones` | Avisos, filtros de lectura y acceso al detalle de cada actividad.                                          |
+| `/artista/configuracion`  | Horarios habituales, preferencias y acceso a los ajustes de cuenta.                                        |
+| `/artista/recordatorios`  | Reglas de correo para clientes y artista, horarios, contenido y excepciones.                               |
+| `/artista/suscripcion`    | Plan, facturación, renovación e historial de pagos.                                                        |
+| `/artista/trabajos`       | Portafolio conectado a la API: borradores, edición, publicación y eliminación.                             |
+| `/artista/perfil`         | Perfil conectado a la API: foto, nombre artístico, biografía, ubicación y estilos.                         |
+
+## Datos de gestión
+
+Las consultas, propuestas, contactos, turnos y pertenencia al estudio proceden del backend, compartidos mediante `ConsultasProvider`. La bandeja del artista y la del titular consultan los mismos registros. El resto de la gestión mantiene su estado local en `ArtistPanelProvider`. No se guardan tokens en localStorage. La clave anterior de ejemplos se conserva separada de la nueva clave de preferencias.
+
+El directorio de clientes utiliza datos reales y todavía no permite editar contactos. Mi estudio muestra el equipo y permite aceptar o rechazar invitaciones vinculadas al email verificado. El ingreso requiere resolver primero el trabajo independiente pendiente. Los contratos y permisos están en [Equipo del estudio](equipo-estudio.md). La agenda persiste los turnos y permite reservar desde una consulta asignada. El artista gestiona sus sesiones y el titular también puede gestionarlas si pertenecen al estudio. Mensajes, reglas generales de recordatorios y suscripción siguen siendo locales; no envían mensajes o correos. Véase [Turnos y agenda](turnos.md). El detalle de la integración está en [Consultas y propuestas](consultas-y-propuestas.md).
+
+Los nombres completos de contactos admiten entre 2 y 80 caracteres, con letras, espacios, apóstrofes o guiones. Esta regla no modifica los nombres del registro de cuentas. La agenda valida fecha, hora, duración de 30 minutos a 8 horas, importes y seña. Las sesiones canceladas no bloquean horarios y dos sesiones consecutivas pueden compartir la hora de fin e inicio. Los presupuestos requieren importe positivo, seña menor o igual al total, detalle y fecha de validez desde hoy.
+
+El perfil y los trabajos mantienen sus servicios y permisos reales. La interfaz de gestión no contiene controles de reinicio de los datos ni etiquetas temporales.
+
+## Navegación y formularios
+
+El menú agrupa Trabajo diario, Gestión y Perfil y cuenta; recuerda si está contraído. Resumen prioriza los turnos de hoy y el próximo encuentro. Sus indicadores abren los listados filtrados correspondientes. Los filtros, búsqueda, mes y detalles abiertos se conservan en los parámetros de la URL. La agenda ofrece lista por día como vista inicial en móvil y admite listas del mes completo desde Estadísticas. Consultas y Clientes muestran filas adaptadas al móvil.
+
+Los formularios usan Formik y controles de React Bootstrap. La validación comienza al enviar y luego se actualiza mientras se corrigen los datos. Los errores se muestran junto al campo y el envío lleva el foco al primer error. El formulario de turno agrupa importes, notas y excepciones de correo en acordeones. El perfil permite guardar datos incompletos y los trabajos publicados indican si aún falta completar el perfil para aparecer en el catálogo.
+
+La protección de cambios sin guardar utiliza nextjs-nav-guard en el layout raíz. Cerrar un formulario o navegar permite seguir editando o descartar. Recargar o cerrar la pestaña utiliza la confirmación propia del navegador. Los interruptores de recordatorios se guardan inmediatamente; sus textos requieren guardar. Los borradores de mensajes se conservan por conversación en el estado local del usuario. El modelo de mensajes distingue enviando, enviado y error, con reintento local; aún no representa una integración externa de mensajería.
+
+## Estadísticas
+
+La sección permite seleccionar un mes y consultar importes de sesiones realizadas, clientes atendidos, turnos por estado, consultas recibidas, horas realizadas e importe promedio por sesión. La evolución muestra seis meses hasta el seleccionado; la comparación usa el mes anterior completo, identificado como tal cuando el mes actual está en curso. La variación porcentual solo aparece para meses cerrados y cuando existe facturación anterior.
+
+Para un integrante de estudio, las consultas atendidas y sus canales incluyen aquellas en las que presentó una propuesta o fue asignado. No se contabilizan como actividad personal todas las consultas disponibles del estudio. La agenda y los importes siempre corresponden al artista autenticado.
+
+El importe realizado se muestra en ARS y suma las sesiones completadas según su fecha de agenda. No suma presupuestos, turnos pendientes o cancelados, ni duplica las señas incluidas en el importe. No representa cobros conciliados ni comprobantes fiscales. Los clientes atendidos son personas únicas con al menos una sesión completada en el mes; los recurrentes tienen además una sesión completada antes del mes seleccionado. Las tasas sin registros se muestran sin porcentaje.
+
+`lib/estadisticas-artista.ts` concentra los cálculos sobre el estado del panel. Editar una sesión o consulta actualiza sus métricas al volver a esta sección. Estas estadísticas utilizan los turnos persistidos, según la zona horaria del negocio.
+
+## Canal de recepción
+
+Cada consulta y conversación conserva su `canal`: Instagram, WhatsApp, TikTok, Facebook o formulario web. Estadísticas cuenta los registros del mes seleccionado por ese campo. La asignación directa o mediante un estudio se mantiene por separado. No es una encuesta de atribución comercial ni se deduce el canal a partir de los mensajes escritos por la persona. Los conectores de cada canal son los que deben proporcionar ese dato cuando se integra la recepción real.
+
+## Recordatorios
+
+`types/recordatorios.ts` define reglas para turno, cuidados y reseña dirigidas al cliente, y agenda diaria, resumen semanal y mensual dirigidos al artista. Cada grupo tiene un control general de activación; cada regla admite activación individual, asunto y contenido. Las plantillas incluyen variables permitidas y una visualización del correo con las variables sustituidas como texto.
+
+Los tiempos iniciales son 24 horas antes del turno, 2 horas después de completar la sesión para cuidados y 7 días después para reseña. La agenda diaria admite noche anterior o mismo día con hora editable; el resumen semanal permite elegir día y hora. El resumen mensual corresponde al mes cerrado y se configura para el primer día del siguiente. La zona horaria queda explícita en la configuración.
+
+Las excepciones por sesión se editan en el formulario del turno y se guardan en la BD. Las excepciones del cliente todavía no tienen un endpoint de edición. La preferencia del turno prevalece sobre la del cliente, y esta sobre la regla general. Desactivar el grupo de clientes impide todos esos correos. Un turno cancelado tampoco habilita recordatorios.
+
+Las reglas generales se conservan en el estado local del panel. No hay programador de envíos conectado a estas pantallas; no modifican los correos de registro, verificación ni recuperación que ya envía el backend.
+
+## Suscripción
+
+La vista muestra el plan Individual, período actual, renovación e historial. Cambiar de facturación mensual a anual programa el nuevo ciclo para la siguiente renovación. Cancelar conserva el acceso hasta el fin del período; reactivar vuelve a habilitar la renovación. La gestión del panel usa estado local y no inicia pagos ni modifica suscripciones en Mercado Pago. Los importes mantienen el criterio de la integración de pagos: Individual mensual de ARS 12.000 y anual de diez mensualidades.
 
 ## Mi perfil
 
@@ -50,3 +114,7 @@ En `/clientes` se muestra una única galería de trabajos publicados, con filtro
 - `Front/src/types/artista.ts`: contratos del perfil, trabajos y catálogo.
 
 El esquema está en `Back/prisma/schema.prisma`. El script SQL aditivo correspondiente es `Back/prisma/changes/20261026_panel_artista.sql`. Los trabajos existentes conservan sus fotos y pasan a borrador por defecto.
+
+## Consultas como integrante de un estudio
+
+La membresía se obtiene de la BD. Los integrantes activos ven las consultas del estudio y pueden editar su propia propuesta mientras estén abiertas. El titular ve todas las propuestas y administra el cierre y la asignación. El independiente usa la misma bandeja limitada a sus consultas. Los controles de cierre o asignación no se ofrecen a integrantes del estudio.

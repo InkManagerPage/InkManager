@@ -1,0 +1,155 @@
+.summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px;
+}
+.currentPlan {
+  padding: 28px;
+  background: #f6f8f1;
+  border: 1px solid #e1e8d5;
+  border-radius: 7px;
+}
+.planEyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.planEyebrow > span:first-child {
+  color: #7b8b6a;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.currentPlan h2 {
+  margin: 0 0 9px;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  color: #3b4f30;
+}
+.currentPlan > p {
+  margin: 0;
+  font-size: 14px;
+  color: #5f6c54;
+}
+.price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 28px 0;
+}
+.price strong {
+  font-size: 35px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  color: #3f5533;
+  font-variant-numeric: tabular-nums;
+}
+.price span {
+  color: #7a8c6b;
+  font-size: 14px;
+}
+.currentPlan ul {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  margin: 0 0 30px;
+  list-style: none;
+}
+.currentPlan li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #758567;
+}
+.billingDetails {
+  margin: 0 0 20px;
+}
+.billingDetails > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e7ecdf;
+}
+.billingDetails dt {
+  font-size: 14px;
+  font-weight: 400;
+  color: #7a8b69;
+}
+.billingDetails dd {
+  margin: 0;
+  color: #566d45;
+  font-size: 14px;
+  text-align: right;
+}
+.studioPlan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 27px 0;
+}
+.studioPlan strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5d744d;
+}
+.studioPlan p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #839475;
+}
+.cycleOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 17px;
+  margin-top: 12px;
+  border: 1px solid #e2e8d9;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cycleOption span {
+  flex: 1;
+}
+.cycleOption strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #5e754d;
+}
+.cycleOption small {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #8c9c7b;
+}
+.cycleOption b {
+  font-size: 15px;
+  color: #566d43;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cycleOption input {
+  accent-color: #738e5d;
+}
+.cycleSelected {
+  border-color: #a5ba8d;
+  background: #f7f9f2;
+}
+@media (max-width: 850px) {
+  .summary {
+    grid-template-columns: 1fr;
+  }
+  .currentPlan {
+    padding: 23px;
+  }
+}

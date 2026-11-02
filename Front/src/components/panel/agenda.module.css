@@ -1,0 +1,225 @@
+.dateNavigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.listDay {
+  margin: 0;
+  padding: 17px 20px;
+  background: #f5f8ef;
+  color: #415b32;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid #e1e7d8;
+}
+.listDay::first-letter {
+  text-transform: uppercase;
+}
+.statusFilter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  color: #526647;
+}
+.statusFilter select {
+  padding: 10px 12px;
+  min-height: 44px;
+  border: 1px solid #dce3d3;
+  border-radius: 5px;
+  background: #fff;
+  color: #35472c;
+}
+.dateNavigation strong {
+  margin: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+.dateNavigation button {
+  min-height: 35px;
+  padding: 8px 10px;
+}
+.calendarScroll {
+  overflow-x: auto;
+}
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(125px, 1fr));
+  min-width: 875px;
+}
+.day {
+  min-width: 0;
+  min-height: 440px;
+  border-right: 1px solid #e7ecdf;
+}
+.day:last-child {
+  border-right: 0;
+}
+.dayHeading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 8px;
+  border-bottom: 1px solid #e7ecdf;
+  background: #fcfdf9;
+}
+.dayHeading span {
+  text-transform: uppercase;
+  font-size: 12px;
+  color: #5f6c54;
+  letter-spacing: 0.6px;
+}
+.dayHeading strong {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 19px;
+  font-weight: 500;
+  color: #667459;
+}
+.currentDay strong {
+  background: #30432b;
+  color: #fff;
+  border-radius: 50%;
+}
+.dayEvents {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px 8px;
+}
+.event {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 13px 10px;
+  text-align: left;
+  background: #edf3e5;
+  border: 1px solid #e0ead4;
+  border-left: 2px solid #9fb687;
+  border-radius: 4px;
+  color: #465b37;
+  transition: background 0.15s;
+}
+.event:hover {
+  background: #e4eed9;
+}
+.event time {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.event strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.event span {
+  display: block;
+  font-size: 12px;
+  margin-top: 7px;
+  color: #5f6c54;
+}
+.event small {
+  display: block;
+  font-size: 11px;
+  margin-top: 16px;
+  color: #5f6c54;
+}
+.pending {
+  background: #f8f3e8;
+  border-color: #eee4d0;
+  border-left-color: #5f6c54;
+  color: #8c744c;
+}
+.pending:hover {
+  background: #f4ecdb;
+}
+.pending span,
+.pending small {
+  color: #5f6c54;
+}
+.cancelled {
+  background: #f0f1ed;
+  border-color: #e1e4d9;
+  color: #5f6c54;
+}
+.cancelled strong {
+  text-decoration: line-through;
+}
+.addEvent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px dashed #e2e8d8;
+  border-radius: 4px;
+  background: none;
+  padding: 9px;
+  color: #5f6c54;
+  font-size: 12px;
+}
+.addEvent:hover {
+  background: #f7f9f2;
+  color: #5f6c54;
+}
+@media (max-width: 650px) {
+  .dateNavigation strong {
+    order: 5;
+    width: 100%;
+    margin: 10px 0 0;
+    font-size: 14px;
+  }
+  .day {
+    min-height: 350px;
+  }
+}
+
+.dateField input {
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid #dce3d3;
+  border-radius: 5px;
+  color: #35472c;
+  max-width: 100%;
+}
+.zone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #5f6c54;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .statusFilter {
+    width: 100%;
+  }
+  .statusFilter label {
+    display: grid;
+    gap: 7px;
+    flex: 1;
+  }
+  .statusFilter select {
+    max-width: 100%;
+  }
+  .dateNavigation {
+    width: 100%;
+  }
+  .dateField {
+    flex: 1;
+    min-width: 0;
+  }
+  .dateField input {
+    width: 100%;
+  }
+}

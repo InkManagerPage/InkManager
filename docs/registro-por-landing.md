@@ -56,7 +56,7 @@ El endpoint devuelve una URL y guarda el flujo firmado durante diez minutos en l
 
 En `GET /api/auth/google/callback`, el backend valida el flujo, intercambia el código, verifica la identidad y busca la cuenta por `googleId`. Una cuenta existente conserva su rol. Una nueva requiere un perfil válido. Si el email ya pertenece a otra cuenta, se rechaza la vinculación automática y se indica usar el método habitual.
 
-El backend crea su propia sesión, establece la cookie `inkmanager_session` y borra la cookie temporal. Los artistas van a `/artista/trabajos`; los otros roles vuelven a la Home. El login con contraseña también dirige al artista a su panel. `AuthProvider` consulta `/api/auth/me` y muestra al usuario. Un rol enviado por query no modifica la cuenta.
+El backend crea su propia sesión, establece la cookie `inkmanager_session` y borra la cookie temporal. Los artistas van a `/artista`; los otros roles vuelven a la Home. El login con contraseña también dirige al artista a su panel. `AuthProvider` consulta `/api/auth/me` y muestra al usuario. Un rol enviado por query no modifica la cuenta.
 
 Ante cancelación o error, la Home recibe `google_error=cancelado`, `cuenta` o `fallido`. `GoogleAuthNotice` presenta el aviso correspondiente. La dirección de retorno procede de la configuración del servidor.
 

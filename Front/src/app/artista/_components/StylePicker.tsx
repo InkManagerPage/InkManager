@@ -5,14 +5,21 @@ export function StylePicker({
   seleccionados,
   onChange,
   label = 'Estilos',
+  error,
 }: {
   opciones: string[];
   seleccionados: string[];
   onChange: (valores: string[]) => void;
   label?: string;
+  error?: string;
 }) {
   return (
-    <fieldset className={styles.stylePicker}>
+    <fieldset
+      className={styles.stylePicker}
+      tabIndex={-1}
+      aria-invalid={Boolean(error) || undefined}
+      aria-describedby={error ? 'styles-error' : undefined}
+    >
       <legend>{label}</legend>
       <div className={styles.choices}>
         {opciones.map((estilo) => (
@@ -33,6 +40,11 @@ export function StylePicker({
           </label>
         ))}
       </div>
+      {error && (
+        <p id="styles-error" role="alert" className="text-danger mt-2">
+          {error}
+        </p>
+      )}
     </fieldset>
   );
 }
