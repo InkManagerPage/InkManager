@@ -45,14 +45,3 @@ export function buscarCruce(
     select: { id: true },
   });
 }
-export function actualizarZonaHoraria(a: AmbitoConsultas, zonaHoraria: string) {
-  return a.tipo === "ESTUDIO"
-    ? prisma.estudio.updateMany({
-        where: { id: a.estudioId!, propietarioId: a.usuarioId },
-        data: { zonaHoraria },
-      })
-    : prisma.usuario.updateMany({
-        where: { id: a.usuarioId, rol: "ARTISTA", estudioId: null },
-        data: { zonaHoraria },
-      });
-}

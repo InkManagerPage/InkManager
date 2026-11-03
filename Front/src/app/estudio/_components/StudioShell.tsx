@@ -11,6 +11,12 @@ import styles from '@/components/panel/shell.module.css';
 const sections: PanelSection[] = [
   { nombre: 'Resumen', ruta: '/estudio', icono: 'resumen', grupo: 'Trabajo diario' },
   { nombre: 'Agenda', ruta: '/estudio/agenda', icono: 'agenda', grupo: 'Trabajo diario' },
+  {
+    nombre: 'Disponibilidad',
+    ruta: '/estudio/disponibilidad',
+    icono: 'reloj',
+    grupo: 'Trabajo diario',
+  },
   { nombre: 'Consultas', ruta: '/estudio/consultas', icono: 'consultas', grupo: 'Trabajo diario' },
   { nombre: 'Clientes', ruta: '/estudio/clientes', icono: 'clientes', grupo: 'Trabajo diario' },
   { nombre: 'Mensajes', ruta: '/estudio/mensajes', icono: 'mensajes', grupo: 'Trabajo diario' },

@@ -174,13 +174,15 @@ model Usuario {
   estudio               Estudio?             @relation("EstudioIntegrantes", fields: [estudioId], references: [id])
   estudiosAdministrados Estudio[]            @relation("EstudioPropietarios")
 
-  solicitudes          Solicitud[]  @relation("ClienteSolicitudes")
+  solicitudes          Solicitud[]             @relation("ClienteSolicitudes")
   cotizaciones         Cotizacion[]
-  contactosPropios     Contacto[]   @relation("ArtistaContactos")
-  solicitudesDirectas  Solicitud[]  @relation("ArtistaSolicitudesDirectas")
-  solicitudesAsignadas Solicitud[]  @relation("ArtistaSolicitudesAsignadas")
-  citas                Cita[]       @relation("ArtistaCitas")
-  citasCreadas         Cita[]       @relation("AutorCitas")
+  contactosPropios     Contacto[]              @relation("ArtistaContactos")
+  solicitudesDirectas  Solicitud[]             @relation("ArtistaSolicitudesDirectas")
+  solicitudesAsignadas Solicitud[]             @relation("ArtistaSolicitudesAsignadas")
+  citas                Cita[]                  @relation("ArtistaCitas")
+  citasCreadas         Cita[]                  @relation("AutorCitas")
+  disponibilidades     DisponibilidadArtista[]
+  bloqueosCreados      BloqueoAgenda[]         @relation("AutorBloqueoAgenda")
 
   sesiones              Sesion[]
   tokensCuenta          TokenCuenta[]
@@ -223,12 +225,13 @@ model Estudio {
   zonaHoraria          String  @default("America/Argentina/Buenos_Aires")
 
   // Relaciones
-  propietarioId String?
-  propietario   Usuario?           @relation("EstudioPropietarios", fields: [propietarioId], references: [id])
-  usuarios      Usuario[]          @relation("EstudioIntegrantes")
-  solicitudes   Solicitud[]
-  contactos     Contacto[]
-  invitaciones  InvitacionEquipo[]
+  propietarioId    String?
+  propietario      Usuario?                @relation("EstudioPropietarios", fields: [propietarioId], references: [id])
+  usuarios         Usuario[]               @relation("EstudioIntegrantes")
+  solicitudes      Solicitud[]
+  contactos        Contacto[]
+  invitaciones     InvitacionEquipo[]
+  disponibilidades DisponibilidadArtista[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -367,6 +370,40 @@ model Cita {
 
   @@index([artistaId, inicioAt])
   @@index([solicitudId, inicioAt])
+}
+
+model DisponibilidadArtista {
+  id        String          @id @default(uuid())
+  artistaId String
+  artista   Usuario         @relation(fields: [artistaId], references: [id], onDelete: Restrict)
+  estudioId String?
+  estudio   Estudio?        @relation(fields: [estudioId], references: [id], onDelete: Restrict)
+  ambito    String          @default("INDEPENDIENTE")
+  semana    Json?
+  version   Int             @default(0)
+  bloqueos  BloqueoAgenda[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([artistaId, ambito])
+  @@index([estudioId])
+}
+
+model BloqueoAgenda {
+  id               String                @id @default(uuid())
+  disponibilidadId String
+  disponibilidad   DisponibilidadArtista @relation(fields: [disponibilidadId], references: [id], onDelete: Restrict)
+  creadaPorId      String
+  creadaPor        Usuario               @relation("AutorBloqueoAgenda", fields: [creadaPorId], references: [id], onDelete: Restrict)
+  motivo           String
+  inicioAt         DateTime              @db.Timestamptz(3)
+  finAt            DateTime              @db.Timestamptz(3)
+  diaCompleto      Boolean               @default(false)
+  canceladoAt      DateTime?             @db.Timestamptz(3)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([disponibilidadId, inicioAt])
 }
 
 model Sesion {
