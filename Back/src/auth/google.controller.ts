@@ -71,7 +71,8 @@ export async function callbackGoogle(
         flujoToken,
         req.query.state,
       );
-      if (usuario.rol === "ARTISTA") destino.pathname = "/artista/trabajos";
+      if (usuario.rol === "ARTISTA") destino.pathname = "/artista";
+      if (usuario.rol === "ESTUDIO_ADMIN") destino.pathname = "/estudio";
       res.cookie("inkmanager_session", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

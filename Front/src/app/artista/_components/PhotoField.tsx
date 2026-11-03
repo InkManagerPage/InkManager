@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { comprimirImagen } from '@/lib/comprimir-imagen';
+import { useUnsavedChanges } from '@/components/forms/UnsavedChanges';
 import styles from './panel.module.css';
 
 export function PhotoField({
@@ -11,16 +12,19 @@ export function PhotoField({
   actual,
   onChange,
   onProcessing,
+  validationError,
 }: {
   id: string;
   label: string;
   actual?: string | null;
   onChange: (file: File | null) => void;
   onProcessing: (procesando: boolean) => void;
+  validationError?: string;
 }) {
   const [preview, setPreview] = useState(actual || '');
   const [error, setError] = useState('');
   const [procesando, setProcesando] = useState(false);
+  useUnsavedChanges(procesando);
   useEffect(
     () => () => {
       if (preview.startsWith('blob:')) URL.revokeObjectURL(preview);
@@ -34,13 +38,7 @@ export function PhotoField({
       </label>
       {preview && (
         <div className={styles.photoPreview}>
-          <Image
-            src={preview}
-            alt={`Vista previa: ${label.toLowerCase()}`}
-            width={440}
-            height={300}
-            unoptimized
-          />
+          <Image src={preview} alt={label} width={440} height={300} unoptimized />
         </div>
       )}
       <input
@@ -49,7 +47,8 @@ export function PhotoField({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         disabled={procesando}
-        aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
+        aria-invalid={Boolean(error || validationError) || undefined}
+        aria-describedby={`${id}-hint${error || validationError ? ` ${id}-error` : ''}`}
         onChange={async (event) => {
           const input = event.currentTarget;
           const file = event.target.files?.[0] ?? null;
@@ -83,9 +82,9 @@ export function PhotoField({
           Optimizando foto…
         </p>
       )}
-      {error && (
+      {(error || validationError) && (
         <p id={`${id}-error`} role="alert" className="text-danger mt-2">
-          {error}
+          {error || validationError}
         </p>
       )}
     </div>

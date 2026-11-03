@@ -11,6 +11,12 @@ import {
 } from '@/services/artistas.service';
 import type { TrabajoArtista } from '@/types/artista';
 import { WorkForm } from './WorkForm';
+import Link from 'next/link';
+import { usePanelFilters } from '@/hooks/usePanelFilters';
+import { useArtistProfile } from './ArtistProfileProvider';
+import { camposPendientes } from '@/lib/perfil-artista';
+import { PageHeader, PanelIcon } from './PanelUI';
+import common from '@/components/panel/workspace.module.css';
 import styles from './panel.module.css';
 
 export function WorkGallery() {
@@ -19,7 +25,11 @@ export function WorkGallery() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [intento, setIntento] = useState(0);
-  const [filtro, setFiltro] = useState('TODOS');
+  const { params, update } = usePanelFilters();
+  const filtro = params.get('estado') || 'TODOS';
+  const setFiltro = (value: string) => update({ estado: value === 'TODOS' ? null : value });
+  const { perfil } = useArtistProfile();
+  const faltantes = perfil ? camposPendientes(perfil) : [];
   const [formulario, setFormulario] = useState<{ trabajo: TrabajoArtista | null } | null>(null);
   const [borrando, setBorrando] = useState<TrabajoArtista | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -79,21 +89,26 @@ export function WorkGallery() {
   const visibles = trabajos.filter((trabajo) => filtro === 'TODOS' || trabajo.estado === filtro);
   return (
     <>
-      <header className={styles.heading}>
-        <div>
-          <h1>Mis trabajos</h1>
-        </div>
+      <PageHeader titulo="Mis trabajos">
         <button
-          className="btn btn-dark"
+          className={common.button}
           onClick={() => {
             setMensaje('');
             setFormulario({ trabajo: null });
           }}
           disabled={cargando || !estilos.length}
         >
-          + Nuevo trabajo
+          <PanelIcon nombre="mas" size={17} /> Nuevo trabajo
         </button>
-      </header>
+      </PageHeader>
+      {trabajos.some((item) => item.estado === 'PUBLICADO') && faltantes.length > 0 && (
+        <p className={common.notice}>
+          Completá tu perfil para aparecer en el catálogo.{' '}
+          <Link href="/artista/perfil" className={common.textButton}>
+            Completar perfil
+          </Link>
+        </p>
+      )}
       {error && (
         <div className="alert alert-danger" role="alert">
           {error}{' '}
@@ -115,7 +130,7 @@ export function WorkGallery() {
         </p>
       )}
       <div className={styles.toolbar}>
-        <div className="btn-group" role="group" aria-label="Estado de los trabajos">
+        <div className={common.tabs} role="group" aria-label="Estado de los trabajos">
           {(
             [
               ['TODOS', 'Todos'],
@@ -126,7 +141,7 @@ export function WorkGallery() {
             <button
               key={valor}
               type="button"
-              className={`btn btn-sm ${filtro === valor ? 'btn-dark' : 'btn-outline-secondary'}`}
+              className={filtro === valor ? common.tabActive : ''}
               aria-pressed={filtro === valor}
               onClick={() => setFiltro(valor)}
             >
@@ -191,7 +206,7 @@ export function WorkGallery() {
                 <div className={styles.cardActions}>
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-dark"
+                    className={common.secondaryButton}
                     disabled={ocupado === trabajo.id}
                     onClick={() => setFormulario({ trabajo })}
                   >
@@ -199,7 +214,7 @@ export function WorkGallery() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-sm btn-light"
+                    className={common.textButton}
                     disabled={ocupado === trabajo.id}
                     onClick={() => void cambiarEstado(trabajo)}
                   >

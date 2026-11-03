@@ -1,0 +1,185 @@
+.period {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.period > button {
+  padding-inline: 10px;
+}
+.month {
+  min-width: 0;
+}
+.month input {
+  min-height: 41px;
+  max-width: 185px;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid #dce0d8;
+  border-radius: 5px;
+  background: #fff;
+  color: #35432d;
+  font-size: 14px;
+}
+.month input:focus-visible {
+  outline: 2px solid #718b65;
+  outline-offset: 3px;
+}
+.periodHeading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.periodHeading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.periodHeading > span {
+  color: #62695e;
+  font-size: 14px;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 23px;
+}
+.revenue {
+  display: grid;
+  gap: 22px;
+  padding: 27px 23px;
+}
+.revenueRow {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 100px;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  color: #5f6c54;
+}
+.revenueRow strong {
+  color: #46533c;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.revenueRow > span {
+  text-transform: capitalize;
+}
+.revenueRow meter {
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border: 0;
+  border-radius: 3px;
+  background: #f0f2ec;
+}
+.revenueRow meter::-webkit-meter-bar {
+  height: 12px;
+  background: #f0f2ec;
+  border: 0;
+  border-radius: 3px;
+}
+.revenueRow meter::-webkit-meter-optimum-value {
+  background: #b7c4a8;
+  border-radius: 3px;
+}
+.revenueRow meter::-moz-meter-bar {
+  background: #b7c4a8;
+  border-radius: 3px;
+}
+.selected meter::-webkit-meter-optimum-value {
+  background: #6d845b;
+}
+.selected meter::-moz-meter-bar {
+  background: #6d845b;
+}
+.details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 23px;
+  margin: 28px 0;
+  padding: 24px 0;
+  border-block: 1px solid #e2e6dc;
+}
+.details dt {
+  color: #5f6c54;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.details dd {
+  margin: 12px 0 0;
+  font-size: 25px;
+  font-weight: 500;
+  color: #34432b;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.appointments {
+  padding: 6px 23px;
+}
+.appointments > div {
+  display: grid;
+  grid-template-columns: 1fr 35px 58px;
+  align-items: center;
+  gap: 15px;
+  padding: 17px 0;
+  border-bottom: 1px solid #ecefe7;
+}
+.appointments > div:last-child {
+  border: 0;
+}
+.appointments strong {
+  font-size: 15px;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.appointments > div > span:first-child {
+  justify-self: start;
+}
+.appointments > div > span:last-child {
+  text-align: right;
+  color: #5f6c54;
+  font-size: 14px;
+}
+.note {
+  margin: 22px 0 0;
+  max-width: 850px;
+  color: #62695e;
+  font-size: 12px;
+  line-height: 1.8;
+}
+@media (max-width: 1100px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .period {
+    width: 100%;
+  }
+  .month {
+    flex: 1;
+  }
+  .month input {
+    max-width: none;
+  }
+  .details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .revenue {
+    padding-inline: 16px;
+  }
+  .revenueRow {
+    grid-template-columns: 53px minmax(0, 1fr) 88px;
+    gap: 9px;
+    font-size: 12px;
+  }
+}
+
+.periodHeading h2::first-letter,
+.revenueRow > span::first-letter {
+  text-transform: uppercase;
+}

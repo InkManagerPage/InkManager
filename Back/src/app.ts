@@ -15,6 +15,10 @@ import { trabajosRouter } from "./trabajos/trabajos.routes.js";
 import { estilosRouter } from "./estilos/estilos.routes.js";
 import { catalogoRouter } from "./catalogo/catalogo.routes.js";
 import { ubicacionesRouter } from "./ubicaciones/ubicaciones.routes.js";
+import { solicitudesRouter } from "./solicitudes/solicitudes.routes.js";
+import { citasRouter } from "./citas/citas.routes.js";
+import { equipoRouter } from "./equipo/equipo.routes.js";
+import { invitacionesEquipoRouter } from "./invitaciones-equipo/invitaciones-equipo.routes.js";
 
 export const app = express();
 
@@ -34,6 +38,10 @@ app.use("/api/trabajos", trabajosRouter);
 app.use("/api/estilos", estilosRouter);
 app.use("/api/catalogo", catalogoRouter);
 app.use("/api/ubicaciones", ubicacionesRouter);
+app.use("/api/consultas", solicitudesRouter);
+app.use("/api/citas", citasRouter);
+app.use("/api/equipo", equipoRouter);
+app.use("/api/invitaciones-equipo", invitacionesEquipoRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "La ruta solicitada no existe." });

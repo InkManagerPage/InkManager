@@ -11,7 +11,13 @@
     "db:security": "prisma db execute --file prisma/changes/20261020_rls.sql --schema prisma/schema.prisma",
     "db:reviews": "prisma db execute --file prisma/changes/20261020_artistas_resenas.sql --schema prisma/schema.prisma",
     "seed:reviews": "tsx prisma/seed-reviews.ts",
-    "seed:catalogo": "tsx prisma/seed-catalogo.ts"
+    "seed:catalogo": "tsx prisma/seed-catalogo.ts",
+    "db:consultas": "prisma db execute --file prisma/changes/20261102_consultas_compartidas.sql --schema prisma/schema.prisma",
+    "seed:recorrido": "tsx prisma/seed-recorrido.ts",
+    "db:integridad-consultas": "prisma db execute --file prisma/changes/20261102_integridad_consultas.sql --schema prisma/schema.prisma",
+    "db:turnos": "prisma db execute --file prisma/changes/20261102_turnos.sql --schema prisma/schema.prisma",
+    "seed:turnos": "tsx prisma/seed-turnos.ts",
+    "db:equipo": "prisma db execute --file prisma/changes/20261102_equipo.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -32,6 +38,7 @@
     "express-rate-limit": "^8.7.1",
     "google-auth-library": "^11.3.1",
     "jsonwebtoken": "^9.0.3",
+    "luxon": "3.7.2",
     "multer": "^2.4.0"
   },
   "devDependencies": {
@@ -39,6 +46,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/luxon": "3.7.6",
     "@types/multer": "^2.3.0",
     "@types/node": "^26.6.5",
     "nodemon": "^3.1.14",
