@@ -1,5 +1,8 @@
-import { Artist } from '@/types/estudios';
+'use client';
+
+import Link from 'next/link';
 import Image from 'next/image';
+import { Artist } from '@/types/estudios';
 import styles from './artist.module.css';
 
 interface ArtistCardProps {
@@ -71,6 +74,14 @@ const ArtistCard = ({ artist }: ArtistCardProps) => {
           </svg>
           <span>{artist.city}</span>
         </div>
+
+        {/* Enlace que redirige a la página de cotización con el artista seleccionado */}
+        <Link
+          href={`/cotizacion?artista=${artist.id}`}
+          className="w-full mt-4 bg-black text-white py-2.5 rounded-xl font-semibold text-xs text-center block hover:bg-gray-800 transition-colors shadow-sm no-underline"
+        >
+          Cotizar con {artist.stage_name}
+        </Link>
       </div>
     </div>
   );
