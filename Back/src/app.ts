@@ -19,6 +19,7 @@ import { solicitudesRouter } from "./solicitudes/solicitudes.routes.js";
 import { citasRouter } from "./citas/citas.routes.js";
 import { equipoRouter } from "./equipo/equipo.routes.js";
 import { invitacionesEquipoRouter } from "./invitaciones-equipo/invitaciones-equipo.routes.js";
+import { disponibilidadRouter } from "./disponibilidad/disponibilidad.routes.js";
 
 export const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/consultas", solicitudesRouter);
 app.use("/api/citas", citasRouter);
 app.use("/api/equipo", equipoRouter);
 app.use("/api/invitaciones-equipo", invitacionesEquipoRouter);
+app.use("/api/disponibilidad", disponibilidadRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "La ruta solicitada no existe." });

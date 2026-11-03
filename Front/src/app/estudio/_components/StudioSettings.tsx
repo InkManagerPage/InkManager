@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { useFormikContext } from 'formik';
 import { PageHeader } from '@/components/panel/PanelUI';
 import { PanelForm, PanelField } from '@/components/panel/PanelForm';
@@ -117,6 +118,15 @@ export function StudioSettings() {
   return (
     <>
       <PageHeader titulo="Configuración" />
+      <section className={styles.settingsSection}>
+        <div>
+          <h2>Disponibilidad del equipo</h2>
+          <p>Horarios de atención y bloqueos por artista.</p>
+        </div>
+        <Link href="/estudio/disponibilidad" className={styles.textButton}>
+          Administrar disponibilidad
+        </Link>
+      </section>
       {aviso && (
         <p role="status" className={styles.notice}>
           {aviso}

@@ -14,7 +14,8 @@ Los artistas ingresan al resumen de `/artista` después de iniciar sesión con c
 | `/artista/mensajes`       | Conversaciones, lectura y composición de mensajes de ejemplo.                                              |
 | `/artista/estudio`        | Modalidad y equipo consultados desde la BD.                                                                |
 | `/artista/notificaciones` | Avisos, filtros de lectura y acceso al detalle de cada actividad.                                          |
-| `/artista/configuracion`  | Horarios habituales, preferencias y acceso a los ajustes de cuenta.                                        |
+| `/artista/disponibilidad` | Días de atención, rangos horarios y bloqueos persistidos por negocio.                                      |
+| `/artista/configuracion`  | Accesos a disponibilidad, contraseña y recordatorios.                                                      |
 | `/artista/recordatorios`  | Reglas de correo para clientes y artista, horarios, contenido y excepciones.                               |
 | `/artista/suscripcion`    | Plan, facturación, renovación e historial de pagos.                                                        |
 | `/artista/trabajos`       | Portafolio conectado a la API: borradores, edición, publicación y eliminación.                             |
@@ -22,7 +23,7 @@ Los artistas ingresan al resumen de `/artista` después de iniciar sesión con c
 
 ## Datos de gestión
 
-Las consultas, propuestas, contactos, turnos y pertenencia al estudio proceden del backend, compartidos mediante `ConsultasProvider`. La bandeja del artista y la del titular consultan los mismos registros. El resto de la gestión mantiene su estado local en `ArtistPanelProvider`. No se guardan tokens en localStorage. La clave anterior de ejemplos se conserva separada de la nueva clave de preferencias.
+Las consultas, propuestas, contactos, turnos, disponibilidad y pertenencia al estudio proceden del backend, compartidos mediante `ConsultasProvider`. La bandeja del artista y la del titular consultan los mismos registros. El resto de la gestión mantiene su estado local en `ArtistPanelProvider`. No se guardan tokens en localStorage. La clave anterior de ejemplos se conserva separada de la nueva clave de preferencias.
 
 El directorio de clientes utiliza datos reales y todavía no permite editar contactos. Mi estudio muestra el equipo y permite aceptar o rechazar invitaciones vinculadas al email verificado. El ingreso requiere resolver primero el trabajo independiente pendiente. Los contratos y permisos están en [Equipo del estudio](equipo-estudio.md). La agenda persiste los turnos y permite reservar desde una consulta asignada. El artista gestiona sus sesiones y el titular también puede gestionarlas si pertenecen al estudio. Mensajes, reglas generales de recordatorios y suscripción siguen siendo locales; no envían mensajes o correos. Véase [Turnos y agenda](turnos.md). El detalle de la integración está en [Consultas y propuestas](consultas-y-propuestas.md).
 
@@ -116,5 +117,7 @@ En `/clientes` se muestra una única galería de trabajos publicados, con filtro
 El esquema está en `Back/prisma/schema.prisma`. El script SQL aditivo correspondiente es `Back/prisma/changes/20261026_panel_artista.sql`. Los trabajos existentes conservan sus fotos y pasan a borrador por defecto.
 
 ## Consultas como integrante de un estudio
+
+**Disponibilidad** guarda los horarios y bloqueos del artista en su negocio actual. El integrante activo gestiona los suyos y el suspendido los consulta. La agenda y los formularios de reserva utilizan esas reglas; véase [Disponibilidad y bloqueos](disponibilidad-y-bloqueos.md).
 
 La membresía se obtiene de la BD. Los integrantes activos ven las consultas del estudio y pueden editar su propia propuesta mientras estén abiertas. El titular ve todas las propuestas y administra el cierre y la asignación. El independiente usa la misma bandeja limitada a sus consultas. Los controles de cierre o asignación no se ofrecen a integrantes del estudio.

@@ -18,7 +18,6 @@ interface PanelContexto {
   reintentarMensaje: (conversacionId: string, mensajeId: string) => void;
   leerConversacion: (id: string) => void;
   leerNotificacion: (id?: string) => void;
-  guardarPreferencias: (preferencias: DatosPanelArtista['preferencias']) => void;
   guardarRecordatorios: (configuracion: RecordatoriosPanel) => string;
   cambiarCiclo: (ciclo: CicloPlan) => void;
   cancelarRenovacion: () => void;
@@ -136,9 +135,6 @@ export function ArtistPanelProvider({ children }: { children: ReactNode }) {
       ),
     }));
   }
-  function guardarPreferencias(preferencias: DatosPanelArtista['preferencias']) {
-    setDatos((actuales) => ({ ...actuales, preferencias }));
-  }
   function guardarRecordatorios(configuracion: RecordatoriosPanel) {
     const error = validarRecordatorios(configuracion);
     if (error) return error;
@@ -180,7 +176,6 @@ export function ArtistPanelProvider({ children }: { children: ReactNode }) {
         reintentarMensaje,
         leerConversacion,
         leerNotificacion,
-        guardarPreferencias,
         guardarRecordatorios,
         cambiarCiclo,
         cancelarRenovacion,

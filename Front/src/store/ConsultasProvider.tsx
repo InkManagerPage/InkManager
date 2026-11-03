@@ -56,12 +56,19 @@ function useConsultasState() {
         void recargar();
       };
     }
+    const agenda =
+      'BroadcastChannel' in window ? new BroadcastChannel('inkmanager-disponibilidad') : null;
+    if (agenda)
+      agenda.onmessage = () => {
+        void recargar();
+      };
     return () => {
       peticion.current?.abort();
       clearInterval(timer);
       document.removeEventListener('visibilitychange', refrescar);
       canal.current?.close();
       canal.current = null;
+      agenda?.close();
     };
   }, [recargar]);
   function aplicar(consulta: ConsultaGuardada) {

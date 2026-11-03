@@ -19,6 +19,8 @@ import { validarCita, validarTransicion } from "./citas.validation.js";
 import * as repo from "./citas.repository.js";
 import type { Prisma } from "@prisma/client";
 import { IANAZone } from "luxon";
+import { comprobarReservaDisponible } from "../disponibilidad/disponibilidad.service.js";
+import { cambiarZonaCalendario } from "../disponibilidad/disponibilidad.repository.js";
 
 function asegurarEditor(a: AmbitoConsultas) {
   if (!a.administra && !a.puedeProponer)
@@ -130,6 +132,13 @@ export async function crearTurno(usuarioId: string, entrada: unknown) {
           "Esta consulta ya tiene un turno. Actualizá la agenda y agregá otra sesión manualmente.",
         );
       await comprobarArtista(tx, a, s.artistaAsignadoId, true);
+      await comprobarReservaDisponible(
+        tx,
+        a,
+        s.artistaAsignadoId,
+        d.inicioAt,
+        d.finAt,
+      );
       await comprobarHorario(tx, d, s.artistaAsignadoId);
       const cotizacion = s.cotizaciones.find(
         (p) => p.artistaId === s.artistaAsignadoId,
@@ -197,6 +206,14 @@ export async function actualizarTurno(
           d.finAt.getTime() !== actual.finAt.getTime();
         if (d.estado !== "CANCELADA")
           await comprobarArtista(tx, a, actual.artistaId, reprograma);
+        if (reprograma && d.estado !== "CANCELADA")
+          await comprobarReservaDisponible(
+            tx,
+            a,
+            actual.artistaId,
+            d.inicioAt,
+            d.finAt,
+          );
         if (
           d.estado !== "CANCELADA" &&
           (estadoPanel(s.estado) !== "ASIGNADA" ||
@@ -239,11 +256,6 @@ export async function guardarZonaHoraria(usuarioId: string, entrada: unknown) {
     !IANAZone.isValidZone(zona)
   )
     throw new HttpError(400, "Elegí una zona horaria válida.");
-  const resultado = await repo.actualizarZonaHoraria(a, zona);
-  if (!resultado.count)
-    throw new HttpError(
-      403,
-      "Tu espacio de trabajo cambió. Actualizá el panel.",
-    );
+  await cambiarZonaCalendario(a, zona);
   return { zonaHoraria: zona };
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import Modal from 'react-bootstrap/Modal';
 import { useAuth } from '@/store/AuthProvider';
 import { useConsultas } from '@/hooks/useConsultas';
@@ -105,6 +106,52 @@ function Agenda({
     )
     .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
   const seleccionada = datos.citas.find((c) => c.id === params.get('cita'));
+  const bloqueos = (datos.bloqueosAgenda || []).filter(
+    (b) =>
+      !filtro &&
+      !cliente &&
+      !consulta &&
+      (!artista || b.artistaId === artista) &&
+      (todos ||
+        (b.desdeFecha <= ultima &&
+          (b.diaCompleto || b.hastaHora !== '00:00'
+            ? b.hastaFecha
+            : moverFecha(b.hastaFecha, -1)) >= primera)),
+  );
+  const diasBloqueados = bloqueos.flatMap((b) => {
+    const fin =
+      b.diaCompleto || b.hastaHora !== '00:00' ? b.hastaFecha : moverFecha(b.hastaFecha, -1);
+    const desde = todos ? b.desdeFecha : b.desdeFecha < primera ? primera : b.desdeFecha;
+    const hasta = todos ? desde : fin > ultima ? ultima : fin;
+    const dias: string[] = [];
+    for (let dia = desde; dia <= hasta; dia = moverFecha(dia, 1)) dias.push(dia);
+    return dias.map((dia) => ({ ...b, dia }));
+  });
+  function bloqueosDelDia(dia: string) {
+    return diasBloqueados
+      .filter((b) => b.dia === dia)
+      .map((b) => (
+        <Link
+          key={b.id}
+          className={agenda.block}
+          href={`${base}/disponibilidad?artista=${b.artistaId}`}
+        >
+          <small>No disponible</small>
+          <strong>{b.motivo}</strong>
+          {todos && b.desdeFecha !== b.hastaFecha && (
+            <span>
+              {mostrarFecha(b.desdeFecha)} — {mostrarFecha(b.hastaFecha)}
+            </span>
+          )}
+          <span>
+            {b.diaCompleto
+              ? 'Todo el día'
+              : `${dia === b.desdeFecha ? b.desdeHora : '00:00'} — ${dia === b.hastaFecha ? b.hastaHora : '24:00'}`}
+          </span>
+          <span>{b.artistaNombre}</span>
+        </Link>
+      ));
+  }
   const mostrarForm = Boolean(seleccionada) || params.has('nueva');
   const [aviso, setAviso] = useState(''),
     [zona, setZona] = useState(false);
@@ -124,12 +171,15 @@ function Agenda({
     update({ cita: c.id, nueva: null });
   }
   function listado() {
-    const dias = [...new Set(citas.map((c) => c.fecha))];
+    const dias = [
+      ...new Set([...citas.map((c) => c.fecha), ...diasBloqueados.map((b) => b.dia)]),
+    ].sort();
     return dias.map((dia) => (
       <section key={dia}>
         <h2 className={agenda.listDay}>
           {dia === hoy ? 'Hoy' : mostrarFecha(dia, { weekday: 'long' })} · {mostrarFecha(dia)}
         </h2>
+        {bloqueosDelDia(dia)}
         {citas
           .filter((c) => c.fecha === dia)
           .map((c) => (
@@ -155,6 +205,12 @@ function Agenda({
   return (
     <>
       <PageHeader titulo={base === '/estudio' ? 'Agenda del equipo' : 'Agenda'}>
+        <Link
+          className={styles.secondaryButton}
+          href={`${base}/disponibilidad${artista ? `?artista=${artista}` : ''}`}
+        >
+          Disponibilidad
+        </Link>
         <button
           className={styles.secondaryButton}
           onClick={() => {
@@ -299,9 +355,10 @@ function Agenda({
             ? mostrarFecha(primera, { weekday: 'long', day: 'numeric', month: 'long' })
             : `${mostrarFecha(primera)} — ${mostrarFecha(ultima)}`}{' '}
         · {cantidad(citas.length, 'turno')}
+        {bloqueos.length > 0 && ` · ${cantidad(bloqueos.length, 'bloqueo')}`}
       </p>
       <section className={styles.surface} aria-label="Turnos">
-        {!citas.length ? (
+        {!citas.length && !bloqueos.length ? (
           <EmptyState titulo="No hay turnos en este período" />
         ) : vista === 'SEMANA' && !compacto ? (
           <div className={agenda.calendarScroll}>
@@ -315,6 +372,7 @@ function Agenda({
                     <strong>{leerFecha(dia).getDate()}</strong>
                   </header>
                   <div className={agenda.dayEvents}>
+                    {bloqueosDelDia(dia)}
                     {citas
                       .filter((c) => c.fecha === dia)
                       .map((c) => (

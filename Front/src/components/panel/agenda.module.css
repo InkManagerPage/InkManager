@@ -200,6 +200,30 @@
   color: #5f6c54;
   font-size: 13px;
 }
+.block {
+  display: grid;
+  gap: 6px;
+  margin: 8px;
+  padding: 14px;
+  border: 1px dashed #a4ab9d;
+  border-radius: 4px;
+  background: #f5f5f1;
+  color: #4e5847;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.block:hover {
+  background: #eceee7;
+  color: #283e24;
+}
+.block small {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dayEvents .block {
+  margin: 0;
+}
 @media (max-width: 600px) {
   .statusFilter {
     width: 100%;
