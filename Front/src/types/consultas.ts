@@ -2,6 +2,7 @@ import type { ClientePanel } from './panel-artista';
 import type { ConsultaEstudio } from './panel-estudio';
 import type { IntegranteGuardado, InvitacionEquipo } from './equipo';
 import type { CitaGuardada } from './citas';
+import type { BloqueoAgenda } from './disponibilidad';
 export interface ConsultaGuardada extends ConsultaEstudio {
   version: number;
   referencias: string[];
@@ -26,4 +27,5 @@ export interface BandejaConsultas {
   consultas: ConsultaGuardada[];
   citas: CitaGuardada[];
   invitaciones: InvitacionEquipo[];
+  bloqueosAgenda: (BloqueoAgenda & { artistaId: string; artistaNombre: string })[];
 }

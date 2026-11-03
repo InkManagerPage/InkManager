@@ -29,6 +29,8 @@ Los turnos de un mismo artista no pueden superponerse. La API comprueba el cruce
 
 No se puede archivar o cambiar de artista una consulta que conserve turnos pendientes o confirmados. Primero deben resolverse o cancelarse.
 
+Crear o reprogramar un turno exige horarios de atención configurados y respeta los bloqueos del artista. La sección Disponibilidad administra estas reglas en la BD. Los turnos existentes conservan su horario al cambiar estado o notas. Los detalles se describen en [Disponibilidad y bloqueos](disponibilidad-y-bloqueos.md).
+
 ## API y código
 
 | Ruta                            | Función                                                                        |

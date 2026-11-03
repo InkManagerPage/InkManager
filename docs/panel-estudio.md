@@ -4,19 +4,20 @@ La ruta privada `/estudio` corresponde a la cuenta con rol `ESTUDIO_ADMIN`. El i
 
 ## Secciones
 
-| Sección       | Función                                                                                      |
-| ------------- | -------------------------------------------------------------------------------------------- |
-| Resumen       | Turnos de hoy, consultas sin asignar, cierres próximos, equipo y canales de recepción.       |
-| Agenda        | Turnos del equipo por día y artista, alta, edición, estado y excepciones de recordatorios.   |
-| Consultas     | Estado del proyecto, propuestas, bocetos, cierre manual o por fecha y asignación de artista. |
-| Clientes      | Directorio de contactos reales y acceso a sus consultas.                                     |
-| Mensajes      | Conversaciones por canal y borradores por conversación.                                      |
-| Equipo        | Invitaciones, suspensión, habilitación, desvinculación y acceso a consultas y turnos.        |
-| Estadísticas  | Mes y artista, importes de sesiones completadas, clientes únicos, horas, estados y canales.  |
-| Recordatorios | Reglas de correo para clientes y titular, tiempos, plantillas y zona horaria.                |
-| Suscripción   | Ciclo mensual o anual, próxima renovación, cancelación, reactivación e historial.            |
-| Perfil        | Nombre, descripción de hasta 300 caracteres, contacto y ubicación del estudio.               |
-| Configuración | Plazo predeterminado de propuestas para nuevas consultas.                                    |
+| Sección        | Función                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| Resumen        | Turnos de hoy, consultas sin asignar, cierres próximos, equipo y canales de recepción.       |
+| Agenda         | Turnos del equipo por día y artista, alta, edición, estado y excepciones de recordatorios.   |
+| Disponibilidad | Días, rangos y bloqueos de cada integrante, con control de turnos afectados.                 |
+| Consultas      | Estado del proyecto, propuestas, bocetos, cierre manual o por fecha y asignación de artista. |
+| Clientes       | Directorio de contactos reales y acceso a sus consultas.                                     |
+| Mensajes       | Conversaciones por canal y borradores por conversación.                                      |
+| Equipo         | Invitaciones, suspensión, habilitación, desvinculación y acceso a consultas y turnos.        |
+| Estadísticas   | Mes y artista, importes de sesiones completadas, clientes únicos, horas, estados y canales.  |
+| Recordatorios  | Reglas de correo para clientes y titular, tiempos, plantillas y zona horaria.                |
+| Suscripción    | Ciclo mensual o anual, próxima renovación, cancelación, reactivación e historial.            |
+| Perfil         | Nombre, descripción de hasta 300 caracteres, contacto y ubicación del estudio.               |
+| Configuración  | Plazo predeterminado de propuestas para nuevas consultas.                                    |
 
 ## Consultas y propuestas
 
@@ -32,6 +33,8 @@ Una consulta se cierra manualmente o al vencer su fecha. Las propuestas de integ
 La elección pública del cliente requiere el enlace de acceso limitado que todavía no está publicado. El titular puede asignar directamente. El plazo se aplica en el backend al consultar la bandeja, por lotes; no hay todavía un worker independiente.
 
 ## Equipo y agenda
+
+**Disponibilidad** permite seleccionar un integrante y administrar sus días, rangos y bloqueos. Las reservas respetan esa configuración. Los cambios que afectan turnos activos se rechazan hasta resolverlos; véase [Disponibilidad y bloqueos](disponibilidad-y-bloqueos.md).
 
 La pertenencia, las invitaciones y el estado de los artistas se gestionan en la BD. El titular puede invitar, suspender, habilitar y desvincular integrantes; el artista acepta o rechaza desde Mi estudio. Véase [Equipo del estudio](equipo-estudio.md). La agenda y las estadísticas usan turnos persistidos. El titular gestiona los del equipo y cada artista los suyos. Consultas, Clientes y Equipo enlazan a la agenda filtrada. Los permisos, estados y reglas de reserva se describen en [Turnos y agenda](turnos.md).
 

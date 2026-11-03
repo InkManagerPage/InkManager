@@ -48,9 +48,10 @@ export async function obtenerUsuarioSesion(token: unknown) {
 
   const { usuarioId, sesionId } = verificarToken(token);
 
-  await validarSesion(sesionId, usuarioId);
-
-  const usuario = await buscarUsuarioPorId(usuarioId);
+  const [, usuario] = await Promise.all([
+    validarSesion(sesionId, usuarioId),
+    buscarUsuarioPorId(usuarioId),
+  ]);
 
   if (!usuario) {
     throw new HttpError(401, "Sesión inválida.");

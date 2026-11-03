@@ -1,9 +1,11 @@
+import { ambitoDeCuenta } from "./solicitudes.ambito.js";
 import { EstadoSolicitud, type Prisma } from "@prisma/client";
 import { HttpError } from "../errors/http-error.js";
 import { listarCitas } from "../citas/citas.repository.js";
 import { presentarCita } from "../citas/citas.entity.js";
 import { listarInvitaciones } from "../invitaciones-equipo/invitaciones-equipo.repository.js";
 import { presentarInvitacion } from "../invitaciones-equipo/invitaciones-equipo.entity.js";
+import { listarBloqueosAgenda } from "../bloqueos-agenda/bloqueos-agenda.repository.js";
 import * as repo from "./solicitudes.repository.js";
 import {
   detalleSolicitud,
@@ -21,47 +23,7 @@ import {
 export async function resolverAmbito(
   usuarioId: string,
 ): Promise<AmbitoConsultas> {
-  const usuario = await repo.buscarCuenta(usuarioId);
-  if (!usuario) throw new HttpError(401, "Debés iniciar sesión.");
-  if (usuario.rol === "ESTUDIO_ADMIN") {
-    if (!usuario.estudio || usuario.estudio.propietarioId !== usuario.id)
-      throw new HttpError(
-        403,
-        "Tu cuenta no tiene un estudio propio asociado.",
-      );
-    return {
-      usuarioId,
-      tipo: "ESTUDIO",
-      estudioId: usuario.estudio.id,
-      nombre: usuario.estudio.nombre,
-      administra: true,
-      puedeProponer: false,
-      zonaHoraria:
-        usuario.estudio.zonaHoraria || "America/Argentina/Buenos_Aires",
-      email: usuario.email,
-      emailVerificado: usuario.emailVerificado,
-    };
-  }
-  if (usuario.rol !== "ARTISTA")
-    throw new HttpError(403, "No tenés acceso a estas consultas.");
-  return {
-    usuarioId,
-    tipo: usuario.estudio ? "ESTUDIO" : "INDEPENDIENTE",
-    estudioId: usuario.estudioId,
-    nombre:
-      usuario.estudio?.nombre ||
-      usuario.nombreArtistico ||
-      usuario.nombre ||
-      "Mi espacio",
-    administra: !usuario.estudioId,
-    puedeProponer: !usuario.estudioId || usuario.estadoEnEstudio === "ACTIVO",
-    zonaHoraria:
-      usuario.estudio?.zonaHoraria ||
-      usuario.zonaHoraria ||
-      "America/Argentina/Buenos_Aires",
-    email: usuario.email,
-    emailVerificado: usuario.emailVerificado,
-  };
+  return ambitoDeCuenta(await repo.buscarCuenta(usuarioId));
 }
 export function comprobarVersion(s: SolicitudCompleta, version: number) {
   if (s.version !== version)
@@ -108,12 +70,14 @@ export async function cerrarEnTransaccion(
 export async function obtenerBandeja(usuarioId: string) {
   const ambito = await resolverAmbito(usuarioId);
   await repo.cerrarVencidasDelAmbito(ambito);
-  const [recibidas, equipo, citas, invitaciones] = await Promise.all([
-    repo.listarSolicitudes(ambito),
-    repo.listarEquipo(ambito),
-    listarCitas(ambito),
-    listarInvitaciones(ambito),
-  ]);
+  const [recibidas, equipo, citas, invitaciones, bloqueosAgenda] =
+    await Promise.all([
+      repo.listarSolicitudes(ambito),
+      repo.listarEquipo(ambito),
+      listarCitas(ambito),
+      listarInvitaciones(ambito),
+      listarBloqueosAgenda(ambito),
+    ]);
   const porId = new Map(recibidas.map((s) => [s.id, s]));
   for (const c of citas)
     if (!porId.has(c.solicitudId)) porId.set(c.solicitudId, c.solicitud);
@@ -157,6 +121,7 @@ export async function obtenerBandeja(usuarioId: string) {
     consultas: solicitudes.map((s) => presentarSolicitud(s, ambito)),
     citas: citas.map((c) => presentarCita(c, ambito)),
     invitaciones: invitaciones.map((i) => presentarInvitacion(i)),
+    bloqueosAgenda,
   };
 }
 export async function cambiarSolicitud(

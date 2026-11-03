@@ -20,6 +20,12 @@ import styles from '@/components/panel/shell.module.css';
 const navegacion: { nombre: string; ruta: string; icono: IconoPanel; grupo: string }[] = [
   { nombre: 'Resumen', ruta: '/artista', icono: 'resumen', grupo: 'Trabajo diario' },
   { nombre: 'Agenda', ruta: '/artista/agenda', icono: 'agenda', grupo: 'Trabajo diario' },
+  {
+    nombre: 'Disponibilidad',
+    ruta: '/artista/disponibilidad',
+    icono: 'reloj',
+    grupo: 'Trabajo diario',
+  },
   { nombre: 'Consultas', ruta: '/artista/consultas', icono: 'consultas', grupo: 'Trabajo diario' },
   { nombre: 'Clientes', ruta: '/artista/clientes', icono: 'clientes', grupo: 'Trabajo diario' },
   { nombre: 'Mensajes', ruta: '/artista/mensajes', icono: 'mensajes', grupo: 'Trabajo diario' },

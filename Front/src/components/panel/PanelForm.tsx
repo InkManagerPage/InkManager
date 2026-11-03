@@ -11,6 +11,7 @@ import {
   type FormikValues,
 } from 'formik';
 import BootstrapForm from 'react-bootstrap/Form';
+import Spinner from 'react-bootstrap/Spinner';
 import { useUnsavedChanges } from '@/components/forms/UnsavedChanges';
 import styles from './workspace.module.css';
 
@@ -126,6 +127,35 @@ function FormStatus() {
   ) : null;
 }
 
+export function PanelSubmitButton({
+  children,
+  disabled = false,
+  pendingText = 'Guardando…',
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  pendingText?: string;
+}) {
+  const { isSubmitting } = useFormikContext();
+  return (
+    <button
+      type="submit"
+      className={styles.button}
+      disabled={disabled || isSubmitting}
+      aria-busy={isSubmitting || undefined}
+    >
+      {isSubmitting ? (
+        <>
+          <Spinner animation="border" size="sm" aria-hidden="true" className="me-2" />
+          <span role="status">{pendingText}</span>
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
+
 export function PanelField({
   name,
   label,
@@ -167,7 +197,6 @@ export function PanelField({
           },
         }
       : {}),
-    id,
     'aria-invalid': invalid || undefined,
     'aria-describedby': invalid ? `${id}-error` : hint ? `${id}-hint` : undefined,
     isInvalid: invalid,
