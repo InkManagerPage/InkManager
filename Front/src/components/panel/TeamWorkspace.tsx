@@ -194,6 +194,14 @@ function Team() {
                             </Link>
                           )}
                           {titular && (
+                            <Link
+                              className={styles.textButton}
+                              href={`/estudio/disponibilidad?artista=${a.id}`}
+                            >
+                              Horarios y bloqueos
+                            </Link>
+                          )}
+                          {titular && (
                             <Dropdown>
                               <Dropdown.Toggle
                                 variant="outline-dark"

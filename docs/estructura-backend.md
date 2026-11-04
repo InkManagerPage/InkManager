@@ -106,6 +106,12 @@ El perfil utiliza `Usuario` y los trabajos utilizan `FotoGaleria`. Los estilos s
 
 `tokens-cuenta` coordina los enlaces de verificación y contraseña; `correos` construye el contenido y lo entrega mediante Resend o una vista previa local. `TokenCuenta` almacena hashes de tokens, propósito, vencimiento y uso. El comportamiento y los endpoints se detallan en [correos y recuperación](correos-y-recuperacion.md).
 
+## Disponibilidad y bloqueos
+
+`disponibilidad` administra los horarios semanales por artista y negocio; `bloqueos-agenda` administra períodos no disponibles. Ambos usan controller, service, repository, entity y validación. `citas` consulta esas reglas dentro de la transacción de reserva. Los contratos y restricciones se detallan en [Disponibilidad y bloqueos](disponibilidad-y-bloqueos.md).
+
+`solicitudes.ambito.ts` contiene las reglas compartidas que determinan el negocio y los permisos a partir de una cuenta. Disponibilidad reutiliza la cuenta leída con bloqueo transaccional; las demás operaciones obtienen la cuenta mediante su repositorio. La autenticación consulta la sesión vigente y el usuario en paralelo, sin almacenar permisos en caché.
+
 ## Pruebas
 
 `npm test` ejecuta las pruebas de `Back/tests/`. La suite usa servidores HTTP temporales y simula Prisma, Cloudinary, Google y Resend. También comprueba validaciones y respuestas del cliente HTTP del frontend. No utiliza la base real ni envía correos a personas.

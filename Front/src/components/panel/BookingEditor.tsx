@@ -1,9 +1,9 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import Accordion from 'react-bootstrap/Accordion';
 import { useFormikContext } from 'formik';
-import { PanelForm, PanelField } from './PanelForm';
+import { PanelForm, PanelField, PanelSubmitButton } from './PanelForm';
 import { PanelReminderOverrides } from './PanelReminderOverrides';
 import { StatusBadge } from './PanelUI';
 import { crearFormularioCita, erroresFormularioCita, relojEnZona } from '@/lib/agenda';
@@ -11,6 +11,10 @@ import { moneda, mostrarFecha } from '@/lib/panel-artista';
 import type { BandejaConsultas } from '@/types/consultas';
 import type { CitaGuardada, FormularioCita } from '@/types/citas';
 import type { RecordatoriosPanel } from '@/types/recordatorios';
+import { useDisponibilidad } from '@/hooks/useDisponibilidad';
+import { problemaReserva } from '@/lib/disponibilidad';
+import { leerFecha } from '@/lib/panel-artista';
+import { fechaValida } from '@/lib/agenda';
 import styles from './workspace.module.css';
 export const estados = {
   PENDIENTE: 'Por confirmar',
@@ -40,10 +44,32 @@ export function BookingEditor({
   onSaved: (c: CitaGuardada) => void;
 }) {
   const guardada = useRef<CitaGuardada | null>(null);
+  const [artistaId, setArtistaId] = useState(
+    cita?.artistaId || datos.consultas.find((c) => c.id === solicitudId)?.artistaId || '',
+  );
+  const disponibilidad = useDisponibilidad(artistaId);
   return (
     <PanelForm<FormularioCita>
       initialValues={crearFormularioCita(datos, solicitudId, fecha, cita)}
-      validate={(v) => erroresFormularioCita(v, datos, cita?.id)}
+      validate={(v) => {
+        const errores = erroresFormularioCita(v, datos, cita?.id);
+        const cambiaHorario =
+          !cita || v.fecha !== cita.fecha || v.hora !== cita.hora || v.duracion !== cita.duracion;
+        if (
+          cambiaHorario &&
+          v.estado !== 'CANCELADA' &&
+          artistaId &&
+          !errores.fecha &&
+          !errores.hora &&
+          !errores.duracion
+        ) {
+          const problema = disponibilidad.datos
+            ? problemaReserva(disponibilidad.datos, v.fecha, v.hora, v.duracion)
+            : disponibilidad.error || 'Esperá a que cargue la disponibilidad del artista.';
+          if (problema) errores.hora = problema;
+        }
+        return errores;
+      }}
       onSave={async (v) => {
         guardada.current = await onSave(v);
       }}
@@ -51,14 +77,19 @@ export function BookingEditor({
         if (guardada.current) onSaved(guardada.current);
       }}
     >
-      <BookingFields datos={datos} cita={cita} base={base} recordatorios={recordatorios} />
+      <BookingFields
+        datos={datos}
+        cita={cita}
+        base={base}
+        recordatorios={recordatorios}
+        disponibilidad={disponibilidad}
+        onArtistChange={setArtistaId}
+      />
       <div className={styles.formActions}>
         <button type="button" className={styles.secondaryButton} onClick={onCancel}>
           Volver
         </button>
-        <button type="submit" className={styles.button}>
-          Guardar turno
-        </button>
+        <PanelSubmitButton>Guardar turno</PanelSubmitButton>
       </div>
     </PanelForm>
   );
@@ -68,11 +99,15 @@ function BookingFields({
   cita,
   base,
   recordatorios,
+  disponibilidad,
+  onArtistChange,
 }: {
   datos: BandejaConsultas;
   cita?: CitaGuardada;
   base: string;
   recordatorios: RecordatoriosPanel;
+  disponibilidad: ReturnType<typeof useDisponibilidad>;
+  onArtistChange: (id: string) => void;
 }) {
   const { values, setValues, setFieldValue, setFieldTouched, errors, touched, submitCount } =
     useFormikContext<FormularioCita>();
@@ -98,6 +133,7 @@ function BookingFields({
             id="booking-request"
             value={values.solicitudId}
             onChange={(e) => {
+              onArtistChange(datos.consultas.find((s) => s.id === e.target.value)?.artistaId || '');
               const inicial = crearFormularioCita(datos, e.target.value, values.fecha);
               void setValues({
                 ...inicial,
@@ -145,6 +181,34 @@ function BookingFields({
             <dd>{cita?.artistaNombre || datos.equipo.find((a) => a.id === c.artistaId)?.nombre}</dd>
           </div>
         </dl>
+      )}
+      {c && (
+        <div className={styles.notice}>
+          {disponibilidad.cargando ? (
+            <span role="status">Cargando disponibilidad…</span>
+          ) : disponibilidad.datos ? (
+            <>
+              <p>
+                {disponibilidad.datos.semana && fechaValida(values.fecha)
+                  ? `Atención este día: ${
+                      disponibilidad.datos.semana
+                        .find((d) => d.dia === (leerFecha(values.fecha).getDay() || 7))
+                        ?.rangos.map((r) => `${r.desde}–${r.hasta}`)
+                        .join(' / ') || 'Sin atención'
+                    }`
+                  : 'El artista todavía no configuró sus horarios.'}
+              </p>
+              <Link
+                className={styles.textButton}
+                href={`${base}/disponibilidad${base === '/estudio' ? `?artista=${disponibilidad.datos.artista.id}` : ''}`}
+              >
+                Ver horarios y bloqueos
+              </Link>
+            </>
+          ) : (
+            <span>{disponibilidad.error}</span>
+          )}
+        </div>
       )}
       {!cita && !elegibles.length && (
         <p className={styles.notice}>

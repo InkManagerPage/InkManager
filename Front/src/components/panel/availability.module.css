@@ -1,0 +1,79 @@
+.artist {
+  display: block;
+  max-width: 360px;
+  margin-bottom: 24px;
+  color: #526647;
+  font-size: 14px;
+}
+.artist select {
+  margin-top: 7px;
+}
+.day {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+  padding: 18px 0;
+  border: 0;
+  border-bottom: 1px solid #e3e6de;
+  min-width: 0;
+}
+.dayHeading {
+  padding-top: 8px;
+}
+.dayHeading small {
+  display: block;
+  color: #6c7465;
+  margin: 5px 0 0 24px;
+}
+.ranges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.range label {
+  display: block;
+  flex: 1;
+  min-width: 110px;
+  max-width: 180px;
+  color: #5f6c55;
+  font-size: 13px;
+}
+.range input {
+  margin-top: 5px;
+  min-height: 44px;
+}
+.range small {
+  display: block;
+  margin-top: 4px;
+}
+.day:focus-visible {
+  outline: 2px solid #60744f;
+  outline-offset: 4px;
+}
+@media (max-width: 600px) {
+  .day {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .range {
+    gap: 8px;
+  }
+  .range label {
+    min-width: 100px;
+  }
+  .range button {
+    padding: 8px 0;
+  }
+  .artist {
+    max-width: none;
+  }
+}
