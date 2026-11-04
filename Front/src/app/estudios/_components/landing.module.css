@@ -285,6 +285,91 @@
   padding: 15px 22px;
   border-radius: 0;
   font-size: 14px;
+  margin-top: 10px;
+}
+
+.planModalDialog {
+  max-width: 960px;
+}
+.planModal {
+  --ink: #202320;
+  --muted: #5f645d;
+  --line: #daddd6;
+  --bs-modal-border-radius: 4px;
+  --bs-modal-header-border-color: var(--line);
+  --bs-modal-footer-border-color: var(--line);
+  color: var(--ink);
+}
+
+.planModalHeader {
+  align-items: flex-start;
+}
+.planModalHeader :global(.modal-title) {
+  font-size: clamp(30px, 4vw, 46px);
+  letter-spacing: -0.045em;
+}
+.planModalEyebrow,
+.planBenefitCount {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.planModalPrice {
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+.planBenefit {
+  min-height: 280px;
+  padding: 18px 48px 46px;
+}
+.planBenefit h3 {
+  margin-bottom: 18px;
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -0.04em;
+}
+.planBenefitDescription,
+.planBenefitHighlight {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.planBenefitDescription {
+  color: var(--muted);
+}
+.planBenefitHighlight {
+  margin-top: 24px;
+}
+.planCarousel {
+  --bs-carousel-indicator-active-bg: var(--ink);
+  --bs-carousel-indicator-bg: var(--line);
+}
+.planCarousel :global(.carousel-control-prev),
+.planCarousel :global(.carousel-control-next) {
+  width: 36px;
+}
+.planCarousel :global(.carousel-control-prev-icon),
+.planCarousel :global(.carousel-control-next-icon) {
+  filter: invert(1);
+}
+.planCarousel :global(.carousel-indicators) {
+  margin-bottom: 0;
+}
+.planModalImage {
+  position: relative;
+  min-height: 300px;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #e8e8e2;
+}
+.planModalImage img {
+  object-fit: cover;
+  filter: saturate(0.65);
+}
+.planModalFooter {
+  justify-content: flex-start;
 }
 
 /* Pie de página y enlace para navegar con teclado. */
@@ -341,6 +426,17 @@
   .toolsImage {
     min-height: 0;
     aspect-ratio: 5 / 4;
+  }
+  .planModalDialog {
+    margin: 12px;
+  }
+  .planBenefit {
+    min-height: 300px;
+    padding-inline: 38px;
+  }
+  .planModalImage {
+    min-height: 220px;
+    aspect-ratio: 5 / 3;
   }
 }
 
