@@ -99,6 +99,11 @@ export function PlansSection() {
                 <div className="card-body d-flex flex-column">
                   <h3>{plan.name}</h3>
                   <p>{plan.description}</p>
+                  <p>
+                    {plan.name === 'Individual' ? 'ARS 12.000 por mes.' : 'ARS 35.000 por mes.'}
+                    <br />
+                    El plan anual incluye 2 meses bonificados.
+                  </p>
                   <ul>
                     {plan.features.map((feature) => (
                       <li key={feature}>

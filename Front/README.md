@@ -21,14 +21,17 @@ El frontend está disponible en [http://127.0.0.1:3001](http://127.0.0.1:3001). 
 
 ## Páginas
 
-| Ruta                      | Función                                                               |
-| ------------------------- | --------------------------------------------------------------------- |
-| `/`                       | Home con entradas para clientes y profesionales.                      |
-| `/estudios`               | Landing para artistas y estudios, con herramientas, reseñas y planes. |
-| `/clientes`               | Catálogo público con datos de ejemplo.                                |
-| `/recuperar-contrasena`   | Solicitar un enlace de contraseña por email.                          |
-| `/restablecer-contrasena` | Crear o cambiar la contraseña desde un enlace.                        |
-| `/verificar-email`        | Confirmar la dirección de correo.                                     |
+| Ruta                      | Función                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `/`                       | Home con entradas para clientes y profesionales.                                      |
+| `/estudios`               | Landing para artistas y estudios, con herramientas, reseñas y planes.                 |
+| `/clientes`               | Catálogo público con datos de ejemplo.                                                |
+| `/recuperar-contrasena`   | Solicitar un enlace de contraseña por email.                                          |
+| `/restablecer-contrasena` | Crear o cambiar la contraseña desde un enlace.                                        |
+| `/verificar-email`        | Confirmar la dirección de correo.                                                     |
+| `/suscripcion`            | Elegir plan, frecuencia mensual/anual y continuar al checkout seguro de Mercado Pago. |
+| `/suscripcion/resultado`  | Consultar la confirmación asíncrona del pago.                                         |
+| `/suscripcion/cancelar`   | Cancelar la renovación desde el enlace seguro recibido por correo.                    |
 
 Login y registro se abren en modales desde la cabecera. En clientes se registra el rol `CLIENTE`; en estudios se elige entre `ARTISTA` y `ESTUDIO_ADMIN`; en Home se elige primero el tipo de cuenta. Se puede acceder con contraseña o Google. El backend administra la sesión mediante una cookie HttpOnly y el frontend comparte sus datos con `AuthProvider`.
 
