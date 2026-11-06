@@ -28,7 +28,7 @@ export function ToolsSection() {
   return (
     <section
       id="herramientas"
-      className={`border-top ${styles.section}`}
+      className={`${styles.section} ${styles.sectionSoft}`}
       aria-labelledby="tools-title"
     >
       <div className={`container-fluid ${styles.container}`}>

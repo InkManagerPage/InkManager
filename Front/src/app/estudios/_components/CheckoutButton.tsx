@@ -30,7 +30,7 @@ const CheckoutButton = ({ plan }: CheckoutButtonProps) => {
   return (
     <button
       type="button"
-      className={`btn btn-outline-dark ${styles.planButton}`}
+      className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
       aria-label={`Suscribirte al plan ${plan.name}`}
       onClick={() => handlePayment(plan)}
     >

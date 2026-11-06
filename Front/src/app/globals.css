@@ -1,16 +1,48 @@
+:root {
+  color-scheme: light;
+
+  --font-sans: var(--font-plex), Arial, sans-serif;
+  --font-serif:
+    'Iowan Old Style', 'Baskerville', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+
+  --theme-background: #fafafa;
+  --theme-surface: #ffffff;
+  --theme-ink: #18181b;
+  --theme-muted: #71717a;
+  --theme-border: rgb(0 0 0 / 6%);
+  --theme-accent: #18181b;
+  --theme-accent-hover: #3f3f46;
+  --theme-shadow-card: 0 10px 30px -10px rgb(0 0 0 / 5%);
+  --theme-shadow-raised: 0 16px 36px -12px rgb(0 0 0 / 12%);
+
+  --bs-primary: #18181b;
+  --bs-primary-rgb: 24, 24, 27;
+  --bs-link-color: #18181b;
+  --bs-link-hover-color: #3f3f46;
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-plex), Arial, sans-serif;
-}
-
 html {
   scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--theme-background);
+  color: var(--theme-ink);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -26,6 +58,14 @@ textarea {
   font: inherit;
 }
 
+a {
+  color: var(--theme-accent);
+}
+
+a:hover {
+  color: var(--theme-accent-hover);
+}
+
 img,
 picture,
 video,
@@ -37,4 +77,40 @@ svg {
 
 [hidden] {
   display: none !important;
+}
+
+.editorial-type {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.glass-surface {
+  border: 1px solid var(--theme-border);
+  background: rgb(255 255 255 / 72%);
+  box-shadow: var(--theme-shadow-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.lift-on-hover {
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lift-on-hover:hover,
+.lift-on-hover:focus-within {
+  transform: translateY(-2px);
+  box-shadow: var(--theme-shadow-raised);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lift-on-hover {
+    transition: none;
+  }
+
+  .lift-on-hover:hover,
+  .lift-on-hover:focus-within {
+    transform: none;
+  }
 }

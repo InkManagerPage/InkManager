@@ -14,7 +14,7 @@ export function LandingHeader() {
         expanded={menuAbierto}
         onToggle={setMenuAbierto}
         className={styles.navbar}
-        data-bs-theme="dark"
+        data-bs-theme="light"
       >
         <div className={`container-fluid ${styles.container}`}>
           <Navbar.Brand href="/" className={styles.brand}>
@@ -27,7 +27,7 @@ export function LandingHeader() {
               <Nav.Link href="#herramientas">Herramientas</Nav.Link>
               <Nav.Link href="#planes">Planes</Nav.Link>
             </Nav>
-            <AuthControls light contextoRegistro="profesional" onOpen={cerrarMenu} />
+            <AuthControls contextoRegistro="profesional" onOpen={cerrarMenu} />
           </Navbar.Collapse>
         </div>
       </Navbar>
