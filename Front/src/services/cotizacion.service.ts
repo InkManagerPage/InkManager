@@ -1,9 +1,7 @@
-
 import type { CotizacionValues } from '@/types/cotizacion';
+import { apiFetch } from '@/lib/api-client';
 
-export async function crearSolicitud(
-  values: CotizacionValues
-): Promise<void> {
+function construirFormData(values: CotizacionValues): FormData {
   if (values.esColor === null) {
     throw new Error('Debes seleccionar el tipo de color.');
   }
@@ -46,32 +44,19 @@ export async function crearSolicitud(
     throw new Error('Debes completar la descripción del tatuaje.');
   }
 
-  if (!values.nombre.trim() || !values.email.trim()) {
-    throw new Error('Debes completar tus datos de contacto.');
-  }
-
-  const email = values.email.trim().toLowerCase();
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('El correo electrónico no es válido.');
-  }
-
   const formData = new FormData();
 
-  // Datos correspondientes a Solicitud
   formData.append(
     'tipoColor',
-    values.esColor ? 'COLOR' : 'BLACK_AND_GREY'
+    values.esColor ? 'COLOR' : 'BLACK_AND_GREY',
   );
 
   formData.append('estilo', values.estilo.trim());
   formData.append('generoCuerpo', generoCuerpo);
   formData.append('zonaGeneral', zonaGeneral);
   formData.append('subZona', values.zonaEspecifica.trim());
-  formData.append('tamano', values.tamanoProporcion.trim());
   formData.append('descripcion', values.descripcion.trim());
 
-  // Información complementaria
   const notas = [
     `Plazo deseado: ${values.tiempoEstimado || 'No especificado'}`,
     `¿Tiene tatuajes previos?: ${
@@ -85,47 +70,60 @@ export async function crearSolicitud(
 
   formData.append('notas', notas);
 
-  // Datos correspondientes a Contacto
-  formData.append('nombre', values.nombre.trim());
-  formData.append('email', email);
-  formData.append('telefono', values.telefono.trim());
-  formData.append('ciudad', values.ciudad.trim());
-
-  // Imagen de ubicación corporal
   if (values.imagenZonaMarcada) {
-    formData.append(
-      'imagenZonaMarcada',
-      values.imagenZonaMarcada
-    );
+    formData.append('imagenZonaMarcada', values.imagenZonaMarcada);
   }
 
-  // Imagen de referencia del diseño
   if (values.imagenReferencia) {
-    formData.append(
-      'referencias',
-      values.imagenReferencia
-    );
+    formData.append('referencias', values.imagenReferencia);
   }
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  return formData;
+}
 
-  if (!API_URL) {
-    throw new Error('No está configurada la URL de la API.');
-  }
+async function enviarSolicitud(endpoint: string, values: CotizacionValues) {
+  const formData = construirFormData(values);
 
-  const response = await fetch(
-    `${API_URL.replace(/\/$/, '')}/api/consultas/publicas`,
-    {
-      method: 'POST',
-      body: formData,
-    }
-  );
+  const response = await apiFetch(endpoint, {
+    method: 'POST',
+    body: formData,
+  });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+  const responseData = await response.json().catch(() => null);
 
+  if (!responseData?.success) {
     throw new Error(
-      errorData.message || 'Error al crear la solicitud.'
+      responseData?.message || 'La solicitud no pudo ser confirmada.',
     );
   }
+}
+
+// Solicitud general dirigida a un estudio.
+export async function crearSolicitud(
+  values: CotizacionValues,
+  slug: string,
+): Promise<void> {
+  if (!slug.trim()) {
+    throw new Error('No se pudo identificar el estudio.');
+  }
+
+  await enviarSolicitud(
+    `/consultas/publicas/${encodeURIComponent(slug)}`,
+    values,
+  );
+}
+
+// Solicitud dirigida a un artista específico.
+export async function crearSolicitudParaArtista(
+  values: CotizacionValues,
+  artistaId: string,
+): Promise<void> {
+  if (!artistaId.trim()) {
+    throw new Error('No se pudo identificar al artista.');
+  }
+
+  await enviarSolicitud(
+    `/consultas/publicas/artista/${encodeURIComponent(artistaId)}`,
+    values,
+  );
 }

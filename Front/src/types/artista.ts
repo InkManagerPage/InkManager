@@ -31,6 +31,7 @@ export interface ArtistaPublico {
   estilosPrincipales: string[];
   fotoPerfil: string;
   estudioId: string | null;
+  estudioSlug: string | null;
   estadoVerificacion: string;
   createdAt: string;
 }
@@ -44,6 +45,7 @@ export interface TrabajoPublico {
   nombreArtista: string;
   ciudad: string;
   estudioId: string | null;
+  estudioSlug: string | null;
   createdAt: string;
 }
 

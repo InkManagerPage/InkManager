@@ -14,12 +14,12 @@ const subZonasPorZona: Record<string, { id: string; label: string }[]> = {
     { id: 'Sleeve', label: 'Manga completa' },
   ],
   Mano: [
-    { id: 'Palm', label: 'Palma (Palm)' },
+    { id: 'Palm', label: 'Palma' },
     { id: 'Top Hand / Fingers', label: 'Dorso / Dedos' },
   ],
   Torso: [
-    { id: 'Ribs', label: 'Costillas (Ribs)' },
-    { id: 'Back', label: 'Espalda (Back)' },
+    { id: 'Ribs', label: 'Costillas' },
+    { id: 'Back', label: 'Espalda' },
     { id: 'Chest / Stomach', label: 'Pecho / Abdomen' },
   ],
   Pierna: [

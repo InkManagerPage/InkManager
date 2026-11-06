@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -14,7 +13,6 @@ import { StepZonaEspecifica } from '@/app/cotizacion/components/steps/StepZonaEs
 import { StepUbicacionArea } from '@/app/cotizacion/components/steps/StepUbicacionArea';
 import { StepDescripcion } from '@/app/cotizacion/components/steps/StepDescripcion';
 import { StepExtra } from '@/app/cotizacion/components/steps/StepExtra';
-import { StepContacto } from '@/app/cotizacion/components/steps/StepContacto';
 
 interface CotizacionFormProps {
   onSubmit: (values: CotizacionValues) => Promise<void>;
@@ -33,49 +31,35 @@ const initialValues: CotizacionValues = {
   imagenReferencia: null,
   tiempoEstimado: '',
   tieneTatuajesPrevios: null,
-  nombre: '',
-  email: '',
-  telefono: '',
-  ciudad: '',
 };
 
-function validarContacto(values: CotizacionValues): string | null {
-  if (!values.nombre.trim()) {
-    return 'Ingresa tu nombre completo.';
-  }
-
-  if (!values.email.trim()) {
-    return 'Ingresa tu correo electrónico.';
-  }
-
-  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    values.email.trim()
-  );
-
-  if (!emailValido) {
-    return 'Ingresa un correo electrónico válido.';
-  }
-
-  return null;
-}
-
-export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
+export function CotizacionForm({
+  onSubmit,
+  error,
+}: CotizacionFormProps) {
   const [paso, setPaso] = useState(1);
 
-  const totalPasos = 9;
-  const porcentajeProgreso = Math.round((paso / totalPasos) * 100);
+  const totalPasos = 8;
+
+  const porcentajeProgreso = Math.round(
+    (paso / totalPasos) * 100
+  );
 
   return (
     <Formik<CotizacionValues>
       initialValues={initialValues}
       onSubmit={async (values) => {
-        // Esta validación también se ejecuta si el usuario presiona Enter.
-        if (paso !== 9) return;
+        if (paso !== totalPasos) return;
 
-        const errorContacto = validarContacto(values);
+        if (!values.tiempoEstimado) {
+          alert(
+            'Selecciona en cuánto tiempo te gustaría tatuarte.'
+          );
+          return;
+        }
 
-        if (errorContacto) {
-          alert(errorContacto);
+        if (values.tieneTatuajesPrevios === null) {
+          alert('Indica si ya tienes tatuajes previos.');
           return;
         }
 
@@ -114,37 +98,20 @@ export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
             return;
           }
 
-          if (paso === 8) {
-            if (!values.tiempoEstimado) {
-              alert('Selecciona en cuánto tiempo te gustaría tatuarte.');
-              return;
-            }
-
-            if (values.tieneTatuajesPrevios === null) {
-              alert('Indica si ya tienes tatuajes previos.');
-              return;
-            }
-          }
-
-          setPaso((actual) => Math.min(actual + 1, totalPasos));
-        };
-
-        const handleSubmitClick = (
-          e: React.MouseEvent<HTMLButtonElement>
-        ) => {
-          const errorContacto = validarContacto(values);
-
-          if (errorContacto) {
-            e.preventDefault();
-            alert(errorContacto);
-          }
+          setPaso((actual) =>
+            Math.min(actual + 1, totalPasos)
+          );
         };
 
         return (
           <Form noValidate>
             <fieldset
               disabled={isSubmitting}
-              style={{ border: 0, padding: 0, margin: 0 }}
+              style={{
+                border: 0,
+                padding: 0,
+                margin: 0,
+              }}
             >
               {/* Barra de progreso */}
               <div style={{ marginBottom: '24px' }}>
@@ -156,7 +123,10 @@ export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
                     marginBottom: '8px',
                   }}
                 >
-                  <span className={styles.eyebrow} style={{ margin: 0 }}>
+                  <span
+                    className={styles.eyebrow}
+                    style={{ margin: 0 }}
+                  >
                     Paso {paso} de {totalPasos}
                   </span>
 
@@ -191,43 +161,64 @@ export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
                 </div>
               </div>
 
-              {/* Pasos */}
+              {/* Pasos del formulario */}
               {paso === 1 && (
-                <StepColor values={values} setFieldValue={setFieldValue} />
+                <StepColor
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 2 && (
-                <StepEstilo values={values} setFieldValue={setFieldValue} />
+                <StepEstilo
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 3 && (
-                <StepModelo values={values} setFieldValue={setFieldValue} />
+                <StepModelo
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 4 && (
-                <StepZonaGeneral values={values} setFieldValue={setFieldValue} />
+                <StepZonaGeneral
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 5 && (
-                <StepZonaEspecifica values={values} setFieldValue={setFieldValue} />
+                <StepZonaEspecifica
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 6 && (
-                <StepUbicacionArea values={values} setFieldValue={setFieldValue} />
+                <StepUbicacionArea
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 7 && (
-                <StepDescripcion values={values} setFieldValue={setFieldValue} />
+                <StepDescripcion
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
               {paso === 8 && (
-                <StepExtra values={values} setFieldValue={setFieldValue} />
+                <StepExtra
+                  values={values}
+                  setFieldValue={setFieldValue}
+                />
               )}
 
-              {paso === 9 && (
-                <StepContacto values={values} setFieldValue={setFieldValue} />
-              )}
-
+              {/* Error del backend */}
               {error && (
                 <p className={styles.error} role="alert">
                   {error}
@@ -245,9 +236,12 @@ export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
                 {paso > 1 && (
                   <button
                     type="button"
-                    onClick={() => setPaso((actual) => actual - 1)}
+                    onClick={() =>
+                      setPaso((actual) => actual - 1)
+                    }
                     className={styles.outline}
                     style={{ width: '35%' }}
+                    disabled={isSubmitting}
                   >
                     Anterior
                   </button>
@@ -258,7 +252,7 @@ export function CotizacionForm({ onSubmit, error }: CotizacionFormProps) {
                   onClick={
                     paso < totalPasos
                       ? avanzarPaso
-                      : handleSubmitClick
+                      : undefined
                   }
                   className={styles.submit}
                   style={{

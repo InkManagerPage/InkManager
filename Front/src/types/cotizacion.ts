@@ -1,4 +1,3 @@
-
 export interface CotizacionValues {
   // Paso 1: Color
   esColor: boolean | null;
@@ -26,10 +25,4 @@ export interface CotizacionValues {
   // Paso 8: Información adicional
   tiempoEstimado: string;
   tieneTatuajesPrevios: boolean | null;
-
-  // Paso 9: Datos de contacto
-  nombre: string;
-  email: string;
-  telefono: string;
-  ciudad: string;
 }
