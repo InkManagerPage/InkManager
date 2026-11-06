@@ -42,7 +42,7 @@ export function ReviewsSection() {
   return (
     <section
       id="resenas"
-      className={`border-top ${styles.section}`}
+      className={`${styles.section} ${styles.sectionSoft} ${styles.sectionCompact}`}
       aria-labelledby="reviews-title"
       aria-describedby="reviews-note"
     >
@@ -69,7 +69,7 @@ export function ReviewsSection() {
             <div aria-hidden="true">
               <FastMarquee
                 direction="right"
-                speed={28}
+                speed={20}
                 autoFill
                 pauseOnHover
                 gradient={false}

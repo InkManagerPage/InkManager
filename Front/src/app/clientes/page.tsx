@@ -3,6 +3,7 @@ import { obtenerCatalogo } from '@/services/catalogo.service';
 import PortfolioList from './_components/portfolio/PortfolioList';
 import CombinableFilters from './_components/combinableFilters/combinableFilters';
 import { SiteHeader } from '@/components/auth/SiteHeader';
+import { LandingFooter } from '../estudios/_components/LandingFooter';
 import styles from './clientes.module.css';
 
 interface Props {
@@ -37,23 +38,37 @@ export default async function QuieroTatuarmePage({ searchParams }: Props) {
   );
 
   return (
-    <main className={styles.page} data-bs-theme="light">
+    <div className={styles.page} data-bs-theme="light" id="inicio">
       <SiteHeader contextoRegistro="cliente" />
-      <header className={styles.hero}>
-        <h1 className={styles.title}>Encontrá tu próximo tatuaje</h1>
-      </header>
-      <CombinableFilters stylesArray={catalogo.estilos} cityArray={catalogo.ciudades} />
-      <div className={styles.content}>
-        {error ? (
-          <p className="alert alert-warning" role="alert">
-            No pudimos cargar los trabajos. Intentá nuevamente.
+      <main>
+        <header className={styles.hero}>
+          <p className={styles.eyebrow}>Una colección de tinta y expresión</p>
+          <h1 className={styles.title}>Encontrá tu próximo tatuaje</h1>
+          <p className={styles.intro}>
+            Explorá trabajos de artistas y estudios, y encontrá el estilo que te representa.
           </p>
-        ) : trabajos.length ? (
-          <PortfolioList trabajos={trabajos} artistas={catalogo.artistas} />
-        ) : (
-          <p className={styles.noResultsMessage}>No hay trabajos disponibles con estos filtros.</p>
-        )}
-      </div>
-    </main>
+        </header>
+        <CombinableFilters stylesArray={catalogo.estilos} cityArray={catalogo.ciudades} />
+        <div className={styles.content}>
+          {error ? (
+            <p className="alert alert-warning" role="alert">
+              No pudimos cargar los trabajos. Intentá nuevamente.
+            </p>
+          ) : trabajos.length ? (
+            <>
+              <p className={styles.resultsCount}>
+                {trabajos.length} {trabajos.length === 1 ? 'obra' : 'obras'} para descubrir
+              </p>
+              <PortfolioList trabajos={trabajos} artistas={catalogo.artistas} />
+            </>
+          ) : (
+            <p className={styles.noResultsMessage}>
+              No hay trabajos disponibles con estos filtros.
+            </p>
+          )}
+        </div>
+      </main>
+      <LandingFooter />
+    </div>
   );
 }
