@@ -27,6 +27,11 @@ export const camposArtistaPublico = {
   estilosPrincipales: true,
   fotoPerfil: true,
   estudioId: true,
+  estudio: {
+    select: {
+      slug: true,
+    },
+  },
   estadoVerificacion: true,
   createdAt: true,
 } as const;

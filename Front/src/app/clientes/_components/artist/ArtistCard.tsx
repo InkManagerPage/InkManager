@@ -1,5 +1,8 @@
-import { Artist } from '@/types/estudios';
+'use client';
+
+import Link from 'next/link';
 import Image from 'next/image';
+import { Artist } from '@/types/estudios';
 import styles from './artist.module.css';
 
 interface ArtistCardProps {
