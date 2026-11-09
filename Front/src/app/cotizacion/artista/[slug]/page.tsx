@@ -13,8 +13,8 @@ import type { CotizacionValues } from '@/types/cotizacion';
 import styles from '@/components/auth/auth.module.css';
 
 export default function SolicitudArtistaPage() {
-  const params = useParams<{ artistaId: string }>();
-  const artistaId = params.artistaId;
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
 
   const {
     usuario,
@@ -31,7 +31,7 @@ export default function SolicitudArtistaPage() {
     setSuccess(false);
 
     try {
-      await crearSolicitudParaArtista(values, artistaId);
+      await crearSolicitudParaArtista(values, slug);
       setSuccess(true);
     } catch (cause) {
       setError(

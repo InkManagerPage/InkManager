@@ -8,6 +8,7 @@ import type { ArtistaPublico, TrabajoPublico } from '@/types/artista';
 import PortfolioCard from './PortfolioCard';
 import styles from './portfolio.module.css';
 import authStyles from '@/components/auth/auth.module.css';
+import { generarSlug } from '@/lib/generar-slug';
 
 export default function PortfolioList({
   trabajos,
@@ -97,18 +98,20 @@ export default function PortfolioList({
 
                 {/* Botón para solicitar presupuesto */}
 
-                {seleccionado && (
+                {artista && (
                   <Link
-                  href={`/cotizacion/artista/${encodeURIComponent(seleccionado.artistaId)}`}
-                  className={authStyles.submit}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: '24px',
-                    textDecoration: 'none',
-                  }}
-                  onClick={() => setSeleccionado(null)}
+                    href={`/cotizacion/artista/${encodeURIComponent(
+                      generarSlug(artista.nombreArtistico)
+                    )}`}
+                    className={authStyles.submit}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: '24px',
+                      textDecoration: 'none',
+                    }}
+                    onClick={() => setSeleccionado(null)}
                   >
                     Solicitar presupuesto
                   </Link>

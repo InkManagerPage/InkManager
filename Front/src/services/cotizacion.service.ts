@@ -116,14 +116,14 @@ export async function crearSolicitud(
 // Solicitud dirigida a un artista específico.
 export async function crearSolicitudParaArtista(
   values: CotizacionValues,
-  artistaId: string,
+  slug: string,
 ): Promise<void> {
-  if (!artistaId.trim()) {
+  if (!slug.trim()) {
     throw new Error('No se pudo identificar al artista.');
   }
 
   await enviarSolicitud(
-    `/consultas/publicas/artista/${encodeURIComponent(artistaId)}`,
+    `/consultas/publicas/artista/${encodeURIComponent(slug)}`,
     values,
   );
 }

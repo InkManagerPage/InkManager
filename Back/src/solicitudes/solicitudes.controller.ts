@@ -83,9 +83,9 @@ export async function crearParaArtista(
   res: Response,
   next: NextFunction,
 ) {
-  const artistaId = req.params.artistaId;
+  const slug = req.params.slug;
 
-  if (typeof artistaId !== "string" || !artistaId.trim()) {
+  if (typeof slug !== "string" || !slug.trim()) {
     return next(
       new HttpError(400, "El identificador del artista no es válido."),
     );
@@ -93,6 +93,6 @@ export async function crearParaArtista(
 
   return procesarCreacion(req, res, next, {
     tipo: "ARTISTA",
-    identificador: artistaId,
+    identificador: slug,
   });
 }

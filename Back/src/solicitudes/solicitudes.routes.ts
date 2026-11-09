@@ -12,11 +12,6 @@ import { upload } from "../middlewares/multer.js";
 
 export const solicitudesRouter = Router();
 
-// ==========================================
-// CREACIÓN DE SOLICITUDES PÚBLICAS
-// Requieren que el cliente esté autenticado.
-// ==========================================
-
 const cargarImagenesSolicitud = upload.fields([
   { name: "imagenZonaMarcada", maxCount: 1 },
   { name: "referencias", maxCount: 1 },
@@ -33,16 +28,12 @@ solicitudesRouter.post(
 
 // Solicitud dirigida a un artista mediante su ID.
 solicitudesRouter.post(
-  "/publicas/artista/:artistaId",
+  "/publicas/artista/:slug",
   requerirSesion,
   requerirRoles("CLIENTE"),
   cargarImagenesSolicitud,
   crearParaArtista,
 );
-
-// ==========================================
-// RUTAS PRIVADAS PARA ARTISTAS Y ADMINISTRADORES
-// ==========================================
 
 solicitudesRouter.use(
   requerirSesion,

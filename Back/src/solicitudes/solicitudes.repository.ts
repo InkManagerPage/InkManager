@@ -506,12 +506,18 @@ export function buscarEstudioPorSlug(slug: string) {
   });
 }
 
-export function buscarArtistaParaSolicitud(id: string) {
-  return prisma.usuario.findUnique({
-    where: { id },
+export async function buscarArtistaParaSolicitud(slug: string) {
+  const artistas = await prisma.usuario.findMany({
+    where: {
+      rol: "ARTISTA",
+      nombreArtistico: {
+        not: null,
+      },
+    },
     select: {
       id: true,
       rol: true,
+      nombreArtistico: true,
       estudioId: true,
       estadoEnEstudio: true,
       estudio: {
@@ -522,6 +528,31 @@ export function buscarArtistaParaSolicitud(id: string) {
       },
     },
   });
+
+  const coincidencias = artistas.filter((artista) => {
+    const nombre = artista.nombreArtistico;
+
+    if (!nombre) return false;
+
+    const slugGenerado = nombre
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    return slugGenerado === slug;
+  });
+
+  if (coincidencias.length > 1) {
+    throw new HttpError(
+      409,
+      "Hay más de un artista con ese nombre artístico. No se puede identificar el destinatario.",
+    );
+  }
+
+  return coincidencias[0] ?? null;
 }
 
 export function buscarClienteParaSolicitud(id: string) {
