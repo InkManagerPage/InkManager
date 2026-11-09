@@ -3,8 +3,9 @@ import type { EstadoMensajeCanal } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import {
+  bloquearConversacionCanal,
   filtroCanal,
-  guardarEntradaCanal,
+  guardarMensajeCanal,
   ventanaRespuesta,
 } from "../mensajes/mensajes.repository.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
@@ -75,15 +76,17 @@ export async function recibirInstagram(datos: Webhook) {
     });
     if (!destinatario) continue;
     for (const evento of entrada.messaging) {
-      const remitente = evento?.sender?.id;
+      const emisor = evento?.sender?.id;
+      const receptor = evento?.recipient?.id;
+      const propio: boolean = emisor === cuentaId;
+      const remitente: string | undefined = propio ? receptor : emisor;
       const mensaje = evento?.message;
       const instante = evento?.timestamp;
       if (
         !mensaje ||
-        mensaje.is_echo ||
         mensaje.is_self ||
         mensaje.is_deleted ||
-        evento.recipient?.id !== cuentaId ||
+        (!propio && (receptor !== cuentaId || mensaje.is_echo)) ||
         !idInstagram(remitente) ||
         remitente === cuentaId ||
         typeof mensaje.mid !== "string" ||
@@ -113,7 +116,7 @@ export async function recibirInstagram(datos: Webhook) {
           remitente,
         )) ||
           "Contacto " + remitente.slice(-4));
-      await guardarEntradaCanal({
+      await guardarMensajeCanal({
         canal: canalInstagram,
         cuentaId,
         estudioId: c.estudioId,
@@ -122,7 +125,9 @@ export async function recibirInstagram(datos: Webhook) {
         nombre,
         proveedorId: mensaje.mid,
         fecha: new Date(instante),
-        destinatario: destinatario.id,
+        ...(propio
+          ? { propio: true }
+          : { propio: false, destinatario: destinatario.id }),
         texto:
           typeof mensaje.text === "string" && mensaje.text.trim()
             ? mensaje.text.slice(0, 4096)
@@ -226,24 +231,33 @@ export async function responderInstagram(
       error instanceof HttpError && error.status < 500 ? "ERROR" : "INCIERTO";
     revocada = error instanceof HttpError && error.status === 401;
   }
-  await prisma.$transaction([
-    prisma.mensajeCanal.update({
+  await prisma.$transaction(async (tx) => {
+    if (proveedorId) {
+      await bloquearConversacionCanal(tx, hilo.id);
+      // Meta puede avisar por webhook antes de responder a la solicitud de envío.
+      await tx.mensajeCanal.deleteMany({
+        where: {
+          conversacionId: hilo.id,
+          proveedorId,
+          propio: true,
+          claveEnvio: null,
+        },
+      });
+    }
+    await tx.mensajeCanal.update({
       where: { id: mensajeId },
       data: { estado, proveedorId },
-    }),
-    prisma.conversacionCanal.updateMany({
+    });
+    await tx.conversacionCanal.updateMany({
       where: { id: hilo.id, ultimaActividad: { lt: fecha } },
       data: { ultimaActividad: fecha },
-    }),
-    ...(revocada
-      ? [
-          prisma.conexionCanal.updateMany({
-            where: { id: conexion.id, tokenCifrado: conexion.tokenCifrado },
-            data: { expiraAt: new Date() },
-          }),
-        ]
-      : []),
-  ]);
+    });
+    if (revocada)
+      await tx.conexionCanal.updateMany({
+        where: { id: conexion.id, tokenCifrado: conexion.tokenCifrado },
+        data: { expiraAt: new Date() },
+      });
+  });
 }
 
 export async function leerInstagram(

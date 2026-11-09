@@ -68,7 +68,14 @@ export async function listarCanales(
   }));
 }
 
-export async function guardarEntradaCanal(d: {
+export async function bloquearConversacionCanal(
+  tx: Prisma.TransactionClient,
+  id: string,
+) {
+  await tx.$queryRaw`SELECT "id" FROM "ConversacionCanal" WHERE "id" = ${id} FOR NO KEY UPDATE`;
+}
+
+export async function guardarMensajeCanal(d: {
   canal: CanalMensajes;
   cuentaId: string;
   estudioId: string | null;
@@ -78,8 +85,7 @@ export async function guardarEntradaCanal(d: {
   proveedorId: string;
   texto: string;
   fecha: Date;
-  destinatario: string;
-}) {
+} & ({ propio: true } | { propio: false; destinatario: string })) {
   await prisma.$transaction(
     async (tx) => {
       const ambito = { estudioId: d.estudioId, artistaId: d.artistaId };
@@ -95,7 +101,7 @@ export async function guardarEntradaCanal(d: {
             ...ambito,
             nombre: d.nombre,
             ultimaActividad: d.fecha,
-            ultimaEntradaAt: d.fecha,
+            ultimaEntradaAt: d.propio ? new Date(0) : d.fecha,
           },
         ],
         skipDuplicates: true,
@@ -105,14 +111,15 @@ export async function guardarEntradaCanal(d: {
       });
       if (hilo.estudioId !== d.estudioId || hilo.artistaId !== d.artistaId)
         return;
+      if (d.propio) await bloquearConversacionCanal(tx, hilo.id);
       const { count } = await tx.mensajeCanal.createMany({
         data: [
           {
             conversacionId: hilo.id,
             proveedorId: d.proveedorId,
             texto: d.texto,
-            propio: false,
-            estado: "RECIBIDO",
+            propio: d.propio,
+            estado: d.propio ? "ENVIADO" : "RECIBIDO",
             fecha: d.fecha,
           },
         ],
@@ -120,12 +127,13 @@ export async function guardarEntradaCanal(d: {
       });
       if (!count) return;
       await tx.conversacionCanal.updateMany({
-        where: { id: hilo.id, ultimaEntradaAt: { lt: d.fecha } },
-        data: { ultimaEntradaAt: d.fecha },
-      });
-      await tx.conversacionCanal.updateMany({
         where: { id: hilo.id, ultimaActividad: { lt: d.fecha } },
         data: { ultimaActividad: d.fecha },
+      });
+      if (d.propio) return;
+      await tx.conversacionCanal.updateMany({
+        where: { id: hilo.id, ultimaEntradaAt: { lt: d.fecha } },
+        data: { ultimaEntradaAt: d.fecha },
       });
       await registrarAviso(tx, {
         usuarioId: d.destinatario,

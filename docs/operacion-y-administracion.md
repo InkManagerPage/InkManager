@@ -26,7 +26,7 @@ Los titulares y los artistas independientes administran sus conexiones. Los arti
 | `INSTAGRAM_GRAPH_VERSION` | Versión de Graph API con formato `vNN.N`. |
 | `INSTAGRAM_TOKEN_KEY` | Clave estable de cifrado de 32 bytes. Generarla con `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. |
 
-Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servidor y, si vence o se revoca, la pantalla permite autorizarlo otra vez. Las instalaciones con el inicio de sesión anterior pueden seguir usando `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` e `INSTAGRAM_WEBHOOK_SECRET`. La bandeja empieza a guardar DMs nuevos al conectar la cuenta. Admite respuestas de texto dentro de la ventana de atención y señala cuando un mensaje contiene contenido multimedia. Las respuestas enviadas directamente desde Instagram se consultan en Instagram.
+Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servidor y, si vence o se revoca, la pantalla permite autorizarlo otra vez. Las instalaciones con el inicio de sesión anterior pueden seguir usando `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` e `INSTAGRAM_WEBHOOK_SECRET`. La bandeja guarda DMs nuevos y muestra los mensajes enviados desde Instagram cuando Meta los entrega por webhook. Admite respuestas de texto dentro de la ventana de atención y señala cuando un mensaje contiene contenido multimedia.
 
 ## WhatsApp
 
