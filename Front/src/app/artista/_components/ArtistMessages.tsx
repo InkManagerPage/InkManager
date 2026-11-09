@@ -3,5 +3,7 @@ import { BandejaMensajes } from '@/components/panel/BandejaMensajes';
 import { useArtistPanel } from './ArtistPanelProvider';
 export function ArtistMessages() {
   const { recargarOperacion } = useArtistPanel();
-  return <BandejaMensajes actualizarResumen={recargarOperacion} />;
+  return (
+    <BandejaMensajes configuracion="/artista/configuracion" actualizarResumen={recargarOperacion} />
+  );
 }

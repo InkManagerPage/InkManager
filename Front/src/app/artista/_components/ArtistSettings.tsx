@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/store/AuthProvider';
+import { CuentasAsociadas } from '@/components/panel/CuentasAsociadas';
 import { PageHeader, PanelIcon } from './PanelUI';
 import styles from '@/components/panel/workspace.module.css';
 export function ArtistSettings() {
@@ -8,6 +9,7 @@ export function ArtistSettings() {
   return (
     <>
       <PageHeader titulo="Configuración" />
+      {usuario && !usuario.estudioId && <CuentasAsociadas />}
       <section className={styles.settingsSection}>
         <div>
           <h2>Disponibilidad</h2>

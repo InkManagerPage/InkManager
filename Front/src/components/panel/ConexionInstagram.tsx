@@ -5,6 +5,7 @@ import Modal from 'react-bootstrap/Modal';
 import { useSearchParams } from 'next/navigation';
 import { usePanelData } from '@/hooks/usePanelData';
 import { apiFetch } from '@/lib/api-client';
+import { PanelIcon } from './PanelUI';
 import styles from './workspace.module.css';
 
 type Conexion = {
@@ -22,7 +23,7 @@ const errores = {
   error: 'No pudimos conectar Instagram. Revisá los permisos de mensajes y volvé a intentarlo.',
 };
 
-export function ConexionInstagram({ alCambiar }: { alCambiar: () => Promise<void> }) {
+export function ConexionInstagram() {
   const { datos, cargando, error: errorConsulta, recargar } = usePanelData<Conexion>(ruta, 30000);
   const [confirmar, setConfirmar] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -40,7 +41,7 @@ export function ConexionInstagram({ alCambiar }: { alCambiar: () => Promise<void
     try {
       await apiFetch(ruta, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
       setConfirmar(false);
-      await Promise.all([recargar(), alCambiar()]);
+      await recargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No pudimos desconectar Instagram.');
     } finally {
@@ -51,7 +52,9 @@ export function ConexionInstagram({ alCambiar }: { alCambiar: () => Promise<void
   return (
     <section className={styles.surface} aria-labelledby="conexion-instagram">
       <div className={styles.surfaceHeading}>
-        <h2 id="conexion-instagram">Instagram</h2>
+        <h3 id="conexion-instagram" className="m-0 d-flex align-items-center gap-2 fs-6">
+          <PanelIcon nombre="instagram" size={19} /> Instagram
+        </h3>
         {conectada && datos.disponible && <strong>Conectado</strong>}
       </div>
       <div className={styles.surfaceBody}>

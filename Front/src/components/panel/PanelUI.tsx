@@ -25,6 +25,8 @@ const iconos = {
   salir: 'M9 21H4V3h5M12 12h9M17 8l4 4-4 4',
   reloj: 'M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
   enviar: 'm22 2-7 20-4-9-9-4 20-7zM22 2 11 13',
+  instagram:
+    'M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5zM16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM17.5 6.5h.01',
   suscripcion: 'M3 5h18v14H3zM3 10h18M7 15h4',
   recordatorios: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4M18 3l3 3M3 6l3-3',
 } as const;

@@ -100,8 +100,8 @@ instagramRouter.get("/callback", async (req, res) => {
   res.clearCookie(cookie, opcionesCookie);
   const ruta =
     req.usuario!.rol === "ESTUDIO_ADMIN"
-      ? "/estudio/mensajes"
-      : "/artista/mensajes";
+      ? "/estudio/configuracion#cuentas-asociadas"
+      : "/artista/configuracion#cuentas-asociadas";
   const destino = new URL(ruta, origenesPermitidos[0]);
   try {
     const a = await resolverAmbito(req.usuario!.id);

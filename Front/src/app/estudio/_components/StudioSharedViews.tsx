@@ -11,7 +11,9 @@ export function StudioClients() {
 }
 export function StudioMessages() {
   const { recargarOperacion } = useStudio();
-  return <BandejaMensajes titular actualizarResumen={recargarOperacion} />;
+  return (
+    <BandejaMensajes configuracion="/estudio/configuracion" actualizarResumen={recargarOperacion} />
+  );
 }
 export function StudioReminders() {
   const panel = useStudio();

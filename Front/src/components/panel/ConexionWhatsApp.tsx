@@ -48,7 +48,7 @@ function leerEvento(evento: MessageEvent) {
   }
 }
 
-export function ConexionWhatsApp({ alCambiar }: { alCambiar: () => Promise<void> }) {
+export function ConexionWhatsApp() {
   const { datos, cargando, error: errorConsulta, recargar } = usePanelData<Conexion>(ruta, 30000);
   const [sdk, setSdk] = useState<SDK | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -61,6 +61,8 @@ export function ConexionWhatsApp({ alCambiar }: { alCambiar: () => Promise<void>
   const permiteAlta = estado === 'SIN_CONEXION' || estado === 'VENCIDA' || estado === 'PILOTO';
   useEffect(() => () => popup.current?.(), []);
 
+  if (estado === 'SIN_CONEXION' && !meta) return null;
+
   async function ejecutar(accion: () => Promise<void>) {
     setOcupado(true);
     setError('');
@@ -69,7 +71,7 @@ export function ConexionWhatsApp({ alCambiar }: { alCambiar: () => Promise<void>
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No pudimos completar la conexión.');
     } finally {
-      await Promise.all([recargar(), alCambiar()]);
+      await recargar();
       setOcupado(false);
     }
   }
@@ -170,7 +172,9 @@ export function ConexionWhatsApp({ alCambiar }: { alCambiar: () => Promise<void>
   return (
     <section className={styles.surface} aria-labelledby="conexion-whatsapp">
       <div className={styles.surfaceHeading}>
-        <h2 id="conexion-whatsapp">WhatsApp</h2>
+        <h3 id="conexion-whatsapp" className="m-0 fs-6">
+          WhatsApp
+        </h3>
         {estado === 'CONECTADA' && meta && <strong>Conectado</strong>}
       </div>
       <div className={styles.surfaceBody}>

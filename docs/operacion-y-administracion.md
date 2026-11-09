@@ -15,7 +15,7 @@ Los titulares y los artistas independientes administran sus conexiones. Los arti
 1. En la app de Meta de InkManager, crear una configuración de **API de Instagram con inicio de sesión unificado**. Requerir una cuenta profesional de Instagram y seleccionar `instagram_basic` e `instagram_manage_messages`. Elegir un token de usuario del sistema y guardar el identificador de configuración. Usar cuentas de prueba con rol en la app durante el desarrollo. [Inicio de sesión unificado de Meta](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-unified-login/get-started)
 2. Registrar la URL HTTPS del frontend más `/api/mensajes/instagram/callback` como URI de redirección en **Business Login**. El backend arma esta URL con `FRONTEND_URL`; ambas deben coincidir exactamente.
 3. En Webhooks, registrar la URL pública HTTPS del backend más `/api/webhooks/instagram` y suscribirse a `messages` del objeto `instagram`. Usar el mismo token de verificación que en el backend.
-4. Habilitar el acceso a mensajes para herramientas conectadas en la cuenta profesional de Instagram. Luego, desde **Mensajes → Conectar Instagram**, autorizar una sola cuenta profesional.
+4. Habilitar el acceso a mensajes para herramientas conectadas en la cuenta profesional de Instagram. Luego, desde **Configuración → Cuentas asociadas → Conectar Instagram**, autorizar una sola cuenta profesional.
 
 | Variable de backend | Valor |
 | --- | --- |
@@ -30,7 +30,7 @@ Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servi
 
 ## WhatsApp
 
-El titular conecta su número de WhatsApp Business desde **Mensajes → Conectar con Meta**. Cada estudio tiene un número y una cuenta de WhatsApp Business (WABA) propios. InkManager comparte una sola app de Meta para autorizar las conexiones mediante Embedded Signup.
+El titular conecta su número de WhatsApp Business desde **Configuración → Cuentas asociadas → Conectar con Meta**. Cada estudio tiene un número y una cuenta de WhatsApp Business (WABA) propios. InkManager comparte una sola app de Meta para autorizar las conexiones mediante Embedded Signup.
 
 ### Configuración de InkManager en Meta
 

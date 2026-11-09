@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import Link from 'next/link';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { usePanelFilters } from '@/hooks/usePanelFilters';
 import type { ClientePanel, ConversacionPanel } from '@/types/panel-artista';
 import { Avatar, EmptyState, PageHeader, PanelIcon, SearchField } from './PanelUI';
@@ -23,7 +24,7 @@ export interface PanelMessagesProps {
   consultas?: { id: string; titulo: string }[];
   conectado: boolean;
   errorConexion: string;
-  conexion?: ReactNode;
+  configuracion?: string;
 }
 const estadosMensaje = {
   RECIBIDO: '',
@@ -34,6 +35,17 @@ const estadosMensaje = {
   ERROR: 'No enviado',
   INCIERTO: 'Envío sin confirmar',
 };
+
+function CanalChat({ canal }: { canal: ConversacionPanel['canal'] }) {
+  if (canal === 'INSTAGRAM')
+    return (
+      <span className={chat.instagram} role="img" aria-label="Instagram" title="Instagram">
+        <PanelIcon nombre="instagram" size={17} />
+      </span>
+    );
+  return <small className={chat.channelLabel}>{nombreCanal(canal)}</small>;
+}
+
 export function PanelMessages(props: PanelMessagesProps) {
   const {
     datos,
@@ -45,7 +57,7 @@ export function PanelMessages(props: PanelMessagesProps) {
     consultas,
     conectado,
     errorConexion,
-    conexion,
+    configuracion,
   } = props;
   const { params, update } = usePanelFilters();
   const busqueda = params.get('q') || '';
@@ -88,6 +100,9 @@ export function PanelMessages(props: PanelMessagesProps) {
     seleccionada?.ventanaHasta && Date.parse(seleccionada.ventanaHasta) <= ahora,
   );
   const puedeResponder = conectado && seleccionada?.puedeResponder !== false;
+  const longitud = texto.trim().length;
+  const puedeEnviar =
+    puedeResponder && !vencida && !guardando && longitud > 0 && longitud <= maximo;
   function setTexto(valor: string) {
     if (seleccionada) guardarBorradorMensaje(seleccionada.id, valor);
   }
@@ -112,15 +127,7 @@ export function PanelMessages(props: PanelMessagesProps) {
   }
   async function enviar(event: FormEvent) {
     event.preventDefault();
-    if (
-      !seleccionada ||
-      guardando ||
-      !puedeResponder ||
-      vencida ||
-      !texto.trim() ||
-      texto.trim().length > maximo
-    )
-      return;
+    if (!seleccionada || !puedeEnviar) return;
     await ejecutar(async () => {
       await enviarMensaje(seleccionada.id, seleccionada.canal, texto);
       setTexto('');
@@ -140,9 +147,18 @@ export function PanelMessages(props: PanelMessagesProps) {
   return (
     <>
       <PageHeader titulo="Mensajes" />
-      {conexion}
-      {!conexion && !conectado && (
-        <p className={styles.notice}>Todavía no hay un canal conectado para este negocio.</p>
+      {!conectado && (
+        <p className={styles.notice}>
+          Todavía no hay un canal conectado para este negocio.
+          {configuracion && (
+            <>
+              {' '}
+              <Link href={configuracion} className={styles.textButton}>
+                Ir a cuentas asociadas
+              </Link>
+            </>
+          )}
+        </p>
       )}
       {(error || errorConexion) && (
         <p className="alert alert-danger" role="alert">
@@ -208,9 +224,11 @@ export function PanelMessages(props: PanelMessagesProps) {
                   >
                     <Avatar nombre={cliente.nombre} />
                     <span className={chat.conversationInfo}>
-                      <strong>{cliente.nombre}</strong>
-                      <small>{nombreCanal(item.canal)}</small>
-                      <span>
+                      <span className={chat.nameLine}>
+                        <strong>{cliente.nombre}</strong>
+                        <CanalChat canal={item.canal} />
+                      </span>
+                      <span className={chat.preview}>
                         {borradores[item.id]
                           ? `Borrador: ${borradores[item.id]}`
                           : ultimo
@@ -241,12 +259,14 @@ export function PanelMessages(props: PanelMessagesProps) {
                 <PanelIcon nombre="volver" />
               </button>
               <Avatar nombre={buscarCliente(seleccionada.clienteId).nombre} />
-              <div>
-                <strong>{buscarCliente(seleccionada.clienteId).nombre}</strong>
-                <span>
-                  {nombreCanal(seleccionada.canal)}
-                  {seleccionada.telefono && ' · ' + seleccionada.telefono}
-                </span>
+              <div className={chat.threadContact}>
+                <div className={chat.nameLine}>
+                  <strong>{buscarCliente(seleccionada.clienteId).nombre}</strong>
+                  <CanalChat canal={seleccionada.canal} />
+                </div>
+                {seleccionada.telefono && (
+                  <span className={chat.channelLabel}>{seleccionada.telefono}</span>
+                )}
               </div>
             </header>
             {consultas && (
@@ -327,17 +347,25 @@ export function PanelMessages(props: PanelMessagesProps) {
               </label>
               <textarea
                 id="message-text"
-                rows={2}
+                rows={1}
+                enterKeyHint="send"
                 maxLength={maximo}
                 value={texto}
-                disabled={guardando || !puedeResponder || vencida}
+                disabled={!puedeResponder || vencida}
+                readOnly={guardando}
                 onChange={(event) => setTexto(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing)
+                    return;
+                  event.preventDefault();
+                  if (!event.repeat && puedeEnviar) event.currentTarget.form?.requestSubmit();
+                }}
                 placeholder="Escribí un mensaje…"
               />
               <button
                 type="submit"
-                className={styles.button}
-                disabled={!texto.trim() || guardando || !puedeResponder || vencida}
+                className={chat.send}
+                disabled={!puedeEnviar}
                 aria-label={guardando ? 'Enviando mensaje' : 'Enviar mensaje'}
               >
                 <PanelIcon nombre="enviar" size={18} />

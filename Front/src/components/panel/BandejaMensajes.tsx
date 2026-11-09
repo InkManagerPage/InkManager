@@ -1,8 +1,6 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 import { PanelMessages } from './PanelMessages';
-import { ConexionWhatsApp } from './ConexionWhatsApp';
-import { ConexionInstagram } from './ConexionInstagram';
 import { PageHeader } from './PanelUI';
 import { useConsultas } from '@/hooks/useConsultas';
 import { mutarPanel, usePanelData } from '@/hooks/usePanelData';
@@ -12,17 +10,16 @@ type Canal = ConversacionPanel['canal'];
 type Bandeja = {
   conectado: boolean;
   administra: boolean;
-  mostrarWhatsApp: boolean;
   conversaciones: ConversacionPanel[];
 };
 const ruta = (canal: Canal, id: string) => '/mensajes/' + canal.toLowerCase() + '/' + id;
 
 export function BandejaMensajes({
   actualizarResumen,
-  titular = false,
+  configuracion,
 }: {
   actualizarResumen: () => Promise<void>;
-  titular?: boolean;
+  configuracion: '/artista/configuracion' | '/estudio/configuracion';
 }) {
   const { datos, error, cargando, recargar } = usePanelData<Bandeja>('/mensajes', 8000);
   const consultas = useConsultas();
@@ -84,14 +81,7 @@ export function BandejaMensajes({
       datos={{ conversaciones: datos.conversaciones, borradoresMensajes: borradores }}
       conectado={datos.conectado}
       errorConexion={error || errorLectura}
-      conexion={
-        datos.administra ? (
-          <div className="d-grid gap-2 mb-3">
-            <ConexionInstagram alCambiar={recargar} />
-            {titular && datos.mostrarWhatsApp && <ConexionWhatsApp alCambiar={recargar} />}
-          </div>
-        ) : undefined
-      }
+      configuracion={datos.administra ? `${configuracion}#cuentas-asociadas` : undefined}
       consultas={consultas.datos?.contexto.administra ? consultas.datos.consultas : undefined}
       buscarCliente={(id) => {
         const c = datos.conversaciones.find((item) => item.id === id);

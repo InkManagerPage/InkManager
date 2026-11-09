@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useFormikContext } from 'formik';
+import { CuentasAsociadas } from '@/components/panel/CuentasAsociadas';
 import { PageHeader } from '@/components/panel/PanelUI';
 import { PanelForm, PanelField, PanelSubmitButton } from '@/components/panel/PanelForm';
 import { LocationFields } from '@/components/forms/LocationFields';
@@ -173,6 +174,7 @@ export function StudioSettings() {
   return (
     <>
       <PageHeader titulo="Configuración" />
+      <CuentasAsociadas estudio />
       <section className={styles.settingsSection}>
         <div>
           <h2>Disponibilidad del equipo</h2>
