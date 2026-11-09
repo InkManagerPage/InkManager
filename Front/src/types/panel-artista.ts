@@ -13,6 +13,7 @@ export interface ClientePanel {
   ciudad: string;
   notas: string;
   recordatorios?: ExcepcionesRecordatorios;
+  editable?: boolean;
 }
 export interface PresupuestoPanel {
   importe: number;
@@ -55,15 +56,20 @@ export interface MensajePanel {
   texto: string;
   propio: boolean;
   fecha: string;
-  estado?: 'ENVIANDO' | 'ENVIADO' | 'ERROR';
+  estado?: 'RECIBIDO' | 'ENVIANDO' | 'ENVIADO' | 'ENTREGADO' | 'LEIDO' | 'ERROR' | 'INCIERTO';
 }
 export interface ConversacionPanel {
+  puedeResponder?: boolean;
   id: string;
   clienteId: string;
   asunto: string;
   canal: CanalConsulta;
   sinLeer: number;
   mensajes: MensajePanel[];
+  nombre?: string;
+  telefono?: string;
+  ventanaHasta?: string;
+  solicitudId?: string | null;
 }
 export interface NotificacionPanel {
   id: string;

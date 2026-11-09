@@ -77,7 +77,8 @@ export function Checkout({ planInicial }: { planInicial: Plan }) {
   const [formularioListo, setFormularioListo] = useState(false);
   const [error, setError] = useState('');
   const precio = ciclo === 'ANUAL' ? planes[plan].mensual * 10 : planes[plan].mensual;
-  const cuentaCompatible = usuario?.rol === planes[plan].rol;
+  const cuentaCompatible =
+    usuario?.rol === planes[plan].rol && (plan !== 'INDIVIDUAL' || !usuario.estudioId);
 
   async function continuar() {
     setProcesando(true);
@@ -350,8 +351,8 @@ export function Checkout({ planInicial }: { planInicial: Plan }) {
         ) : !cuentaCompatible ? (
           <div className={styles.auth}>
             <p className={styles.error} role="alert">
-              El plan {planes[plan].titulo} requiere una cuenta de tipo {planes[plan].rol}. Cerrá
-              sesión para entrar con otra cuenta o elegí el plan que corresponda a tu perfil.
+              El plan {planes[plan].titulo} está disponible para{' '}
+              {plan === 'INDIVIDUAL' ? 'artistas independientes' : 'titulares de un estudio'}.
             </p>
             <AuthControls contextoRegistro="profesional" />
           </div>

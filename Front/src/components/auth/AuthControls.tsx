@@ -55,9 +55,15 @@ export function AuthControls({
             <strong>{usuario.nombre || usuario.email}</strong>
             <small>{nombresRol[usuario.rol]}</small>
           </span>
-          {(usuario.rol === 'ARTISTA' || usuario.rol === 'ESTUDIO_ADMIN') && (
+          {usuario.rol !== 'CLIENTE' && (
             <Link
-              href={usuario.rol === 'ARTISTA' ? '/artista' : '/estudio'}
+              href={
+                usuario.rol === 'SUPERADMIN'
+                  ? '/admin'
+                  : usuario.rol === 'ARTISTA'
+                    ? '/artista'
+                    : '/estudio'
+              }
               className={styles.linkButton}
               onClick={onOpen}
             >

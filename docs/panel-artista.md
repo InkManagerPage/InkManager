@@ -23,9 +23,9 @@ Los artistas ingresan al resumen de `/artista` después de iniciar sesión con c
 
 ## Datos de gestión
 
-Las consultas, propuestas, contactos, turnos, disponibilidad y pertenencia al estudio proceden del backend, compartidos mediante `ConsultasProvider`. La bandeja del artista y la del titular consultan los mismos registros. El resto de la gestión mantiene su estado local en `ArtistPanelProvider`. No se guardan tokens en localStorage. La clave anterior de ejemplos se conserva separada de la nueva clave de preferencias.
+Las consultas, propuestas, contactos, turnos, disponibilidad y pertenencia al estudio proceden del backend, compartidos mediante `ConsultasProvider`. La bandeja del artista y la del titular consultan los mismos registros. El panel consulta la operación del negocio mediante `useOperacion`. Las reglas, contactos y avisos se guardan en el backend. Los tokens de sesión se manejan con cookies.
 
-El directorio de clientes utiliza datos reales y todavía no permite editar contactos. Mi estudio muestra el equipo y permite aceptar o rechazar invitaciones vinculadas al email verificado. El ingreso requiere resolver primero el trabajo independiente pendiente. Los contratos y permisos están en [Equipo del estudio](equipo-estudio.md). La agenda persiste los turnos y permite reservar desde una consulta asignada. El artista gestiona sus sesiones y el titular también puede gestionarlas si pertenecen al estudio. Mensajes, reglas generales de recordatorios y suscripción siguen siendo locales; no envían mensajes o correos. Véase [Turnos y agenda](turnos.md). El detalle de la integración está en [Consultas y propuestas](consultas-y-propuestas.md).
+El directorio permite editar los contactos y sus excepciones de correo. Mi estudio muestra el equipo y permite aceptar o rechazar invitaciones vinculadas al email verificado. El ingreso requiere resolver primero el trabajo independiente pendiente. Los contratos y permisos están en [Equipo del estudio](equipo-estudio.md). La agenda persiste los turnos y permite reservar desde una consulta asignada. El artista gestiona sus sesiones y el titular también puede gestionarlas si pertenecen al estudio. Mensajes, recordatorios y suscripción se describen en [Mensajes, recordatorios y administración](operacion-y-administracion.md). Véase [Turnos y agenda](turnos.md). El detalle de la integración está en [Consultas y propuestas](consultas-y-propuestas.md).
 
 Los nombres completos de contactos admiten entre 2 y 80 caracteres, con letras, espacios, apóstrofes o guiones. Esta regla no modifica los nombres del registro de cuentas. La agenda valida fecha, hora, duración de 30 minutos a 8 horas, importes y seña. Las sesiones canceladas no bloquean horarios y dos sesiones consecutivas pueden compartir la hora de fin e inicio. Los presupuestos requieren importe positivo, seña menor o igual al total, detalle y fecha de validez desde hoy.
 
@@ -37,7 +37,7 @@ El menú agrupa Trabajo diario, Gestión y Perfil y cuenta; recuerda si está co
 
 Los formularios usan Formik y controles de React Bootstrap. La validación comienza al enviar y luego se actualiza mientras se corrigen los datos. Los errores se muestran junto al campo y el envío lleva el foco al primer error. El formulario de turno agrupa importes, notas y excepciones de correo en acordeones. El perfil permite guardar datos incompletos y los trabajos publicados indican si aún falta completar el perfil para aparecer en el catálogo.
 
-La protección de cambios sin guardar utiliza nextjs-nav-guard en el layout raíz. Cerrar un formulario o navegar permite seguir editando o descartar. Recargar o cerrar la pestaña utiliza la confirmación propia del navegador. Los interruptores de recordatorios se guardan inmediatamente; sus textos requieren guardar. Los borradores de mensajes se conservan por conversación en el estado local del usuario. El modelo de mensajes distingue enviando, enviado y error, con reintento local; aún no representa una integración externa de mensajería.
+La protección de cambios sin guardar utiliza nextjs-nav-guard en el layout raíz. Cerrar un formulario o navegar permite seguir editando o descartar. Recargar o cerrar la pestaña utiliza la confirmación propia del navegador. Los interruptores guardan la configuración en el backend. Las ediciones de texto requieren guardar. Los borradores de mensajes se mantienen en memoria por conversación.
 
 ## Estadísticas
 
@@ -59,13 +59,13 @@ Cada consulta y conversación conserva su `canal`: Instagram, WhatsApp, TikTok, 
 
 Los tiempos iniciales son 24 horas antes del turno, 2 horas después de completar la sesión para cuidados y 7 días después para reseña. La agenda diaria admite noche anterior o mismo día con hora editable; el resumen semanal permite elegir día y hora. El resumen mensual corresponde al mes cerrado y se configura para el primer día del siguiente. La zona horaria queda explícita en la configuración.
 
-Las excepciones por sesión se editan en el formulario del turno y se guardan en la BD. Las excepciones del cliente todavía no tienen un endpoint de edición. La preferencia del turno prevalece sobre la del cliente, y esta sobre la regla general. Desactivar el grupo de clientes impide todos esos correos. Un turno cancelado tampoco habilita recordatorios.
+Las excepciones por sesión se editan en el formulario del turno y se guardan en la BD. Las excepciones del cliente se editan en su ficha. La preferencia del turno prevalece sobre la del cliente, y esta sobre la regla general. Desactivar el grupo de clientes impide todos esos correos. Un turno cancelado tampoco habilita recordatorios.
 
-Las reglas generales se conservan en el estado local del panel. No hay programador de envíos conectado a estas pantallas; no modifican los correos de registro, verificación ni recuperación que ya envía el backend.
+Las reglas generales se guardan en PostgreSQL. El programador de correos aplica las preferencias activadas cuando está habilitado en el backend.
 
 ## Suscripción
 
-La vista muestra el plan Individual, período actual, renovación e historial. Cambiar de facturación mensual a anual programa el nuevo ciclo para la siguiente renovación. Cancelar conserva el acceso hasta el fin del período; reactivar vuelve a habilitar la renovación. La gestión del panel usa estado local y no inicia pagos ni modifica suscripciones en Mercado Pago. Los importes mantienen el criterio de la integración de pagos: Individual mensual de ARS 12.000 y anual de diez mensualidades.
+La vista muestra el plan, su estado, el ciclo, el próximo cobro y el período registrado. Permite iniciar la contratación o cancelar una suscripción vigente con confirmación.
 
 ## Mi perfil
 
@@ -101,7 +101,7 @@ Un artista aparece cuando tiene foto, nombre artístico, biografía, ciudad, est
 
 La consulta devuelve hasta 100 artistas ordenados por nombre y hasta 24 trabajos publicados por artista, ordenados por fecha descendente. El frontend consulta sin caché y aplica los filtros existentes de estilo, ciudad y tipo. Un trabajo puede encontrarse por cualquiera de sus estilos.
 
-En `/clientes` se muestra una única galería de trabajos publicados, con filtros por estilo, tipo de artista y ciudad. Cada foto abre un modal con la imagen completa, descripción, estilos, nombre, foto, biografía y ciudad del artista. No se muestran secciones separadas de artistas y estudios ni perfiles de ejemplo. El panel no controla suscripciones o cobros.
+En `/clientes` se muestra una única galería de trabajos publicados, con filtros por estilo, tipo de artista y ciudad. Cada foto abre un modal con la imagen completa, descripción, estilos, nombre, foto, biografía y ciudad del artista. No se muestran secciones separadas de artistas y estudios ni perfiles de ejemplo.
 
 ## Organización del código
 

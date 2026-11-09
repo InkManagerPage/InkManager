@@ -9,6 +9,7 @@ export const trabajoPublicado = {
 } satisfies Prisma.FotoGaleriaWhereInput;
 export const artistaVisible = {
   rol: "ARTISTA",
+  suspendidoAt: null,
   nombreArtistico: { not: null, notIn: [""] },
   biografia: { not: null, notIn: [""] },
   ciudad: { not: null, notIn: [""] },

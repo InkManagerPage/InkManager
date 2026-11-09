@@ -20,6 +20,12 @@ const sections: PanelSection[] = [
   { nombre: 'Consultas', ruta: '/estudio/consultas', icono: 'consultas', grupo: 'Trabajo diario' },
   { nombre: 'Clientes', ruta: '/estudio/clientes', icono: 'clientes', grupo: 'Trabajo diario' },
   { nombre: 'Mensajes', ruta: '/estudio/mensajes', icono: 'mensajes', grupo: 'Trabajo diario' },
+  {
+    nombre: 'Notificaciones',
+    ruta: '/estudio/notificaciones',
+    icono: 'campana',
+    grupo: 'Trabajo diario',
+  },
   { nombre: 'Equipo', ruta: '/estudio/equipo', icono: 'clientes', grupo: 'Gestión' },
   {
     nombre: 'Estadísticas',
@@ -74,7 +80,7 @@ export function StudioShell({ children }: { children: ReactNode }) {
   );
 }
 function Workspace({ children }: { children: ReactNode }) {
-  const { datos, errorPersistencia } = useStudio();
+  const { datos, operacion } = useStudio();
   const consultas = useConsultas();
   const nav = sections.map((s) => ({
     ...s,
@@ -83,7 +89,9 @@ function Workspace({ children }: { children: ReactNode }) {
         ? datos.consultas.filter((c) => c.estado === 'POR_ASIGNAR').length
         : s.icono === 'mensajes'
           ? datos.conversaciones.reduce((n, c) => n + c.sinLeer, 0)
-          : 0,
+          : s.icono === 'campana'
+            ? operacion?.notificaciones.filter((n) => !n.leida).length
+            : 0,
   }));
   return (
     <PanelShell
@@ -92,11 +100,6 @@ function Workspace({ children }: { children: ReactNode }) {
       subtitulo="Cuenta del estudio"
       perfil="/estudio/perfil"
     >
-      {errorPersistencia && (
-        <p className="alert alert-warning" role="alert">
-          {errorPersistencia}
-        </p>
-      )}
       {consultas.error && !consultas.datos ? (
         <div>
           <p className="alert alert-danger" role="alert">

@@ -1,6 +1,7 @@
 import { ambitoDeCuenta } from "./solicitudes.ambito.js";
 import { EstadoSolicitud, type Prisma } from "@prisma/client";
 import { HttpError } from "../errors/http-error.js";
+import { registrarAviso } from "../operacion/avisos.repository.js";
 import { listarCitas } from "../citas/citas.repository.js";
 import { presentarCita } from "../citas/citas.entity.js";
 import { listarInvitaciones } from "../invitaciones-equipo/invitaciones-equipo.repository.js";
@@ -37,6 +38,7 @@ export function cotizacionesVigentes(s: SolicitudCompleta, ahora = new Date()) {
     (c) =>
       (!c.validaHasta || c.validaHasta >= ahora) &&
       c.artista.rol === "ARTISTA" &&
+      !c.artista.suspendidoAt &&
       (s.estudioId
         ? c.artista.estudioId === s.estudioId &&
           c.artista.estadoEnEstudio === "ACTIVO"
@@ -91,6 +93,8 @@ export async function obtenerBandeja(usuarioId: string) {
       telefono: string;
       ciudad: string;
       notas: string;
+      editable?: boolean;
+      recordatorios?: unknown;
     }
   >();
   for (const s of solicitudes) {
@@ -103,6 +107,8 @@ export async function obtenerBandeja(usuarioId: string) {
         telefono: c.telefono || "",
         ciudad: c.ciudad || "",
         notas: "notas" in c && typeof c.notas === "string" ? c.notas : "",
+        editable: ambito.administra && Boolean(s.contacto),
+        recordatorios: s.contacto?.recordatorios || {},
       });
   }
   return {
@@ -140,7 +146,15 @@ export async function cambiarSolicitud(
     version = validarVersion(body);
   const resultado = await repo.mutarSolicitud(ambito, id, async (tx, s) => {
     comprobarVersion(s, version);
-    if (body.accion === "CERRAR") return cerrarEnTransaccion(tx, s);
+    if (body.accion === "CERRAR") {
+      const cerrada = await cerrarEnTransaccion(tx, s);
+      const artistaId = cerrada.artistaAsignadoId;
+      if (artistaId && artistaId !== usuarioId && cerrada.version !== s.version)
+        await registrarAviso(tx, { usuarioId: artistaId, clave: "asignacion:" + id + ":" + version,
+          titulo: "Te asignaron una consulta", detalle: s.titulo || "Nueva asignación",
+          destino: "/artista/consultas?consulta=" + id });
+      return cerrada;
+    }
     if (body.accion === "ARCHIVAR") {
       if (
         await tx.cita.count({
@@ -199,6 +213,7 @@ export async function cambiarSolicitud(
         where: {
           id: artistaId,
           rol: "ARTISTA",
+          suspendidoAt: null,
           ...(ambito.tipo === "ESTUDIO"
             ? { estudioId: ambito.estudioId, estadoEnEstudio: "ACTIVO" }
             : { id: usuarioId, estudioId: null }),
@@ -210,6 +225,10 @@ export async function cambiarSolicitud(
           400,
           "Elegí un artista activo de este espacio de trabajo.",
         );
+      if (artista.id !== s.artistaAsignadoId && artista.id !== usuarioId)
+        await registrarAviso(tx, { usuarioId: artista.id, clave: "asignacion:" + id + ":" + version,
+          titulo: "Te asignaron una consulta", detalle: s.titulo || "Nueva asignación",
+          destino: "/artista/consultas?consulta=" + id });
       return tx.solicitud.update({
         where: { id },
         data: {

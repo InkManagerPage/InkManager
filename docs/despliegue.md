@@ -22,6 +22,10 @@ GOOGLE_REDIRECT_URI=https://ink-manager-woad.vercel.app/api/auth/google/callback
 
 `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` deben pertenecer al mismo cliente OAuth de Google Cloud. No se incluyen en el frontend.
 
+## Cobros con Mercado Pago
+
+Verificar primero el checkout, la confirmación de pago por webhook y la cancelación con las credenciales de prueba de Mercado Pago. En Render, habilitar nuevas contrataciones con `MERCADOPAGO_COBROS_ACTIVOS=1` después de completar esa prueba y de configurar el access token, la URL pública del webhook y su secreto. La consulta y la cancelación de suscripciones existentes siguen disponibles con la configuración del proveedor.
+
 ## Cliente de Google
 
 En Google Auth Platform → Clientes → cliente de aplicación web, los URI de redirección autorizados incluyen exactamente:

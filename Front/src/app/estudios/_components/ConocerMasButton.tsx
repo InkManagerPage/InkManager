@@ -66,7 +66,9 @@ export default function ConocerMasButton({ plan }: ConocerMasButtonProps) {
         <Modal.Body className={styles.planModalBody}>
           <div className="row g-4 ">
             <div className="col-12 col-md-7">
-              <p className={styles.planModalPrice}>Precio: ${plan.price}</p>
+              <p className={styles.planModalPrice}>
+                ARS {plan.price.toLocaleString('es-AR')} por mes
+              </p>
               <Carousel
                 activeIndex={activeBenefit}
                 onSelect={(index) => {

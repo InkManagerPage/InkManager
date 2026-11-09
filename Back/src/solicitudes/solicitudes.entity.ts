@@ -31,6 +31,7 @@ export const detalleSolicitud = {
           nombreArtistico: true,
           estudioId: true,
           estadoEnEstudio: true,
+          suspendidoAt: true,
           rol: true,
         },
       },

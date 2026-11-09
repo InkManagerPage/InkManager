@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { HttpError } from "../src/errors/http-error.js";
 import { prisma } from "../src/config/prisma.js";
-import { crearSuscripcion } from "../src/pagos/pagos.service.js";
+import { cancelarSuscripcion, crearSuscripcion } from "../src/pagos/pagos.service.js";
 import { obtenerPrecio, validarPlanYCiclo } from "../src/pagos/planes.js";
 import { validarFirmaWebhook } from "../src/pagos/pagos.service.js";
 
@@ -34,6 +34,40 @@ test("la solicitud de plan rechaza opciones que no están habilitadas", () => {
       error instanceof Error && error.message.includes("plan"),
   );
   assert.throws(() => validarPlanYCiclo(null), HttpError);
+});
+
+test("el plan individual requiere un artista sin estudio", async () => {
+  await assert.rejects(
+    crearSuscripcion(
+      {
+        id: "artista",
+        nombre: "Artista",
+        email: "artista@example.test",
+        rol: "ARTISTA",
+        estudioId: "estudio",
+      },
+      { plan: "INDIVIDUAL", ciclo: "MENSUAL" },
+    ),
+    (error: unknown) => error instanceof HttpError && error.status === 403,
+  );
+});
+
+test("producción exige activar los cobros antes de crear una suscripción", async (t) => {
+  const ambiente = { ...process.env, NODE_ENV: "production", MERCADOPAGO_COBROS_ACTIVOS: "0" };
+  t.after(reemplazar(prisma.suscripcion, "findFirst", () => {
+    throw new Error("No debe acceder a pagos");
+  }));
+  t.mock.method(globalThis, "fetch", () => { throw new Error("No debe consultar a Mercado Pago"); });
+  const original = process.env;
+  process.env = ambiente;
+  try {
+    await assert.rejects(
+      crearSuscripcion({ id: "artista", nombre: "Artista", email: "qa@example.test", rol: "ARTISTA", estudioId: null }, { plan: "INDIVIDUAL", ciclo: "MENSUAL" }),
+      (error: unknown) => error instanceof HttpError && error.status === 503,
+    );
+  } finally {
+    process.env = original;
+  }
 });
 
 test("valida la firma HMAC del webhook y rechaza datos alterados", () => {
@@ -85,10 +119,12 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
   const nombres = [
     "MERCADOPAGO_ACCESS_TOKEN",
     "MERCADOPAGO_WEBHOOK_URL",
+    "MERCADOPAGO_WEBHOOK_SECRET",
     "FRONTEND_URL",
   ] as const;
   const originalEnv = new Map(nombres.map((name) => [name, process.env[name]]));
   process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_SECRET = "test-webhook-secret";
   process.env.MERCADOPAGO_WEBHOOK_URL =
     "https://hooks.example.test/mercadopago";
   process.env.FRONTEND_URL = "https://inkmanager.example.test";
@@ -129,6 +165,7 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
       true,
     );
     assert.equal(autoRecurring?.transaction_amount, 12000);
+    assert.equal(solicitud?.body.status, "pending");
     assert.equal(solicitud?.body.payer_email, "artista@example.test");
     assert.equal(
       solicitud?.body.notification_url,
@@ -150,7 +187,7 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
   }
 });
 
-test("cierra intentos pendientes sin pago y permite iniciar otro checkout", async () => {
+test("permite otro checkout cuando Mercado Pago confirma que el anterior está cerrado", async () => {
   const actualizaciones: Array<{
     where: Record<string, unknown>;
     data: Record<string, unknown>;
@@ -196,11 +233,12 @@ test("cierra intentos pendientes sin pago y permite iniciar otro checkout", asyn
   ];
   const originalFetch = globalThis.fetch;
   const originalEnv = new Map(
-    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "FRONTEND_URL"].map(
+    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "MERCADOPAGO_WEBHOOK_SECRET", "FRONTEND_URL"].map(
       (name) => [name, process.env[name]],
     ),
   );
   process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_SECRET = "test-webhook-secret";
   process.env.MERCADOPAGO_WEBHOOK_URL =
     "https://hooks.example.test/mercadopago";
   process.env.FRONTEND_URL = "https://inkmanager.example.test";
@@ -209,14 +247,8 @@ test("cierra intentos pendientes sin pago y permite iniciar otro checkout", asyn
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     requests.push(`${init?.method ?? "GET"} ${url}`);
-    if (init?.method === "PUT") {
-      return new Response(JSON.stringify({ status: "cancelled" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
     if (url.endsWith("/preapproval/preapproval-anterior")) {
-      return new Response(JSON.stringify({ status: "pending" }), {
+      return new Response(JSON.stringify({ status: "cancelled" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -249,7 +281,7 @@ test("cierra intentos pendientes sin pago y permite iniciar otro checkout", asyn
     assert.equal(actualizaciones[0]?.data.estado, "ERROR");
     assert.equal(
       requests.some((request) => request.startsWith("PUT ")),
-      true,
+      false,
     );
     assert.equal(
       requests.some((request) => request.startsWith("POST ")),
@@ -291,11 +323,12 @@ test("crea una suscripción con token seguro sin enviar datos de tarjeta", async
   ];
   const originalFetch = globalThis.fetch;
   const originalEnv = new Map(
-    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "FRONTEND_URL"].map(
+    ["MERCADOPAGO_ACCESS_TOKEN", "MERCADOPAGO_WEBHOOK_URL", "MERCADOPAGO_WEBHOOK_SECRET", "FRONTEND_URL"].map(
       (name) => [name, process.env[name]],
     ),
   );
   process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_SECRET = "test-webhook-secret";
   process.env.MERCADOPAGO_WEBHOOK_URL =
     "https://hooks.example.test/mercadopago";
   process.env.FRONTEND_URL = "https://inkmanager.example.test";
@@ -346,4 +379,59 @@ test("crea una suscripción con token seguro sin enviar datos de tarjeta", async
       else process.env[name] = value;
     }
   }
+});
+
+test("un pago en curso o sin respuesta impide volver a cobrar y cancelar antes de confirmar", async (t) => {
+  const ambiente = {
+    MERCADOPAGO_ACCESS_TOKEN: "test-access-token",
+    MERCADOPAGO_WEBHOOK_SECRET: "test-webhook-secret",
+    MERCADOPAGO_WEBHOOK_URL: "https://hooks.example.test/mercadopago",
+  };
+  const original = Object.entries(ambiente).map(([nombre]) => [nombre, process.env[nombre]] as const);
+  Object.assign(process.env, ambiente);
+  t.after(() => {
+    for (const [nombre, valor] of original) {
+      if (valor === undefined) delete process.env[nombre];
+      else process.env[nombre] = valor;
+    }
+  });
+
+  let pendiente: Record<string, unknown> | undefined;
+  let creaciones = 0;
+  t.after(reemplazar(prisma.suscripcion, "findFirst", async ({ where }: { where: Record<string, unknown> }) =>
+    where.estado ? pendiente : null,
+  ));
+  t.after(reemplazar(prisma.suscripcion, "findMany", async () => pendiente ? [pendiente] : []));
+  t.after(reemplazar(prisma.suscripcion, "create", async ({ data }: { data: Record<string, unknown> }) => {
+    pendiente = { ...data, mercadoPagoId: null, estado: "PENDIENTE" };
+    creaciones++;
+    return pendiente;
+  }));
+  t.after(reemplazar(prisma.suscripcion, "updateMany", async () => {
+    throw new Error("El intento incierto debe quedar pendiente");
+  }));
+  let avisarInicio!: () => void;
+  let liberarProveedor!: () => void;
+  const iniciado = new Promise<void>((resolve) => { avisarInicio = resolve; });
+  const continuar = new Promise<void>((resolve) => { liberarProveedor = resolve; });
+  const proveedor = t.mock.method(globalThis, "fetch", async () => {
+    avisarInicio();
+    await continuar;
+    throw new Error("El proveedor perdió la conexión");
+  });
+  const usuario = { id: "usuario-test", email: "artista@example.test", nombre: "Artista", rol: "ARTISTA" as const, estudioId: null };
+  const pagar = () => crearSuscripcion(usuario, { plan: "INDIVIDUAL", ciclo: "MENSUAL" });
+  const conflicto = (error: unknown) => error instanceof HttpError && error.status === 409;
+  const primero = assert.rejects(pagar(), (error: unknown) => error instanceof HttpError && error.status === 502);
+  try {
+    await iniciado;
+    await assert.rejects(pagar(), conflicto);
+    await assert.rejects(cancelarSuscripcion(usuario.id, undefined), conflicto);
+  } finally {
+    liberarProveedor();
+    await primero;
+  }
+  await assert.rejects(pagar(), conflicto);
+  assert.equal(creaciones, 1);
+  assert.equal(proveedor.mock.callCount(), 1);
 });

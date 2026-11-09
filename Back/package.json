@@ -19,7 +19,12 @@
     "db:turnos": "prisma db execute --file prisma/changes/20261102_turnos.sql --schema prisma/schema.prisma",
     "seed:turnos": "tsx prisma/seed-turnos.ts",
     "db:equipo": "prisma db execute --file prisma/changes/20261102_equipo.sql --schema prisma/schema.prisma",
-    "db:disponibilidad": "prisma db execute --file prisma/changes/20261102_disponibilidad.sql --schema prisma/schema.prisma"
+    "db:disponibilidad": "prisma db execute --file prisma/changes/20261102_disponibilidad.sql --schema prisma/schema.prisma",
+    "db:operacion": "prisma db execute --file prisma/changes/20261106_operacion.sql --schema prisma/schema.prisma",
+    "admin:habilitar": "tsx prisma/habilitar-admin.ts",
+    "db:whatsapp": "prisma db execute --file prisma/changes/20261106_whatsapp_estudios.sql --schema prisma/schema.prisma",
+    "db:mensajes": "prisma db execute --file prisma/changes/20261106_mensajes_canales.sql --schema prisma/schema.prisma",
+    "db:instagram": "prisma db execute --file prisma/changes/20261109_instagram_login_unificado.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -41,7 +46,15 @@
     "google-auth-library": "^11.3.1",
     "jsonwebtoken": "^9.0.3",
     "luxon": "3.7.2",
-    "multer": "^2.4.0"
+    "multer": "^2.5.0"
+  },
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    },
+    "nodemon": {
+      "minimatch": "11.0.1"
+    }
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

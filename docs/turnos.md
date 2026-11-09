@@ -46,4 +46,4 @@ La creación requiere `claveCreacion` UUID, `versionConsulta` y `sesionAdicional
 
 El esquema está definido en Prisma y en `Back/prisma/changes/20261102_turnos.sql`. `seed-turnos.ts` agrega proyectos y sesiones exclusivamente a las cuentas del recorrido de desarrollo; no reemplaza registros existentes. Los turnos locales antiguos no se importan automáticamente.
 
-Las excepciones de recordatorios de cada turno se guardan en la BD. Las reglas generales del panel siguen siendo locales y todavía no existe un programador de envíos para las sesiones. Esta agenda no envía correos, mensajes ni genera cobros.
+Las excepciones de recordatorios de cada turno se guardan en la BD. Los recordatorios configurados se envían mediante el programador del backend. Véase [Mensajes, recordatorios y administración](operacion-y-administracion.md).

@@ -22,11 +22,18 @@ import { invitacionesEquipoRouter } from "./invitaciones-equipo/invitaciones-equ
 import { disponibilidadRouter } from "./disponibilidad/disponibilidad.routes.js";
 import { pagosRouter } from "./pagos/pagos.routes.js";
 import { webhooksMercadoPagoRouter } from "./webhooks/mercadopago.routes.js";
+import { administracionRouter } from "./administracion/administracion.routes.js";
+import { webhookWhatsApp } from "./whatsapp/whatsapp.routes.js";
+import { webhookInstagram } from "./instagram/instagram.routes.js";
+import { mensajesUnificadosRouter } from "./mensajes/mensajes.routes.js";
+import { operacionRouter } from "./operacion/operacion.routes.js";
 
 export const app = express();
 
 app.use(cors({ origin: origenesPermitidos, credentials: true }));
 app.use(validarOrigen);
+app.use("/api/webhooks/whatsapp", webhookWhatsApp);
+app.use("/api/webhooks/instagram", webhookInstagram);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -48,6 +55,9 @@ app.use("/api/invitaciones-equipo", invitacionesEquipoRouter);
 app.use("/api/disponibilidad", disponibilidadRouter);
 app.use("/api/pagos", pagosRouter);
 app.use("/api/webhooks", webhooksMercadoPagoRouter);
+app.use("/api/admin", administracionRouter);
+app.use("/api/mensajes", mensajesUnificadosRouter);
+app.use("/api/operacion", operacionRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "La ruta solicitada no existe." });

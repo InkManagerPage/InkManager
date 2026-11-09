@@ -30,7 +30,11 @@ export interface PanelRemindersProps {
   datos: { recordatorios: RecordatoriosPanel; citas: CitaPanel[]; consultas: unknown[] };
   nombre: string;
   buscarCliente: (id: string) => ClientePanel;
-  guardarRecordatorios: (valor: RecordatoriosPanel) => string;
+  guardarRecordatorios: (valor: RecordatoriosPanel) => Promise<string>;
+  operacion: { puedeEditarClientes: boolean } | null;
+  cargandoOperacion: boolean;
+  errorOperacion: string;
+  recargarOperacion: () => Promise<void>;
 }
 const ReminderContext = createContext<PanelRemindersProps | null>(null);
 function useReminderPanel() {
@@ -46,14 +50,25 @@ export function PanelReminders(props: PanelRemindersProps) {
   );
 }
 function Reminders() {
-  const { datos, guardarRecordatorios } = useReminderPanel();
+  const {
+    datos,
+    guardarRecordatorios,
+    operacion,
+    cargandoOperacion,
+    errorOperacion,
+    recargarOperacion,
+  } = useReminderPanel();
   const [editando, setEditando] = useState<TipoRecordatorio | null>(null);
   const [aviso, setAviso] = useState('');
   const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
   const config = datos.recordatorios;
   const confirmClose = useDiscardChanges();
-  function guardar(siguiente: RecordatoriosPanel) {
-    const fallo = guardarRecordatorios(siguiente);
+  async function guardar(siguiente: RecordatoriosPanel) {
+    setGuardando(true);
+    setAviso('');
+    const fallo = await guardarRecordatorios(siguiente);
+    setGuardando(false);
     setError(fallo);
     if (!fallo) setAviso('Configuración de recordatorios actualizada.');
     return fallo;
@@ -61,6 +76,22 @@ function Reminders() {
   const titulo = [...recordatoriosCliente, ...recordatoriosArtista].find(
     (item) => item.id === editando,
   )?.titulo;
+  if (!operacion)
+    return (
+      <>
+        <PageHeader titulo="Recordatorios" />
+        {cargandoOperacion ? (
+          <p role="status">Cargando recordatorios…</p>
+        ) : (
+          <p role="alert">
+            {errorOperacion}{' '}
+            <button className={styles.textButton} onClick={() => void recargarOperacion()}>
+              Reintentar
+            </button>
+          </p>
+        )}
+      </>
+    );
   return (
     <>
       <PageHeader
@@ -77,124 +108,131 @@ function Reminders() {
           {aviso}
         </p>
       )}
-      <div className={mail.timezone}>
-        <PanelIcon nombre="reloj" size={18} />
-        <label htmlFor="reminder-timezone">Zona horaria</label>
-        <select
-          id="reminder-timezone"
-          value={config.zonaHoraria}
-          onChange={(event) => guardar({ ...config, zonaHoraria: event.target.value })}
-        >
-          {zonasHorarias.map((zona) => (
-            <option value={zona} key={zona}>
-              {zona.replaceAll('_', ' ')}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={styles.stack}>
-        <section className={styles.surface} aria-labelledby="client-reminders">
-          <div className={styles.surfaceHeading}>
-            <div>
-              <h2 id="client-reminders">Correos para tus clientes</h2>
-              <p className={mail.groupDescription}>
-                Turnos, cuidados y seguimiento después de cada sesión.
-              </p>
+      {guardando && <p role="status">Guardando preferencias…</p>}
+      <fieldset disabled={guardando}>
+        <div className={mail.timezone}>
+          <PanelIcon nombre="reloj" size={18} />
+          <label htmlFor="reminder-timezone">Zona horaria</label>
+          <select
+            id="reminder-timezone"
+            value={config.zonaHoraria}
+            onChange={(event) => guardar({ ...config, zonaHoraria: event.target.value })}
+          >
+            {zonasHorarias.map((zona) => (
+              <option value={zona} key={zona}>
+                {zona.replaceAll('_', ' ')}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.stack}>
+          <section className={styles.surface} aria-labelledby="client-reminders">
+            <div className={styles.surfaceHeading}>
+              <div>
+                <h2 id="client-reminders">Correos para tus clientes</h2>
+                <p className={mail.groupDescription}>
+                  Turnos, cuidados y seguimiento después de cada sesión.
+                </p>
+              </div>
+              <label className={mail.groupSwitch}>
+                <span>{config.clientesHabilitados ? 'Activados' : 'Desactivados'}</span>
+                <span className="form-check form-switch m-0">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Correos para clientes"
+                    checked={config.clientesHabilitados}
+                    disabled={!operacion.puedeEditarClientes}
+                    onChange={(event) =>
+                      guardar({ ...config, clientesHabilitados: event.target.checked })
+                    }
+                  />
+                </span>
+              </label>
             </div>
-            <label className={mail.groupSwitch}>
-              <span>{config.clientesHabilitados ? 'Activados' : 'Desactivados'}</span>
-              <span className="form-check form-switch m-0">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  role="switch"
-                  aria-label="Correos para clientes"
-                  checked={config.clientesHabilitados}
-                  onChange={(event) =>
-                    guardar({ ...config, clientesHabilitados: event.target.checked })
-                  }
-                />
-              </span>
-            </label>
-          </div>
-          {recordatoriosCliente.map((item) => (
-            <ReminderRow
-              key={item.id}
-              titulo={item.titulo}
-              descripcion={item.descripcion}
-              tipo={item.id}
-              regla={config.reglas[item.id]}
-              habilitado={config.clientesHabilitados}
-              onToggle={() =>
-                guardar({
-                  ...config,
-                  reglas: {
-                    ...config.reglas,
-                    [item.id]: {
-                      ...config.reglas[item.id],
-                      activo: !config.reglas[item.id].activo,
+            {recordatoriosCliente.map((item) => (
+              <ReminderRow
+                key={item.id}
+                titulo={item.titulo}
+                descripcion={item.descripcion}
+                tipo={item.id}
+                regla={config.reglas[item.id]}
+                habilitado={config.clientesHabilitados}
+                editable={operacion.puedeEditarClientes}
+                onToggle={() =>
+                  guardar({
+                    ...config,
+                    reglas: {
+                      ...config.reglas,
+                      [item.id]: {
+                        ...config.reglas[item.id],
+                        activo: !config.reglas[item.id].activo,
+                      },
                     },
-                  },
-                })
-              }
-              onEdit={() => setEditando(item.id)}
-            />
-          ))}
-          <div className={styles.sectionFoot}>
-            <span>
-              Podés establecer excepciones desde la ficha del cliente o al editar un turno.
-            </span>
-          </div>
-        </section>
-        <section className={styles.surface} aria-labelledby="artist-reminders">
-          <div className={styles.surfaceHeading}>
-            <div>
-              <h2 id="artist-reminders">Correos para vos</h2>
-              <p className={mail.groupDescription}>
-                Tu agenda y un resumen de cómo viene tu trabajo.
-              </p>
+                  })
+                }
+                onEdit={() => setEditando(item.id)}
+              />
+            ))}
+            <div className={styles.sectionFoot}>
+              <span>
+                {operacion.puedeEditarClientes
+                  ? 'Podés establecer excepciones desde la ficha del cliente o al editar un turno.'
+                  : 'El titular del estudio administra estos correos.'}
+              </span>
             </div>
-            <label className={mail.groupSwitch}>
-              <span>{config.artistaHabilitado ? 'Activados' : 'Desactivados'}</span>
-              <span className="form-check form-switch m-0">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  role="switch"
-                  aria-label="Correos para el artista"
-                  checked={config.artistaHabilitado}
-                  onChange={(event) =>
-                    guardar({ ...config, artistaHabilitado: event.target.checked })
-                  }
-                />
-              </span>
-            </label>
-          </div>
-          {recordatoriosArtista.map((item) => (
-            <ReminderRow
-              key={item.id}
-              titulo={item.titulo}
-              descripcion={item.descripcion}
-              tipo={item.id}
-              regla={config.reglas[item.id]}
-              habilitado={config.artistaHabilitado}
-              onToggle={() =>
-                guardar({
-                  ...config,
-                  reglas: {
-                    ...config.reglas,
-                    [item.id]: {
-                      ...config.reglas[item.id],
-                      activo: !config.reglas[item.id].activo,
+          </section>
+          <section className={styles.surface} aria-labelledby="artist-reminders">
+            <div className={styles.surfaceHeading}>
+              <div>
+                <h2 id="artist-reminders">Correos para vos</h2>
+                <p className={mail.groupDescription}>
+                  Tu agenda y un resumen de cómo viene tu trabajo.
+                </p>
+              </div>
+              <label className={mail.groupSwitch}>
+                <span>{config.artistaHabilitado ? 'Activados' : 'Desactivados'}</span>
+                <span className="form-check form-switch m-0">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Correos para el artista"
+                    checked={config.artistaHabilitado}
+                    onChange={(event) =>
+                      guardar({ ...config, artistaHabilitado: event.target.checked })
+                    }
+                  />
+                </span>
+              </label>
+            </div>
+            {recordatoriosArtista.map((item) => (
+              <ReminderRow
+                key={item.id}
+                titulo={item.titulo}
+                descripcion={item.descripcion}
+                tipo={item.id}
+                regla={config.reglas[item.id]}
+                habilitado={config.artistaHabilitado}
+                onToggle={() =>
+                  guardar({
+                    ...config,
+                    reglas: {
+                      ...config.reglas,
+                      [item.id]: {
+                        ...config.reglas[item.id],
+                        activo: !config.reglas[item.id].activo,
+                      },
                     },
-                  },
-                })
-              }
-              onEdit={() => setEditando(item.id)}
-            />
-          ))}
-        </section>
-      </div>
+                  })
+                }
+                onEdit={() => setEditando(item.id)}
+              />
+            ))}
+          </section>
+        </div>
+      </fieldset>
       <Offcanvas
         show={Boolean(editando)}
         onHide={() => confirmClose(() => setEditando(null))}
@@ -211,14 +249,13 @@ function Reminders() {
               tipo={editando}
               inicial={config.reglas[editando]}
               onCancel={() => confirmClose(() => setEditando(null))}
-              onSave={(regla) => {
-                const fallo = guardar({
+              onSave={async (regla) => {
+                return guardar({
                   ...config,
                   reglas: { ...config.reglas, [editando]: regla },
                 });
-                if (!fallo) setEditando(null);
-                return fallo;
               }}
+              onSaved={() => setEditando(null)}
             />
           )}
         </Offcanvas.Body>
@@ -233,6 +270,7 @@ function ReminderRow({
   tipo,
   regla,
   habilitado,
+  editable = true,
   onToggle,
   onEdit,
 }: {
@@ -241,6 +279,7 @@ function ReminderRow({
   tipo: TipoRecordatorio;
   regla: ReglaCorreo;
   habilitado: boolean;
+  editable?: boolean;
   onToggle: () => void;
   onEdit: () => void;
 }) {
@@ -266,7 +305,12 @@ function ReminderRow({
         </span>
       </div>
       <div className={mail.ruleActions}>
-        <button className={styles.textButton} onClick={onEdit} aria-label={`Configurar ${titulo}`}>
+        <button
+          className={styles.textButton}
+          onClick={onEdit}
+          disabled={!editable}
+          aria-label={`Configurar ${titulo}`}
+        >
           Configurar
         </button>
         <label className={`form-check form-switch m-0 ${mail.switchTarget}`}>
@@ -276,7 +320,7 @@ function ReminderRow({
             role="switch"
             aria-label={titulo}
             checked={regla.activo && habilitado}
-            disabled={!habilitado}
+            disabled={!habilitado || !editable}
             onChange={onToggle}
           />
         </label>
@@ -289,11 +333,13 @@ function ReminderEditor({
   tipo,
   inicial,
   onSave,
+  onSaved,
   onCancel,
 }: {
   tipo: TipoRecordatorio;
   inicial: ReglaCorreo;
-  onSave: (regla: ReglaCorreo) => string;
+  onSave: (regla: ReglaCorreo) => Promise<string>;
+  onSaved: () => void;
   onCancel: () => void;
 }) {
   return (
@@ -303,6 +349,7 @@ function ReminderEditor({
       onSave={(regla) =>
         onSave({ ...regla, asunto: regla.asunto.trim(), mensaje: regla.mensaje.trim() })
       }
+      onSaved={onSaved}
     >
       <ReminderFields tipo={tipo} onCancel={onCancel} />
     </PanelForm>

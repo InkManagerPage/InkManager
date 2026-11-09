@@ -16,6 +16,7 @@ import { validarIdConsulta } from "../solicitudes/solicitudes.validation.js";
 import { validarCotizacion } from "./cotizaciones.validation.js";
 import { guardarCotizacion } from "./cotizaciones.repository.js";
 import type { Prisma } from "@prisma/client";
+import { registrarAviso } from "../operacion/avisos.repository.js";
 
 export async function guardarMiCotizacion(
   usuarioId: string,
@@ -66,6 +67,12 @@ export async function guardarMiCotizacion(
         s.cotizaciones.find((c) => c.artistaId === usuarioId)?.bocetoPublicId ||
         null;
       await guardarCotizacion(tx, id, usuarioId, datos, imagen);
+      if (s.estudioId && !s.cotizaciones.some(c => c.artistaId === usuarioId)) {
+        const estudio = await tx.estudio.findUnique({ where: { id: s.estudioId }, select: { propietarioId: true } });
+        if (estudio?.propietarioId) await registrarAviso(tx, { usuarioId: estudio.propietarioId,
+          clave: "propuesta:" + id + ":" + usuarioId, titulo: "Nueva propuesta de presupuesto",
+          detalle: s.titulo || "Consulta de tatuaje", destino: "/estudio/consultas?consulta=" + id });
+      }
       return tx.solicitud.update({
         where: { id },
         data: { version: { increment: 1 } },

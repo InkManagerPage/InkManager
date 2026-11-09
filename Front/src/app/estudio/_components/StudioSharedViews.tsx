@@ -1,45 +1,26 @@
 'use client';
 import { WorkspaceDirectory } from '@/components/panel/WorkspaceDirectory';
-import { PanelMessages } from '@/components/panel/PanelMessages';
+import { BandejaMensajes } from '@/components/panel/BandejaMensajes';
 import { PanelReminders } from '@/components/panel/PanelReminders';
-import { PanelSubscription } from '@/components/panel/PanelSubscription';
+import { SuscripcionReal } from '@/components/panel/SuscripcionReal';
+import { NotificacionesPanel } from '@/components/panel/NotificacionesPanel';
 import { useStudio } from './StudioProvider';
 
 export function StudioClients() {
   return <WorkspaceDirectory tipo="CLIENTES" />;
 }
 export function StudioMessages() {
-  return <PanelMessages {...useStudio()} />;
+  const { recargarOperacion } = useStudio();
+  return <BandejaMensajes titular actualizarResumen={recargarOperacion} />;
 }
 export function StudioReminders() {
   const panel = useStudio();
   return <PanelReminders {...panel} nombre={panel.datos.perfil.nombre} />;
 }
 export function StudioSubscription() {
-  const { datos, setDatos } = useStudio();
-  return (
-    <PanelSubscription
-      suscripcion={datos.suscripcion}
-      nombrePlan="Estudio"
-      precio={(ciclo) => (ciclo === 'ANUAL' ? 290000 : 29000)}
-      cambiarCiclo={(ciclo) =>
-        setDatos((d) => ({
-          ...d,
-          suscripcion: {
-            ...d.suscripcion,
-            cicloProximo: ciclo === d.suscripcion.ciclo ? null : ciclo,
-          },
-        }))
-      }
-      cancelarRenovacion={() =>
-        setDatos((d) => ({
-          ...d,
-          suscripcion: { ...d.suscripcion, estado: 'CANCELACION_PROGRAMADA', cicloProximo: null },
-        }))
-      }
-      reactivarRenovacion={() =>
-        setDatos((d) => ({ ...d, suscripcion: { ...d.suscripcion, estado: 'ACTIVA' } }))
-      }
-    />
-  );
+  return <SuscripcionReal plan="ESTUDIO" />;
+}
+export function StudioNotifications() {
+  const panel = useStudio();
+  return <NotificacionesPanel avisos={panel.operacion?.notificaciones || []} {...panel} />;
 }

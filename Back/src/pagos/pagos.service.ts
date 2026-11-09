@@ -14,6 +14,9 @@ import {
 } from "node:crypto";
 import { prisma } from "../config/prisma.js";
 import {
+  ErrorMercadoPago,
+  obtenerAccessTokenMercadoPago,
+  obtenerSecretoWebhookMercadoPago,
   obtenerUrlWebhookMercadoPago,
   solicitarMercadoPago,
   urlFrontend,
@@ -163,13 +166,17 @@ export async function crearSuscripcion(
     throw new HttpError(400, "El token de tarjeta no es válido.");
   }
   if (
-    (plan === "INDIVIDUAL" && usuario.rol !== "ARTISTA") ||
+    (plan === "INDIVIDUAL" &&
+      (usuario.rol !== "ARTISTA" || usuario.estudioId)) ||
     (plan === "ESTUDIO" && usuario.rol !== "ESTUDIO_ADMIN")
   ) {
     throw new HttpError(
       403,
       "El plan elegido no corresponde al tipo de cuenta.",
     );
+  }
+  if (process.env.NODE_ENV === "production" && process.env.MERCADOPAGO_COBROS_ACTIVOS !== "1") {
+    throw new HttpError(503, "La contratación de suscripciones todavía no está disponible.");
   }
 
   const ahora = new Date();
@@ -198,48 +205,38 @@ export async function crearSuscripcion(
       usuarioId: usuario.id,
       estado: EstadoSuscripcion.PENDIENTE,
     },
-    select: { id: true, mercadoPagoId: true },
+    select: { id: true, mercadoPagoId: true, plan: true, ciclo: true },
   });
 
+  obtenerAccessTokenMercadoPago();
+  obtenerSecretoWebhookMercadoPago();
+  const notificationUrl = obtenerUrlWebhookMercadoPago();
+  const backUrl = urlFrontend("/suscripcion/resultado");
+
   for (const intento of intentosPendientes) {
-    if (intento.mercadoPagoId) {
-      const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
-        `/preapproval/${encodeURIComponent(intento.mercadoPagoId)}`,
+    if (!intento.mercadoPagoId) {
+      throw new HttpError(
+        409,
+        "Todavía estamos verificando el intento anterior. Revisá el estado de tu suscripción antes de volver a pagar.",
       );
-      const estadoRemoto =
-        typeof remota.status === "string" ? remota.status.toLowerCase() : "";
-      if (estadoRemoto === "authorized") {
-        throw new HttpError(
-          409,
-          "Mercado Pago está confirmando el primer pago. Esperá unos instantes antes de iniciar otro intento.",
-        );
-      }
-      if (estadoRemoto === "pending") {
-        const cancelada = await solicitarMercadoPago<SuscripcionMercadoPago>(
-          `/preapproval/${encodeURIComponent(intento.mercadoPagoId)}`,
-          { method: "PUT", body: { status: "cancelled" } },
-        );
-        const estadoCancelado =
-          typeof cancelada.status === "string"
-            ? cancelada.status.toLowerCase()
-            : "";
-        if (estadoCancelado !== "cancelled" && estadoCancelado !== "canceled") {
-          throw new HttpError(
-            502,
-            "No pudimos cerrar el intento de pago anterior. Intentá nuevamente.",
-          );
-        }
-      } else if (
-        estadoRemoto !== "cancelled" &&
-        estadoRemoto !== "canceled" &&
-        estadoRemoto !== "rejected" &&
-        estadoRemoto !== "paused"
-      ) {
-        throw new HttpError(
-          502,
-          "Mercado Pago no confirmó el estado del intento anterior.",
-        );
-      }
+    }
+    const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
+      `/preapproval/${encodeURIComponent(intento.mercadoPagoId)}`,
+    );
+    const estadoRemoto = typeof remota.status === "string" ? remota.status.toLowerCase() : "";
+    if (estadoRemoto === "authorized") {
+      throw new HttpError(409, "Mercado Pago todavía está procesando la suscripción anterior.");
+    }
+    if (estadoRemoto === "pending") {
+      if (!cardTokenId && intento.plan === plan && intento.ciclo === ciclo && remota.init_point)
+        return { checkoutUrl: urlCheckout(remota.init_point) };
+      throw new HttpError(409, "Revisá o cancelá el intento pendiente desde Suscripción antes de iniciar otro.");
+    }
+    if (estadoRemoto === "paused") {
+      throw new HttpError(409, "Cancelá la suscripción anterior desde Suscripción antes de iniciar otro intento.");
+    }
+    if (!["cancelled", "canceled", "rejected"].includes(estadoRemoto)) {
+      throw new HttpError(502, "Mercado Pago no confirmó el estado del intento anterior.");
     }
 
     await prisma.suscripcion.updateMany({
@@ -295,10 +292,11 @@ export async function crearSuscripcion(
             transaction_amount: monto,
             currency_id: "ARS",
           },
-          back_url: urlFrontend("/suscripcion/resultado"),
-          notification_url: obtenerUrlWebhookMercadoPago(),
+          back_url: backUrl,
+          notification_url: notificationUrl,
+          status: typeof cardTokenId === "string" ? "authorized" : "pending",
           ...(typeof cardTokenId === "string"
-            ? { card_token_id: cardTokenId, status: "authorized" }
+            ? { card_token_id: cardTokenId }
             : {}),
         },
       },
@@ -325,10 +323,12 @@ export async function crearSuscripcion(
     const checkoutUrl = urlCheckout(respuesta.init_point);
     return { checkoutUrl };
   } catch (error) {
-    await prisma.suscripcion.update({
-      where: { id: suscripcion.id },
-      data: { estado: EstadoSuscripcion.ERROR },
-    });
+    if (error instanceof ErrorMercadoPago && [400, 401, 403, 404, 422].includes(error.estadoProveedor)) {
+      await prisma.suscripcion.updateMany({
+        where: { id: suscripcion.id, estado: EstadoSuscripcion.PENDIENTE, mercadoPagoId: null },
+        data: { estado: EstadoSuscripcion.ERROR },
+      });
+    }
     throw error;
   }
 }
@@ -361,6 +361,7 @@ async function notificarCancelacion(suscripcionId: string): Promise<void> {
 export async function cancelarSuscripcion(
   usuarioId: string | undefined,
   tokenEntrada: unknown,
+  suscripcionId?: string,
 ): Promise<{ estado: EstadoSuscripcion; periodoHasta: Date | null }> {
   let suscripcion: {
     id: string;
@@ -403,6 +404,7 @@ export async function cancelarSuscripcion(
     suscripcion = await prisma.suscripcion.findFirst({
       where: {
         usuarioId,
+        ...(suscripcionId ? { id: suscripcionId } : {}),
         estado: {
           in: [
             EstadoSuscripcion.PENDIENTE,
@@ -428,12 +430,14 @@ export async function cancelarSuscripcion(
     throw new HttpError(404, "No encontramos una suscripción para cancelar.");
   }
   if (suscripcion.estado !== EstadoSuscripcion.CANCELADA) {
-    if (suscripcion.mercadoPagoId) {
-      await solicitarMercadoPago<SuscripcionMercadoPago>(
-        `/preapproval/${encodeURIComponent(suscripcion.mercadoPagoId)}`,
-        { method: "PUT", body: { status: "cancelled" } },
-      );
-    }
+    if (!suscripcion.mercadoPagoId)
+      throw new HttpError(409, "Todavía estamos verificando el intento de pago. Volvé a intentar cuando Mercado Pago confirme el estado.");
+    const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
+      `/preapproval/${encodeURIComponent(suscripcion.mercadoPagoId)}`,
+      { method: "PUT", body: { status: "canceled" } },
+    );
+    if (remota.status !== "cancelled" && remota.status !== "canceled")
+      throw new HttpError(502, "Mercado Pago todavía no confirmó la cancelación.");
     await prisma.suscripcion.update({
       where: { id: suscripcion.id },
       data: {
@@ -449,7 +453,13 @@ export async function cancelarSuscripcion(
     });
   }
 
-  await notificarCancelacion(suscripcion.id);
+  try {
+    await notificarCancelacion(suscripcion.id);
+  } catch {
+    console.error(
+      "La suscripción quedó cancelada. El correo de confirmación sigue pendiente.",
+    );
+  }
   return {
     estado: EstadoSuscripcion.CANCELADA,
     periodoHasta: suscripcion.periodoHasta,
@@ -540,28 +550,27 @@ async function procesarActualizacionSuscripcion(dataId: string): Promise<void> {
     where: { id: referencia },
     select: { id: true, mercadoPagoId: true, estado: true },
   });
-  if (!suscripcion) return;
+  if (!suscripcion || (suscripcion.mercadoPagoId && suscripcion.mercadoPagoId !== dataId)) return;
   const estadoRemoto =
     typeof remota.status === "string" ? remota.status.toLowerCase() : "";
-  const nuevoEstado =
-    estadoRemoto === "cancelled" || estadoRemoto === "canceled"
-      ? EstadoSuscripcion.CANCELADA
-      : estadoRemoto === "paused" || estadoRemoto === "rejected"
-        ? EstadoSuscripcion.VENCIDA
-        : suscripcion.estado;
+  const cancelada = estadoRemoto === "cancelled" || estadoRemoto === "canceled";
+  const rechazada = estadoRemoto === "rejected";
   const proximoCobroAt = fechaValida(remota.next_payment_date);
-  await prisma.suscripcion.update({
-    where: { id: suscripcion.id },
+  const guardada = await prisma.suscripcion.updateMany({
+    where: {
+      id: suscripcion.id,
+      OR: [{ mercadoPagoId: null }, { mercadoPagoId: dataId }],
+      ...(rechazada ? { estado: { not: EstadoSuscripcion.CANCELADA } } : {}),
+    },
     data: {
       mercadoPagoId: dataId,
-      estado: nuevoEstado,
-      ...(nuevoEstado === EstadoSuscripcion.CANCELADA
-        ? { canceladaAt: new Date() }
-        : {}),
+      ...(cancelada ? { estado: EstadoSuscripcion.CANCELADA } : {}),
+      ...(cancelada && suscripcion.estado !== EstadoSuscripcion.CANCELADA ? { canceladaAt: new Date() } : {}),
+      ...(rechazada ? { estado: EstadoSuscripcion.VENCIDA } : {}),
       ...(proximoCobroAt ? { proximoCobroAt } : {}),
     },
   });
-  if (nuevoEstado === EstadoSuscripcion.CANCELADA) {
+  if (guardada.count && cancelada) {
     await notificarCancelacion(suscripcion.id);
   }
 }
@@ -586,7 +595,7 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
       : null;
   if (
     !suscripcion ||
-    (preapprovalId && suscripcion.mercadoPagoId !== preapprovalId)
+    (preapprovalId && suscripcion.mercadoPagoId && suscripcion.mercadoPagoId !== preapprovalId)
   ) {
     return;
   }
@@ -604,6 +613,14 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
       : estadoRemoto === "rejected"
         ? EstadoPagoSuscripcion.RECHAZADO
         : EstadoPagoSuscripcion.PENDIENTE;
+  const vincularPreapproval = Boolean(preapprovalId && !suscripcion.mercadoPagoId);
+  const detalles = preapprovalId && (vincularPreapproval || estado !== EstadoPagoSuscripcion.PENDIENTE)
+    ? await solicitarMercadoPago<SuscripcionMercadoPago>(
+        `/preapproval/${encodeURIComponent(preapprovalId)}`,
+      )
+    : null;
+  if (vincularPreapproval && parseId(detalles?.external_reference) !== suscripcion.referenciaExterna)
+    return;
   const monto =
     parseMonto(pagoRemoto.payment?.transaction_amount) ??
     parseMonto(pagoRemoto.transaction_amount);
@@ -658,33 +675,36 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
   });
 
   let proximoCobroConfirmado = suscripcion.proximoCobroAt;
+  let renovacionActiva = false;
   if (estado === EstadoPagoSuscripcion.APROBADO) {
-    const detalles = preapprovalId
-      ? await solicitarMercadoPago<SuscripcionMercadoPago>(
-          `/preapproval/${encodeURIComponent(preapprovalId)}`,
-        )
-      : null;
     const proximoCobroAt = fechaValida(detalles?.next_payment_date);
     proximoCobroConfirmado = proximoCobroAt ?? proximoCobroConfirmado;
     await prisma.suscripcion.update({
       where: { id: suscripcion.id },
       data: {
-        ...(suscripcion.estado === EstadoSuscripcion.CANCELADA
-          ? {}
-          : { estado: EstadoSuscripcion.ACTIVA }),
         ...(preapprovalId ? { mercadoPagoId: preapprovalId } : {}),
         ...(proximoCobroAt
           ? { proximoCobroAt, periodoHasta: proximoCobroAt }
           : {}),
       },
     });
+    const activada = await prisma.suscripcion.updateMany({
+      where: { id: suscripcion.id, estado: { in: [EstadoSuscripcion.PENDIENTE, EstadoSuscripcion.ACTIVA] } },
+      data: { estado: EstadoSuscripcion.ACTIVA },
+    });
+    renovacionActiva = activada.count > 0;
   } else if (
     estado === EstadoPagoSuscripcion.RECHAZADO &&
-    suscripcion.estado !== EstadoSuscripcion.CANCELADA
+    detalles?.status === "rejected"
   ) {
-    await prisma.suscripcion.update({
-      where: { id: suscripcion.id },
-      data: { estado: EstadoSuscripcion.VENCIDA },
+    await prisma.suscripcion.updateMany({
+      where: { id: suscripcion.id, estado: { not: EstadoSuscripcion.CANCELADA } },
+      data: { estado: EstadoSuscripcion.VENCIDA, ...(preapprovalId ? { mercadoPagoId: preapprovalId } : {}) },
+    });
+  } else if (vincularPreapproval) {
+    await prisma.suscripcion.updateMany({
+      where: { id: suscripcion.id, mercadoPagoId: null },
+      data: { mercadoPagoId: preapprovalId },
     });
   }
 
@@ -692,7 +712,7 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
     let accion: { texto: string; url: string } | undefined;
     if (
       estado === EstadoPagoSuscripcion.APROBADO &&
-      suscripcion.estado !== EstadoSuscripcion.CANCELADA
+      renovacionActiva
     ) {
       const secreto = randomBytes(32).toString("base64url");
       const venceAt =
@@ -717,8 +737,7 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
     }
 
     const aprobado = estado === EstadoPagoSuscripcion.APROBADO;
-    const pagoSinRenovacion =
-      aprobado && suscripcion.estado === EstadoSuscripcion.CANCELADA;
+    const pagoSinRenovacion = aprobado && !renovacionActiva;
     const asunto = aprobado
       ? pagoSinRenovacion
         ? "Pago de InkManager confirmado"
@@ -728,7 +747,7 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
       monto === null ? "" : ` Importe: ${formatoMoneda.format(monto)}.`;
     const mensaje = aprobado
       ? pagoSinRenovacion
-        ? `Confirmamos un pago del plan ${nombresPlanes[suscripcion.plan]}.${montoTexto} La suscripción ya está cancelada y no se realizarán nuevos cobros.`
+        ? `Confirmamos un pago del plan ${nombresPlanes[suscripcion.plan]}.${montoTexto} La suscripción no tiene renovación activa.`
         : `Confirmamos el pago y la suscripción al plan ${nombresPlanes[suscripcion.plan]} con facturación ${nombreCiclo(suscripcion.ciclo)}.${montoTexto} El próximo cobro está previsto para ${fechaLegible(proximoCobroConfirmado)}.`
       : `El pago del plan ${nombresPlanes[suscripcion.plan]} fue rechazado.${montoTexto} Revisá el medio de pago en Mercado Pago para evitar interrupciones.`;
     await enviarCorreo(
@@ -750,6 +769,24 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
 
 export async function enviarAvisosVencimiento(): Promise<void> {
   const ahora = new Date();
+  const canceladas = await prisma.suscripcion.findMany({
+    where: {
+      estado: EstadoSuscripcion.CANCELADA,
+      correoCancelacionEnviadoAt: null,
+      canceladaAt: { gte: new Date(ahora.getTime() - 86400000) },
+    },
+    select: { id: true },
+    take: 100,
+  });
+  for (const { id } of canceladas) {
+    try {
+      await notificarCancelacion(id);
+    } catch {
+      console.error(
+        "El correo de confirmación de cancelación sigue pendiente.",
+      );
+    }
+  }
   const hasta = new Date(ahora.getTime() + 3 * 86400000);
   const suscripciones = await prisma.suscripcion.findMany({
     where: {

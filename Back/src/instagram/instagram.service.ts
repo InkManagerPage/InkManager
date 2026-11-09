@@ -1,0 +1,296 @@
+import { randomUUID } from "node:crypto";
+import type { EstadoMensajeCanal } from "@prisma/client";
+import { prisma } from "../config/prisma.js";
+import { HttpError } from "../errors/http-error.js";
+import {
+  filtroCanal,
+  guardarEntradaCanal,
+  ventanaRespuesta,
+} from "../mensajes/mensajes.repository.js";
+import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
+import {
+  objetoEntrada,
+  validarIdConsulta,
+} from "../solicitudes/solicitudes.validation.js";
+import {
+  activaInstagram,
+  canalInstagram,
+  credencialInstagram,
+  credencialVigenteInstagram,
+} from "./instagram.conexion.js";
+import {
+  configuracionInstagram,
+  enviarInstagram,
+  idInstagram,
+  nombreRemitente,
+} from "./instagram.proveedor.js";
+
+type Evento = {
+  sender?: { id?: string };
+  recipient?: { id?: string };
+  timestamp?: number;
+  message?: {
+    mid?: string;
+    text?: string;
+    is_echo?: boolean;
+    is_self?: boolean;
+    is_deleted?: boolean;
+  };
+};
+type Webhook = {
+  object?: string;
+  entry?: { id?: string; messaging?: Evento[] }[];
+};
+
+export async function recibirInstagram(datos: Webhook) {
+  const config = configuracionInstagram();
+  if (!config || datos?.object !== "instagram" || !Array.isArray(datos.entry))
+    return;
+  for (const entrada of datos.entry) {
+    const cuentaId = entrada?.id;
+    if (!idInstagram(cuentaId) || !Array.isArray(entrada.messaging)) continue;
+    const c = await prisma.conexionCanal.findUnique({
+      where: { canal_cuentaId: { canal: canalInstagram, cuentaId } },
+      include: { estudio: { select: { propietarioId: true } } },
+    });
+    if (!c) continue;
+    if (!c.activa && credencialVigenteInstagram(c))
+      throw new HttpError(
+        503,
+        "Instagram todavía está terminando la conexión.",
+      );
+    if (!activaInstagram(c)) continue;
+    const destinatario = await prisma.usuario.findFirst({
+      where: {
+        suspendidoAt: null,
+        ...(c.estudioId
+          ? {
+              id: c.estudio?.propietarioId ?? "",
+              rol: "ESTUDIO_ADMIN",
+              estudioId: c.estudioId,
+            }
+          : { id: c.artistaId!, rol: "ARTISTA", estudioId: null }),
+      },
+      select: { id: true },
+    });
+    if (!destinatario) continue;
+    for (const evento of entrada.messaging) {
+      const remitente = evento?.sender?.id;
+      const mensaje = evento?.message;
+      const instante = evento?.timestamp;
+      if (
+        !mensaje ||
+        mensaje.is_echo ||
+        mensaje.is_self ||
+        mensaje.is_deleted ||
+        evento.recipient?.id !== cuentaId ||
+        !idInstagram(remitente) ||
+        remitente === cuentaId ||
+        typeof mensaje.mid !== "string" ||
+        !mensaje.mid ||
+        mensaje.mid.length > 500 ||
+        typeof instante !== "number" ||
+        !Number.isFinite(instante) ||
+        instante < 1 ||
+        instante > Date.now() + 300000
+      )
+        continue;
+      const hilo = await prisma.conversacionCanal.findUnique({
+        where: {
+          canal_cuentaId_remitente: {
+            canal: canalInstagram,
+            cuentaId,
+            remitente,
+          },
+        },
+        select: { nombre: true },
+      });
+      const nombre =
+        hilo?.nombre ??
+        ((await nombreRemitente(
+          config,
+          credencialInstagram(c, config),
+          remitente,
+        )) ||
+          "Contacto " + remitente.slice(-4));
+      await guardarEntradaCanal({
+        canal: canalInstagram,
+        cuentaId,
+        estudioId: c.estudioId,
+        artistaId: c.artistaId,
+        remitente,
+        nombre,
+        proveedorId: mensaje.mid,
+        fecha: new Date(instante),
+        destinatario: destinatario.id,
+        texto:
+          typeof mensaje.text === "string" && mensaje.text.trim()
+            ? mensaje.text.slice(0, 4096)
+            : "Este mensaje contiene contenido multimedia.",
+      });
+    }
+  }
+}
+
+async function hiloPermitido(usuarioId: string, identificador: unknown) {
+  const a = await resolverAmbito(usuarioId);
+  if (!a.administra && !a.puedeProponer)
+    throw new HttpError(403, "No podés gestionar mensajes.");
+  const hilo = await prisma.conversacionCanal.findFirst({
+    where: {
+      id: validarIdConsulta(identificador),
+      canal: canalInstagram,
+      ...filtroCanal(a),
+    },
+  });
+  if (!hilo) throw new HttpError(404, "No encontramos la conversación.");
+  return { a, hilo };
+}
+
+export async function responderInstagram(
+  usuarioId: string,
+  id: unknown,
+  entrada: unknown,
+) {
+  const body = objetoEntrada(entrada);
+  const texto = typeof body.texto === "string" ? body.texto.trim() : "";
+  const claveEnvio = validarIdConsulta(body.clave);
+  if (!texto || texto.length > 1000)
+    throw new HttpError(400, "Escribí un mensaje de hasta 1000 caracteres.");
+  const { hilo } = await hiloPermitido(usuarioId, id);
+  async function comprobarEnvio() {
+    const previo = await prisma.mensajeCanal.findUnique({
+      where: { claveEnvio },
+    });
+    if (previo && (previo.conversacionId !== hilo.id || previo.texto !== texto))
+      throw new HttpError(409, "El envío ya fue utilizado.");
+    return Boolean(previo);
+  }
+  if (await comprobarEnvio()) return;
+  const config = configuracionInstagram();
+  const conexion = await prisma.conexionCanal.findUnique({
+    where: {
+      canal_cuentaId: { canal: canalInstagram, cuentaId: hilo.cuentaId },
+    },
+  });
+  if (
+    !config ||
+    !conexion ||
+    conexion.estudioId !== hilo.estudioId ||
+    conexion.artistaId !== hilo.artistaId
+  )
+    throw new HttpError(
+      503,
+      "Instagram no está conectado para esta conversación.",
+    );
+  const credencial = credencialInstagram(conexion, config);
+  if (Date.now() - hilo.ultimaEntradaAt.getTime() >= ventanaRespuesta)
+    throw new HttpError(
+      409,
+      "La ventana de respuesta cerró. Esperá un nuevo mensaje del cliente.",
+    );
+
+  const mensajeId = randomUUID();
+  const fecha = new Date();
+  const { count } = await prisma.mensajeCanal.createMany({
+    data: [
+      {
+        id: mensajeId,
+        claveEnvio,
+        conversacionId: hilo.id,
+        texto,
+        propio: true,
+        estado: "ENVIANDO",
+        fecha,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  if (!count) {
+    await comprobarEnvio();
+    return;
+  }
+  let proveedorId: string | undefined;
+  let estado: EstadoMensajeCanal;
+  let revocada = false;
+  try {
+    proveedorId = await enviarInstagram(
+      config,
+      credencial,
+      hilo.remitente,
+      texto,
+    );
+    estado = "ENVIADO";
+  } catch (error) {
+    estado =
+      error instanceof HttpError && error.status < 500 ? "ERROR" : "INCIERTO";
+    revocada = error instanceof HttpError && error.status === 401;
+  }
+  await prisma.$transaction([
+    prisma.mensajeCanal.update({
+      where: { id: mensajeId },
+      data: { estado, proveedorId },
+    }),
+    prisma.conversacionCanal.updateMany({
+      where: { id: hilo.id, ultimaActividad: { lt: fecha } },
+      data: { ultimaActividad: fecha },
+    }),
+    ...(revocada
+      ? [
+          prisma.conexionCanal.updateMany({
+            where: { id: conexion.id, tokenCifrado: conexion.tokenCifrado },
+            data: { expiraAt: new Date() },
+          }),
+        ]
+      : []),
+  ]);
+}
+
+export async function leerInstagram(
+  usuarioId: string,
+  id: unknown,
+  entrada: unknown,
+) {
+  const { hilo } = await hiloPermitido(usuarioId, id);
+  const { hasta } = objetoEntrada(entrada);
+  const fecha = typeof hasta === "string" ? new Date(hasta) : null;
+  if (!fecha || !Number.isFinite(fecha.getTime()) || fecha > new Date())
+    throw new HttpError(400, "La fecha de lectura no es válida.");
+  await prisma.mensajeCanal.updateMany({
+    where: {
+      conversacionId: hilo.id,
+      propio: false,
+      leidoAt: null,
+      fecha: { lte: fecha },
+    },
+    data: { leidoAt: new Date() },
+  });
+}
+
+export async function vincularInstagram(
+  usuarioId: string,
+  id: unknown,
+  entrada: unknown,
+) {
+  const { a, hilo } = await hiloPermitido(usuarioId, id);
+  if (!a.administra)
+    throw new HttpError(403, "Solo el titular puede vincular una consulta.");
+  const valor = objetoEntrada(entrada).solicitudId;
+  const solicitudId = valor === null ? null : validarIdConsulta(valor);
+  if (
+    solicitudId &&
+    !(await prisma.solicitud.findFirst({
+      where: {
+        id: solicitudId,
+        estudioId: hilo.estudioId,
+        ...(hilo.artistaId ? { artistaDestinoId: hilo.artistaId } : {}),
+      },
+      select: { id: true },
+    }))
+  )
+    throw new HttpError(404, "No encontramos la consulta en este negocio.");
+  await prisma.conversacionCanal.update({
+    where: { id: hilo.id },
+    data: { solicitudId },
+  });
+}

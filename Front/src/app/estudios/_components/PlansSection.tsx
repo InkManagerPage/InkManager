@@ -38,7 +38,7 @@ const plans = [
       },
     ],
     image: '/images/artist-hands.jpg',
-    price: 20,
+    price: 12000,
   },
   {
     name: 'Estudio',
@@ -81,7 +81,7 @@ const plans = [
       },
     ],
     image: '/images/studio-session.jpg',
-    price: 50,
+    price: 35000,
   },
 ];
 
@@ -100,7 +100,7 @@ export function PlansSection() {
                   <h3>{plan.name}</h3>
                   <p>{plan.description}</p>
                   <p>
-                    {plan.name === 'Individual' ? 'ARS 12.000 por mes.' : 'ARS 35.000 por mes.'}
+                    ARS {plan.price.toLocaleString('es-AR')} por mes.
                     <br />
                     El plan anual incluye 2 meses bonificados.
                   </p>

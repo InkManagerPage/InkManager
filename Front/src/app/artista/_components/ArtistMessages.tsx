@@ -1,6 +1,7 @@
 'use client';
-import { PanelMessages } from '@/components/panel/PanelMessages';
+import { BandejaMensajes } from '@/components/panel/BandejaMensajes';
 import { useArtistPanel } from './ArtistPanelProvider';
 export function ArtistMessages() {
-  return <PanelMessages {...useArtistPanel()} />;
+  const { recargarOperacion } = useArtistPanel();
+  return <BandejaMensajes actualizarResumen={recargarOperacion} />;
 }

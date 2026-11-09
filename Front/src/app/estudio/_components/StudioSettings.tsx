@@ -3,16 +3,28 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useFormikContext } from 'formik';
 import { PageHeader } from '@/components/panel/PanelUI';
-import { PanelForm, PanelField } from '@/components/panel/PanelForm';
-import { ciudadesEjemplo } from '@/mocks/panel-artista';
+import { PanelForm, PanelField, PanelSubmitButton } from '@/components/panel/PanelForm';
+import { LocationFields } from '@/components/forms/LocationFields';
+import { mutarPanel } from '@/hooks/usePanelData';
+import { useConsultas } from '@/hooks/useConsultas';
 import type { PerfilEstudio } from '@/types/panel-estudio';
 import { useStudio } from './StudioProvider';
 import styles from '@/components/panel/workspace.module.css';
 import studio from './studio.module.css';
 
 export function StudioProfile() {
-  const { datos, setDatos } = useStudio();
+  const { operacion, errorOperacion, recargarOperacion } = useStudio();
+  const { recargar } = useConsultas();
   const [aviso, setAviso] = useState('');
+  const perfil = operacion?.estudio;
+  if (!perfil)
+    return (
+      <EstadoEstudio
+        titulo="Perfil del estudio"
+        error={errorOperacion}
+        recargar={recargarOperacion}
+      />
+    );
   return (
     <>
       <PageHeader titulo="Perfil del estudio" />
@@ -21,8 +33,8 @@ export function StudioProfile() {
           {aviso}
         </p>
       )}
-      <PanelForm<PerfilEstudio>
-        initialValues={datos.perfil}
+      <PanelForm<PerfilEstudio & { ciudadId: number | null }>
+        initialValues={perfil}
         className={studio.profile}
         validate={(v) => {
           const errores: Partial<Record<keyof PerfilEstudio, string>> = {};
@@ -32,22 +44,17 @@ export function StudioProfile() {
             errores.email = 'Ingresá un email válido.';
           if (!/^[+\d\s()-]{7,30}$/.test(v.telefono))
             errores.telefono = 'Ingresá un teléfono válido.';
-          if (!ciudadesEjemplo.includes(v.ciudad)) errores.ciudad = 'Elegí una ciudad de la lista.';
           if (v.direccion.trim().length < 5 || v.direccion.length > 160)
             errores.direccion = 'Usá entre 5 y 160 caracteres.';
           if (v.biografia.trim().length < 10 || v.biografia.length > 300)
             errores.biografia = 'La descripción debe tener entre 10 y 300 caracteres.';
           return errores;
         }}
-        onSave={(perfil) => {
-          setDatos((d) => ({
-            ...d,
-            perfil: Object.fromEntries(
-              Object.entries(perfil).map(([k, v]) => [k, v.trim()]),
-            ) as unknown as PerfilEstudio,
-          }));
-          setAviso('Perfil guardado.');
+        onSave={async (valores) => {
+          await mutarPanel('/operacion/estudio', 'PATCH', valores);
+          void Promise.all([recargarOperacion(), recargar()]);
         }}
+        onSaved={() => setAviso('Perfil guardado.')}
       >
         <section className={styles.settingsSection}>
           <div>
@@ -89,20 +96,16 @@ export function StudioProfile() {
               />
               <PanelField name="telefono" label="Teléfono" type="tel" required maxLength={30} />
             </div>
-            <PanelField name="ciudad" label="Ciudad" as="select" required>
-              {ciudadesEjemplo.map((c) => (
-                <option value={c} key={c}>
-                  {c}
-                </option>
-              ))}
-            </PanelField>
+            <CiudadEstudio
+              pais={perfil.pais}
+              provinciaId={perfil.provinciaId}
+              anterior={perfil.ciudad}
+            />
             <PanelField name="direccion" label="Dirección" required maxLength={160} />
           </div>
         </section>
         <div className={styles.formActions}>
-          <button className={styles.button} type="submit">
-            Guardar perfil
-          </button>
+          <PanelSubmitButton>Guardar perfil</PanelSubmitButton>
         </div>
       </PanelForm>
     </>
@@ -112,9 +115,61 @@ function BioCount() {
   const { values } = useFormikContext<PerfilEstudio>();
   return <p className={studio.formNote}>{values.biografia.length}/300 caracteres</p>;
 }
+function CiudadEstudio({
+  pais,
+  provinciaId,
+  anterior,
+}: {
+  pais: string | null;
+  provinciaId: number | null;
+  anterior: string;
+}) {
+  const { values, setFieldValue } = useFormikContext<{ ciudadId: number | null }>();
+  return (
+    <LocationFields
+      paisActual={pais}
+      provinciaActual={provinciaId}
+      ciudadId={values.ciudadId}
+      ciudadAnterior={anterior}
+      onChange={(id) => {
+        void setFieldValue('ciudadId', id);
+      }}
+    />
+  );
+}
+function EstadoEstudio({
+  titulo,
+  error,
+  recargar,
+}: {
+  titulo: string;
+  error: string;
+  recargar: () => Promise<void>;
+}) {
+  return (
+    <>
+      <PageHeader titulo={titulo} />
+      {error ? (
+        <p role="alert">
+          {error}{' '}
+          <button className={styles.textButton} onClick={() => void recargar()}>
+            Reintentar
+          </button>
+        </p>
+      ) : (
+        <p role="status">Cargando datos del estudio…</p>
+      )}
+    </>
+  );
+}
 export function StudioSettings() {
-  const { datos, setDatos } = useStudio();
+  const { operacion, errorOperacion, recargarOperacion } = useStudio();
   const [aviso, setAviso] = useState('');
+  const perfil = operacion?.estudio;
+  if (!perfil)
+    return (
+      <EstadoEstudio titulo="Configuración" error={errorOperacion} recargar={recargarOperacion} />
+    );
   return (
     <>
       <PageHeader titulo="Configuración" />
@@ -133,16 +188,17 @@ export function StudioSettings() {
         </p>
       )}
       <PanelForm
-        initialValues={{ horas: datos.plazoPropuestasHoras }}
+        initialValues={{ horas: perfil.plazoPropuestasHoras }}
         validate={(v) =>
           !Number.isInteger(v.horas) || v.horas < 0 || v.horas > 720
             ? { horas: 'Elegí entre 1 y 720 horas, o 0 para cierre manual.' }
             : {}
         }
-        onSave={(v) => {
-          setDatos((d) => ({ ...d, plazoPropuestasHoras: v.horas }));
-          setAviso('Configuración guardada.');
+        onSave={async (v) => {
+          await mutarPanel('/operacion/estudio', 'PATCH', v);
+          void recargarOperacion();
         }}
+        onSaved={() => setAviso('Configuración guardada.')}
       >
         <section className={styles.settingsSection}>
           <div>
@@ -176,9 +232,7 @@ export function StudioSettings() {
           </p>
         </section>
         <div className={styles.formActions}>
-          <button className={styles.button} type="submit">
-            Guardar configuración
-          </button>
+          <PanelSubmitButton>Guardar configuración</PanelSubmitButton>
         </div>
       </PanelForm>
     </>

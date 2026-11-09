@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../errors/http-error.js";
+import { obtenerUsuarioSesion } from "../auth/auth.service.js";
 import {
   cancelarSuscripcion,
   crearSuscripcion,
@@ -38,7 +39,8 @@ export async function cancelarPago(
     if (entrada !== undefined && typeof entrada !== "string") {
       throw new HttpError(400, "El enlace de cancelación no es válido.");
     }
-    const resultado = await cancelarSuscripcion(req.usuario?.id, entrada);
+    const usuario = entrada === undefined ? await obtenerUsuarioSesion(req.cookies?.inkmanager_session) : null;
+    const resultado = await cancelarSuscripcion(usuario?.id, entrada);
     res.status(200).json({
       message: "La suscripción fue cancelada.",
       ...resultado,

@@ -217,6 +217,7 @@ function cuenta(rol = "ARTISTA", completo = false) {
     dniPasaporte: "documento-privado",
     nombreArtistico: "Ana Ink",
     estudioId: null,
+    suspendidoAt: null,
     biografia: completo ? "Biografía artística" : null,
     ciudad: completo ? "Rosario" : null,
     ciudadId: completo ? 1384 : null,
@@ -483,10 +484,13 @@ test("catálogo excluye borradores y perfiles incompletos y no expone datos priv
   const publicado = cuenta("ARTISTA", true);
   const incompleto = cuenta();
   const sinPublicar = cuenta("ARTISTA", true);
+  const suspendido = cuenta("ARTISTA", true);
+  Object.assign(suspendido.usuario, { suspendidoAt: new Date() });
   const visible = trabajo(publicado.usuario.id, "PUBLICADO");
   const oculto = trabajo(publicado.usuario.id);
   trabajo(incompleto.usuario.id, "PUBLICADO");
   trabajo(sinPublicar.usuario.id);
+  trabajo(suspendido.usuario.id, "PUBLICADO");
   const response = await request("/catalogo");
   assert.equal(response.status, 200);
   const datos = await response.json();

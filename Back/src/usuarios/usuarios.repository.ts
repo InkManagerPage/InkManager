@@ -72,6 +72,7 @@ export function buscarUsuarioParaLogin(
 ): Promise<UsuarioParaLogin | null> {
   return prisma.usuario.findFirst({
     where: {
+      suspendidoAt: null,
       email: {
         equals: email,
         mode: "insensitive",
@@ -91,7 +92,7 @@ export function buscarUsuarioParaLogin(
 // Esta función busca un usuario por su ID y devuelve solo los campos necesarios para la sesión. El select evita que se devuelvan campos sensibles como la contraseña.
 export function buscarUsuarioPorId(id: string): Promise<UsuarioSesion | null> {
   return prisma.usuario.findUnique({
-    where: { id },
+    where: { id, suspendidoAt: null },
     select: {
       id: true,
       nombre: true,
@@ -140,7 +141,7 @@ export function buscarUsuarioPorGoogleId(
   googleId: string,
 ): Promise<UsuarioSesion | null> {
   return prisma.usuario.findUnique({
-    where: { googleId },
+    where: { googleId, suspendidoAt: null },
     select: {
       id: true,
       nombre: true,

@@ -146,9 +146,9 @@ export async function mutarSolicitud<T>(
   );
 }
 
-export async function cerrarVencidasDelAmbito(a: AmbitoConsultas) {
+export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas) {
   const filtro =
-    a.tipo === "INDEPENDIENTE"
+    !a ? Prisma.sql`TRUE` : a.tipo === "INDEPENDIENTE"
       ? Prisma.sql`s."artistaDestinoId"=${a.usuarioId} AND s."estudioId" IS NULL`
       : Prisma.sql`s."estudioId"=${a.estudioId}`;
   // Un lote evita abrir una transacción remota por cada consulta vencida.
@@ -162,16 +162,23 @@ export async function cerrarVencidasDelAmbito(a: AmbitoConsultas) {
       FROM vencidas v JOIN "Solicitud" s ON s."id"=v."id"
       LEFT JOIN "Cotizacion" c ON c."solicitudId"=s."id"
         AND (c."validaHasta" IS NULL OR c."validaHasta">=CURRENT_TIMESTAMP)
-        AND EXISTS (SELECT 1 FROM "Usuario" u WHERE u."id"=c."artistaId" AND u."rol"='ARTISTA'
+        AND EXISTS (SELECT 1 FROM "Usuario" u WHERE u."id"=c."artistaId" AND u."rol"='ARTISTA' AND u."suspendidoAt" IS NULL
           AND ((s."estudioId" IS NOT NULL AND u."estudioId"=s."estudioId" AND u."estadoEnEstudio"='ACTIVO')
           OR (s."estudioId" IS NULL AND u."id"=s."artistaDestinoId" AND u."estudioId" IS NULL)))
       GROUP BY s."id"
+    ), actualizadas AS (
+      UPDATE "Solicitud" s SET
+        "estado"=(CASE WHEN o.cantidad=1 THEN 'ASIGNADA' WHEN o.cantidad>1 THEN 'ELECCION_CLIENTE' ELSE 'POR_ASIGNAR' END)::"EstadoSolicitud",
+        "artistaAsignadoId"=CASE WHEN o.cantidad=1 THEN o.artista ELSE NULL END,
+        "asignadaPor"=CASE WHEN o.cantidad=1 THEN 'UNICA_PROPUESTA' ELSE NULL END,
+        "cerradaAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP,"version"=s."version"+1
+      FROM opciones o WHERE s."id"=o."id"
+      RETURNING s."id",s."artistaAsignadoId",s."titulo",s."version"
     )
-    UPDATE "Solicitud" s SET
-      "estado"=(CASE WHEN o.cantidad=1 THEN 'ASIGNADA' WHEN o.cantidad>1 THEN 'ELECCION_CLIENTE' ELSE 'POR_ASIGNAR' END)::"EstadoSolicitud",
-      "artistaAsignadoId"=CASE WHEN o.cantidad=1 THEN o.artista ELSE NULL END,
-      "asignadaPor"=CASE WHEN o.cantidad=1 THEN 'UNICA_PROPUESTA' ELSE NULL END,
-      "cerradaAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP,"version"=s."version"+1
-    FROM opciones o WHERE s."id"=o."id"
+    INSERT INTO "AvisoPanel" ("id","usuarioId","clave","titulo","detalle","destino")
+    SELECT gen_random_uuid()::text,"artistaAsignadoId",'asignacion:' || "id" || ':' || ("version"-1),
+      'Te asignaron una consulta',COALESCE(NULLIF("titulo",''),'Nueva asignación'),'/artista/consultas?consulta=' || "id"
+    FROM actualizadas WHERE "artistaAsignadoId" IS NOT NULL
+    ON CONFLICT ("usuarioId","clave") DO NOTHING
   `);
 }

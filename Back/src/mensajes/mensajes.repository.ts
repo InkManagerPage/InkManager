@@ -1,0 +1,146 @@
+import type { CanalMensajes, Prisma } from "@prisma/client";
+import { prisma } from "../config/prisma.js";
+import { registrarAviso } from "../operacion/avisos.repository.js";
+import type { AmbitoConsultas } from "../solicitudes/solicitudes.entity.js";
+
+export const ventanaRespuesta = 24 * 60 * 60 * 1000;
+
+export function filtroCanal(
+  a: AmbitoConsultas,
+): Prisma.ConversacionCanalWhereInput {
+  if (!a.estudioId) return { estudioId: null, artistaId: a.usuarioId };
+  return {
+    estudioId: a.estudioId,
+    ...(!a.administra ? { solicitud: { artistaAsignadoId: a.usuarioId } } : {}),
+  };
+}
+
+export async function listarCanales(
+  a: AmbitoConsultas,
+  cantidadMensajes: number,
+) {
+  const filas = await prisma.conversacionCanal.findMany({
+    where: filtroCanal(a),
+    orderBy: [{ ultimaActividad: "desc" }, { id: "desc" }],
+    take: 50,
+    select: {
+      id: true,
+      canal: true,
+      cuentaId: true,
+      nombre: true,
+      solicitudId: true,
+      ultimaEntradaAt: true,
+      mensajes: {
+        select: {
+          id: true,
+          texto: true,
+          propio: true,
+          fecha: true,
+          estado: true,
+        },
+        orderBy: [{ fecha: "desc" }, { id: "desc" }],
+        take: cantidadMensajes,
+      },
+      _count: {
+        select: { mensajes: { where: { propio: false, leidoAt: null } } },
+      },
+    },
+  });
+  return filas.map((c) => ({
+    id: c.id,
+    clienteId: c.id,
+    canal: c.canal,
+    cuentaId: c.cuentaId,
+    nombre: c.nombre,
+    asunto: "Mensaje directo",
+    solicitudId: c.solicitudId,
+    ventanaHasta: new Date(
+      c.ultimaEntradaAt.getTime() + ventanaRespuesta,
+    ).toISOString(),
+    sinLeer: c._count.mensajes,
+    mensajes: c.mensajes.reverse().map((m) => ({
+      ...m,
+      estado:
+        m.estado === "ENVIANDO" && Date.now() - m.fecha.getTime() > 90000
+          ? ("INCIERTO" as const)
+          : m.estado,
+    })),
+  }));
+}
+
+export async function guardarEntradaCanal(d: {
+  canal: CanalMensajes;
+  cuentaId: string;
+  estudioId: string | null;
+  artistaId: string | null;
+  remitente: string;
+  nombre: string;
+  proveedorId: string;
+  texto: string;
+  fecha: Date;
+  destinatario: string;
+}) {
+  await prisma.$transaction(
+    async (tx) => {
+      const ambito = { estudioId: d.estudioId, artistaId: d.artistaId };
+      const clave = {
+        canal: d.canal,
+        cuentaId: d.cuentaId,
+        remitente: d.remitente,
+      };
+      await tx.conversacionCanal.createMany({
+        data: [
+          {
+            ...clave,
+            ...ambito,
+            nombre: d.nombre,
+            ultimaActividad: d.fecha,
+            ultimaEntradaAt: d.fecha,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      const hilo = await tx.conversacionCanal.findUniqueOrThrow({
+        where: { canal_cuentaId_remitente: clave },
+      });
+      if (hilo.estudioId !== d.estudioId || hilo.artistaId !== d.artistaId)
+        return;
+      const { count } = await tx.mensajeCanal.createMany({
+        data: [
+          {
+            conversacionId: hilo.id,
+            proveedorId: d.proveedorId,
+            texto: d.texto,
+            propio: false,
+            estado: "RECIBIDO",
+            fecha: d.fecha,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      if (!count) return;
+      await tx.conversacionCanal.updateMany({
+        where: { id: hilo.id, ultimaEntradaAt: { lt: d.fecha } },
+        data: { ultimaEntradaAt: d.fecha },
+      });
+      await tx.conversacionCanal.updateMany({
+        where: { id: hilo.id, ultimaActividad: { lt: d.fecha } },
+        data: { ultimaActividad: d.fecha },
+      });
+      await registrarAviso(tx, {
+        usuarioId: d.destinatario,
+        clave: d.canal + ":" + d.cuentaId + ":" + d.proveedorId,
+        titulo:
+          d.canal === "INSTAGRAM"
+            ? "Nuevo mensaje de Instagram"
+            : "Nuevo mensaje",
+        detalle: d.nombre,
+        destino:
+          (d.estudioId ? "/estudio" : "/artista") +
+          "/mensajes?conversacion=" +
+          hilo.id,
+      });
+    },
+    { timeout: 20000 },
+  );
+}

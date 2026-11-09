@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { registrarAviso } from "../operacion/avisos.repository.js";
 import { HttpError } from "../errors/http-error.js";
 import {
   resolverAmbito,
@@ -154,6 +155,9 @@ export async function crearTurno(usuarioId: string, entrada: unknown) {
         },
         include: detalleCita,
       });
+      if (cita.artistaId !== usuarioId)
+        await registrarAviso(tx, { usuarioId: cita.artistaId, clave: "turno:" + cita.id,
+          titulo: "Nuevo turno en tu agenda", detalle: cita.titulo, destino: "/artista/agenda?cita=" + cita.id });
       return { cita, creada: true };
     });
     return { cita: presentarCita(resultado.cita, a), creada: resultado.creada };
@@ -224,7 +228,7 @@ export async function actualizarTurno(
             "La asignación de la consulta cambió. Cancelá este turno y agendá uno nuevo.",
           );
         await comprobarHorario(tx, d, actual.artistaId, id);
-        return tx.cita.update({
+        const actualizada = await tx.cita.update({
           where: { id },
           data: {
             ...d,
@@ -234,6 +238,11 @@ export async function actualizarTurno(
           },
           include: detalleCita,
         });
+        if (actualizada.artistaId !== usuarioId && (reprograma || actualizada.estado !== actual.estado))
+          await registrarAviso(tx, { usuarioId: actualizada.artistaId,
+            clave: "turno:" + id + ":" + actualizada.version, titulo: "Turno actualizado",
+            detalle: actualizada.titulo, destino: "/artista/agenda?cita=" + id });
+        return actualizada;
       },
     );
     return presentarCita(cita, a);

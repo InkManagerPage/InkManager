@@ -3,6 +3,12 @@ import { HttpError } from "../errors/http-error.js";
 
 const api = "https://api.mercadopago.com";
 
+export class ErrorMercadoPago extends HttpError {
+  constructor(public estadoProveedor: number) {
+    super(502, "Mercado Pago no pudo completar la operación. Intentá nuevamente.");
+  }
+}
+
 export function obtenerAccessTokenMercadoPago(): string {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   if (!token) {
@@ -73,6 +79,7 @@ export async function solicitarMercadoPago<T>(
       ...(opciones.body === undefined
         ? {}
         : { body: JSON.stringify(opciones.body) }),
+      redirect: "error",
       signal: AbortSignal.timeout(10000),
     });
   } catch {
@@ -85,10 +92,7 @@ export async function solicitarMercadoPago<T>(
   const cuerpo: unknown = await respuesta.json().catch(() => null);
   if (!respuesta.ok || !cuerpo || typeof cuerpo !== "object") {
     console.error(`Mercado Pago respondió HTTP ${respuesta.status}.`);
-    throw new HttpError(
-      502,
-      "Mercado Pago no pudo completar la operación. Intentá nuevamente.",
-    );
+    throw new ErrorMercadoPago(respuesta.status);
   }
   return cuerpo as T;
 }

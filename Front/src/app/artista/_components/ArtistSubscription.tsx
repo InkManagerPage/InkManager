@@ -1,15 +1,8 @@
 'use client';
-import { PanelSubscription } from '@/components/panel/PanelSubscription';
-import { useArtistPanel } from './ArtistPanelProvider';
-import { precioIndividual } from '@/lib/suscripcion-panel';
+import { SuscripcionReal } from '@/components/panel/SuscripcionReal';
+import { useAuth } from '@/store/AuthProvider';
+
 export function ArtistSubscription() {
-  const panel = useArtistPanel();
-  return (
-    <PanelSubscription
-      {...panel}
-      suscripcion={panel.datos.suscripcion}
-      nombrePlan="Individual"
-      precio={precioIndividual}
-    />
-  );
+  const { usuario } = useAuth();
+  return <SuscripcionReal plan="INDIVIDUAL" puedeContratar={!usuario?.estudioId} />;
 }

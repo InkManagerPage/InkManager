@@ -73,6 +73,7 @@ export async function callbackGoogle(
       );
       if (usuario.rol === "ARTISTA") destino.pathname = "/artista";
       if (usuario.rol === "ESTUDIO_ADMIN") destino.pathname = "/estudio";
+      if (usuario.rol === "SUPERADMIN") destino.pathname = "/admin";
       res.cookie("inkmanager_session", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

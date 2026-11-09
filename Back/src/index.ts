@@ -2,11 +2,15 @@ import "dotenv/config";
 import { app } from "./app.js";
 import { configuracionCorreo } from "./config/correos.js";
 import { iniciarAvisosVencimiento } from "./pagos/pagos.service.js";
+import { iniciarRecordatorios } from "./recordatorios/recordatorios.worker.js";
 
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  iniciarAvisosVencimiento();
+  if (process.env.RECORDATORIOS_AUTOMATICOS === "1") {
+    iniciarAvisosVencimiento();
+    iniciarRecordatorios();
+  }
   console.log("Servidor ejecutándose en http://localhost:" + PORT);
   try {
     console.log("Transporte de correo: " + configuracionCorreo().transporte);

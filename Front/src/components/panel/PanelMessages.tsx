@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { usePanelFilters } from '@/hooks/usePanelFilters';
 import type { ClientePanel, ConversacionPanel } from '@/types/panel-artista';
 import { Avatar, EmptyState, PageHeader, PanelIcon, SearchField } from './PanelUI';
@@ -12,11 +12,28 @@ import chat from './messages.module.css';
 export interface PanelMessagesProps {
   datos: { conversaciones: ConversacionPanel[]; borradoresMensajes?: Record<string, string> };
   buscarCliente: (id: string) => ClientePanel;
-  leerConversacion: (id: string) => void;
-  enviarMensaje: (id: string, texto: string) => void;
+  leerConversacion: (id: string, canal: ConversacionPanel['canal'], hasta: string) => Promise<void>;
+  enviarMensaje: (id: string, canal: ConversacionPanel['canal'], texto: string) => Promise<void>;
   guardarBorradorMensaje: (id: string, texto: string) => void;
-  reintentarMensaje: (id: string, mensajeId: string) => void;
+  vincularConsulta: (
+    id: string,
+    canal: ConversacionPanel['canal'],
+    solicitudId: string | null,
+  ) => Promise<void>;
+  consultas?: { id: string; titulo: string }[];
+  conectado: boolean;
+  errorConexion: string;
+  conexion?: ReactNode;
 }
+const estadosMensaje = {
+  RECIBIDO: '',
+  ENVIANDO: 'Enviando…',
+  ENVIADO: 'Enviado',
+  ENTREGADO: 'Entregado',
+  LEIDO: 'Leído',
+  ERROR: 'No enviado',
+  INCIERTO: 'Envío sin confirmar',
+};
 export function PanelMessages(props: PanelMessagesProps) {
   const {
     datos,
@@ -24,17 +41,31 @@ export function PanelMessages(props: PanelMessagesProps) {
     leerConversacion,
     enviarMensaje,
     guardarBorradorMensaje,
-    reintentarMensaje,
+    vincularConsulta,
+    consultas,
+    conectado,
+    errorConexion,
+    conexion,
   } = props;
   const { params, update } = usePanelFilters();
   const busqueda = params.get('q') || '';
   const setBusqueda = (value: string) => update({ q: value || null }, true);
   const soloSinLeer = params.get('sinLeer') === '1';
+  const canal = params.get('canal') || '';
+  const canales = [...new Set(datos.conversaciones.map((hilo) => hilo.canal))];
   const borradores = datos.borradoresMensajes || {};
   const cercaDelFinal = useRef(true);
   const hiloAnterior = useRef<string | undefined>(undefined);
   const fin = useRef<HTMLDivElement>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setAhora(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, []);
   const conversaciones = datos.conversaciones
+    .filter((item) => !canal || item.canal === canal)
     .filter((item) => !soloSinLeer || item.sinLeer > 0)
     .filter((item) =>
       `${buscarCliente(item.clienteId).nombre} ${item.asunto}`
@@ -47,6 +78,16 @@ export function PanelMessages(props: PanelMessagesProps) {
     (params.has('conversacion') || soloSinLeer ? undefined : conversaciones[0]);
   const cantidad = seleccionada?.mensajes.length || 0;
   const texto = seleccionada ? borradores[seleccionada.id] || '' : '';
+  const ultimoRecibido = seleccionada?.mensajes.findLast((m) => !m.propio)?.fecha;
+  const idSeleccionado = seleccionada?.id;
+  const canalSeleccionado = seleccionada?.canal;
+  const maximo = canalSeleccionado === 'INSTAGRAM' ? 1000 : 2000;
+  const hiloAbierto = params.has('conversacion');
+  const sinLeer = seleccionada?.sinLeer;
+  const vencida = Boolean(
+    seleccionada?.ventanaHasta && Date.parse(seleccionada.ventanaHasta) <= ahora,
+  );
+  const puedeResponder = conectado && seleccionada?.puedeResponder !== false;
   function setTexto(valor: string) {
     if (seleccionada) guardarBorradorMensaje(seleccionada.id, valor);
   }
@@ -57,24 +98,57 @@ export function PanelMessages(props: PanelMessagesProps) {
   }, [seleccionada?.id, cantidad]);
   useEffect(() => {
     if (
-      seleccionada?.sinLeer &&
-      (params.has('conversacion') || window.matchMedia('(min-width: 651px)').matches)
+      idSeleccionado &&
+      canalSeleccionado &&
+      ultimoRecibido &&
+      sinLeer &&
+      (hiloAbierto || window.matchMedia('(min-width: 651px)').matches)
     )
-      leerConversacion(seleccionada.id);
-  }, [seleccionada?.id, seleccionada?.sinLeer, leerConversacion, params]);
+      void leerConversacion(idSeleccionado, canalSeleccionado, ultimoRecibido);
+  }, [idSeleccionado, canalSeleccionado, ultimoRecibido, sinLeer, leerConversacion, hiloAbierto]);
   function abrir(id: string) {
-    leerConversacion(id);
+    setError('');
     update({ conversacion: id });
   }
-  function enviar(event: FormEvent) {
+  async function enviar(event: FormEvent) {
     event.preventDefault();
-    if (!seleccionada || !texto.trim() || texto.trim().length > 2000) return;
-    enviarMensaje(seleccionada.id, texto);
-    setTexto('');
+    if (
+      !seleccionada ||
+      guardando ||
+      !puedeResponder ||
+      vencida ||
+      !texto.trim() ||
+      texto.trim().length > maximo
+    )
+      return;
+    await ejecutar(async () => {
+      await enviarMensaje(seleccionada.id, seleccionada.canal, texto);
+      setTexto('');
+    });
+  }
+  async function ejecutar(accion: () => Promise<void>) {
+    setGuardando(true);
+    setError('');
+    try {
+      await accion();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No pudimos completar la operación.');
+    } finally {
+      setGuardando(false);
+    }
   }
   return (
     <>
-      <PageHeader titulo="Mensajes" descripcion="El contexto de cada proyecto, a mano." />
+      <PageHeader titulo="Mensajes" />
+      {conexion}
+      {!conexion && !conectado && (
+        <p className={styles.notice}>Todavía no hay un canal conectado para este negocio.</p>
+      )}
+      {(error || errorConexion) && (
+        <p className="alert alert-danger" role="alert">
+          {error || errorConexion}
+        </p>
+      )}
       <div className={styles.toolbar}>
         <div className={styles.tabs}>
           <button
@@ -92,6 +166,21 @@ export function PanelMessages(props: PanelMessagesProps) {
             Sin leer
           </button>
         </div>
+        {(canales.length > 1 || canal) && (
+          <select
+            className="form-select w-auto"
+            aria-label="Filtrar por canal"
+            value={canal}
+            onChange={(event) => update({ canal: event.target.value || null, conversacion: null })}
+          >
+            <option value="">Todos los canales</option>
+            {canales.map((id) => (
+              <option key={id} value={id}>
+                {nombreCanal(id)}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <section
         className={`${chat.messenger} ${params.has('conversacion') ? chat.mobileThread : ''}`}
@@ -120,6 +209,7 @@ export function PanelMessages(props: PanelMessagesProps) {
                     <Avatar nombre={cliente.nombre} />
                     <span className={chat.conversationInfo}>
                       <strong>{cliente.nombre}</strong>
+                      <small>{nombreCanal(item.canal)}</small>
                       <span>
                         {borradores[item.id]
                           ? `Borrador: ${borradores[item.id]}`
@@ -154,10 +244,32 @@ export function PanelMessages(props: PanelMessagesProps) {
               <div>
                 <strong>{buscarCliente(seleccionada.clienteId).nombre}</strong>
                 <span>
-                  {nombreCanal(seleccionada.canal)} · {seleccionada.asunto}
+                  {nombreCanal(seleccionada.canal)}
+                  {seleccionada.telefono && ' · ' + seleccionada.telefono}
                 </span>
               </div>
             </header>
+            {consultas && (
+              <label className="p-2">
+                Consulta vinculada
+                <select
+                  className="form-select form-select-sm"
+                  value={seleccionada.solicitudId || ''}
+                  disabled={guardando}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    void ejecutar(() => vincularConsulta(seleccionada.id, seleccionada.canal, id));
+                  }}
+                >
+                  <option value="">Sin consulta vinculada</option>
+                  {consultas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.titulo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div
               className={chat.messages}
               ref={fin}
@@ -187,23 +299,9 @@ export function PanelMessages(props: PanelMessagesProps) {
                         <time dateTime={mensaje.fecha}>
                           {mostrarFecha(mensaje.fecha, { hour: '2-digit', minute: '2-digit' })}
                           {mensaje.propio && (
-                            <span>
-                              {mensaje.estado === 'ERROR'
-                                ? 'No enviado'
-                                : mensaje.estado === 'ENVIANDO'
-                                  ? 'Enviando…'
-                                  : 'Enviado'}
-                            </span>
+                            <span>{estadosMensaje[mensaje.estado || 'ENVIADO']}</span>
                           )}
                         </time>
-                        {mensaje.propio && mensaje.estado === 'ERROR' && (
-                          <button
-                            className={styles.textButton}
-                            onClick={() => reintentarMensaje(seleccionada.id, mensaje.id)}
-                          >
-                            Reintentar envío
-                          </button>
-                        )}
                       </div>
                     </div>
                   );
@@ -215,6 +313,14 @@ export function PanelMessages(props: PanelMessagesProps) {
                 />
               )}
             </div>
+            {conectado && !puedeResponder && (
+              <p className={styles.notice}>La cuenta de esta conversación está desconectada.</p>
+            )}
+            {puedeResponder && vencida && (
+              <p className="m-2 small">
+                La ventana de respuesta cerró. Esperá un nuevo mensaje del cliente.
+              </p>
+            )}
             <form className={chat.composer} onSubmit={enviar}>
               <label className="visually-hidden" htmlFor="message-text">
                 Escribí un mensaje
@@ -222,19 +328,17 @@ export function PanelMessages(props: PanelMessagesProps) {
               <textarea
                 id="message-text"
                 rows={2}
-                maxLength={2000}
+                maxLength={maximo}
                 value={texto}
-                onFocus={() => {
-                  if (seleccionada.sinLeer) leerConversacion(seleccionada.id);
-                }}
+                disabled={guardando || !puedeResponder || vencida}
                 onChange={(event) => setTexto(event.target.value)}
                 placeholder="Escribí un mensaje…"
               />
               <button
                 type="submit"
                 className={styles.button}
-                disabled={!texto.trim()}
-                aria-label="Enviar mensaje"
+                disabled={!texto.trim() || guardando || !puedeResponder || vencida}
+                aria-label={guardando ? 'Enviando mensaje' : 'Enviar mensaje'}
               >
                 <PanelIcon nombre="enviar" size={18} />
               </button>

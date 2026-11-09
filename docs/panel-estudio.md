@@ -11,11 +11,11 @@ La ruta privada `/estudio` corresponde a la cuenta con rol `ESTUDIO_ADMIN`. El i
 | Disponibilidad | Días, rangos y bloqueos de cada integrante, con control de turnos afectados.                 |
 | Consultas      | Estado del proyecto, propuestas, bocetos, cierre manual o por fecha y asignación de artista. |
 | Clientes       | Directorio de contactos reales y acceso a sus consultas.                                     |
-| Mensajes       | Conversaciones por canal y borradores por conversación.                                      |
+| Mensajes       | Bandeja por canal, conexión de Instagram y vínculos con consultas.                |
 | Equipo         | Invitaciones, suspensión, habilitación, desvinculación y acceso a consultas y turnos.        |
 | Estadísticas   | Mes y artista, importes de sesiones completadas, clientes únicos, horas, estados y canales.  |
 | Recordatorios  | Reglas de correo para clientes y titular, tiempos, plantillas y zona horaria.                |
-| Suscripción    | Ciclo mensual o anual, próxima renovación, cancelación, reactivación e historial.            |
+| Suscripción    | Ciclo mensual o anual, próxima renovación y cancelación.            |
 | Perfil         | Nombre, descripción de hasta 300 caracteres, contacto y ubicación del estudio.               |
 | Configuración  | Plazo predeterminado de propuestas para nuevas consultas.                                    |
 
@@ -30,7 +30,7 @@ Una consulta se cierra manualmente o al vencer su fecha. Las propuestas de integ
 - Varias propuestas disponibles: queda a elección del cliente.
 - El titular puede asignar o reasignar directamente a un artista activo, incluso antes del cierre.
 
-La elección pública del cliente requiere el enlace de acceso limitado que todavía no está publicado. El titular puede asignar directamente. El plazo se aplica en el backend al consultar la bandeja, por lotes; no hay todavía un worker independiente.
+La elección pública del cliente requiere el enlace de acceso limitado que todavía no está publicado. El titular puede asignar directamente. El plazo se aplica en el backend al consultar la bandeja y mediante el programador cuando está activo.
 
 ## Equipo y agenda
 
@@ -40,8 +40,8 @@ La pertenencia, las invitaciones y el estado de los artistas se gestionan en la 
 
 ## Datos y componentes
 
-`ConsultasProvider` consulta el contexto, los contactos, el equipo y las solicitudes de la API. `StudioProvider` combina esa fuente con las preferencias y funciones que siguen siendo locales. Los datos del negocio no se inicializan desde el antiguo mock del panel. La versión anterior de almacenamiento permanece sin borrarse, separada de la nueva clave.
+`ConsultasProvider` consulta el contexto, los contactos, el equipo y las solicitudes de la API. `StudioProvider` combina esa fuente con la configuración, los mensajes y los avisos que devuelve la API de operación.
 
 `components/panel/` contiene controles y formularios compartidos. `ConsultationsWorkspace` sirve a ambos roles y `WorkspaceDirectory` relaciona clientes e integrantes con sus consultas. Los contratos y reglas están descritos en [Consultas y propuestas](consultas-y-propuestas.md).
 
-La suscripción y sus importes siguen siendo locales. Esta interfaz no realiza cobros ni envía mensajes o recordatorios. El perfil y el portafolio público del artista conservan sus APIs existentes.
+La bandeja, los recordatorios y las suscripciones se describen en [Mensajes, recordatorios y administración](operacion-y-administracion.md).
