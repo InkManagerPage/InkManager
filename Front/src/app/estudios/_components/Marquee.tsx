@@ -26,7 +26,7 @@ export function Marquee() {
         ) : (
           <FastMarquee
             direction="right"
-            speed={45}
+            speed={24}
             autoFill
             pauseOnHover
             gradient={false}

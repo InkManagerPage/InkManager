@@ -1,14 +1,15 @@
 /* Colores y reglas compartidas de la landing. */
 .landing {
-  --ink: #202320;
-  --muted: #5f645d;
-  --line: #daddd6;
+  --ink: #25251f;
+  --muted: #6a6a61;
+  --line: #deddd5;
+  --landing-bg: #f7f6f2;
   --bs-body-color: var(--ink);
-  --bs-body-bg: #fff;
+  --bs-body-bg: var(--landing-bg);
   --bs-border-color: var(--line);
   width: 100%;
   color: var(--ink);
-  background: #fff;
+  background: var(--landing-bg);
 }
 
 .landing a {
@@ -31,15 +32,16 @@
 
 /* Cabecera y menú de Bootstrap. */
 .header {
-  position: absolute;
-  inset: 0 0 auto;
+  position: relative;
   z-index: 3;
-  color: #fff;
+  color: var(--ink);
+  background: var(--landing-bg);
+  border-bottom: 1px solid var(--line);
 }
 .navbar {
-  min-height: 112px;
-  --bs-navbar-color: #fff;
-  --bs-navbar-hover-color: #ddd;
+  min-height: 94px;
+  --bs-navbar-color: var(--ink);
+  --bs-navbar-hover-color: var(--muted);
 }
 .brand {
   display: inline-flex;
@@ -48,49 +50,85 @@
   font-size: 29px;
   font-weight: 500;
   letter-spacing: -1.5px;
+  transition: opacity 0.25s ease;
 }
 .header :global(.navbar-nav) {
   gap: 30px;
   font-size: 14px;
 }
 .header :global(.navbar-brand),
-.header :global(.navbar-brand:hover) {
-  color: #fff;
+.header :global(.navbar-brand:hover),
+.header :global(.nav-link) {
+  color: var(--ink);
+}
+.header :global(.nav-link) {
+  transition: color 0.25s ease;
+}
+.brand:hover {
+  opacity: 0.68;
 }
 
-/* Portada con fotografía a pantalla completa. */
+/* Portada editorial. */
 .hero {
-  position: relative;
-  isolation: isolate;
-  min-height: 100dvh;
-  display: flex;
-  align-items: end;
-  color: #fff;
+  padding-block: clamp(44px, 6vw, 92px) clamp(72px, 9vw, 136px);
+  color: var(--ink);
+  background: var(--landing-bg);
+}
+.heroLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: clamp(40px, 7vw, 112px);
+}
+.heroContent {
+  max-width: 680px;
+  padding-block: 36px;
 }
 .heroImage {
   object-fit: cover;
-  object-position: center 43%;
-  filter: saturate(0.6);
+  object-position: 54% 43%;
+  filter: sepia(0.07) saturate(0.72);
+  transition: transform 0.8s cubic-bezier(0.2, 0.65, 0.3, 1);
 }
-.heroShade {
+.heroVisual {
+  position: relative;
+  min-height: 430px;
+  height: min(57vw, 690px);
+  margin: 0;
+  overflow: hidden;
+  background: #e7e5dd;
+}
+.heroVisual::after {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    180deg,
-    rgb(10 14 10 / 0.6),
-    rgb(10 14 10 / 0.08) 35%,
-    rgb(10 14 10 / 0.8)
-  );
+  background: linear-gradient(145deg, rgb(244 230 207 / 10%), transparent 58%);
+  content: '';
+  pointer-events: none;
 }
-.heroContent {
-  position: relative;
-  z-index: 2;
-  padding-top: 160px;
-  padding-bottom: 56px;
+.heroVisual:hover .heroImage {
+  transform: scale(1.035);
+}
+.heroCaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100% - 24px);
+  padding: 17px 20px;
+  color: var(--ink);
+  background: var(--landing-bg);
+  font-size: 12px;
+}
+.heroCaption span {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
 }
 .eyebrow {
-  margin-bottom: 27px;
+  margin-bottom: 30px;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
@@ -98,10 +136,22 @@
   text-transform: uppercase;
 }
 .hero h1 {
-  margin: 0 0 32px;
-  font-size: clamp(64px, 7.5vw, 140px);
-  letter-spacing: -0.055em;
-  line-height: 1.02;
+  margin: 0 0 28px;
+  font-family: var(--font-serif);
+  font-size: clamp(60px, 7.2vw, 112px);
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+.heroAccent {
+  color: #77766a;
+  font-style: italic;
+}
+.heroDescription {
+  max-width: 430px;
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
 }
 .textLink {
   display: inline-flex;
@@ -110,20 +160,34 @@
   min-height: 44px;
   border-bottom: 1px solid currentColor;
   font-size: 13px;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    opacity 0.25s ease;
 }
 .textLink:hover {
-  opacity: 0.7;
+  color: var(--muted);
+}
+.textLink span {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+.textLink:hover span {
+  transform: translate(3px, -3px);
 }
 
 /* Franja de palabras. La animación la resuelve React Fast Marquee. */
 .marquee {
   overflow: hidden;
-  padding-block: 40px;
+  padding-block: clamp(24px, 3vw, 36px);
   border-bottom: 1px solid var(--line);
 }
 .marqueeWord {
-  margin-right: 6vw;
-  font-size: clamp(36px, 5.5vw, 100px);
+  margin-right: 4.5vw;
+  color: #77766a;
+  font-family: var(--font-serif);
+  font-size: clamp(30px, 4vw, 72px);
+  font-style: italic;
   line-height: 1.2;
   letter-spacing: -0.04em;
   white-space: nowrap;
@@ -142,9 +206,17 @@
 /* Espaciado de las secciones y presentación de la plataforma. */
 .section {
   padding-block: clamp(72px, 8vw, 140px);
+  border-top: 1px solid var(--line);
   scroll-margin-top: 24px;
 }
+.sectionSoft {
+  background: #f0efe9;
+}
+.sectionCompact {
+  padding-block: clamp(64px, 7vw, 104px);
+}
 .section h2 {
+  max-width: 760px;
   margin-bottom: 30px;
   font-size: clamp(34px, 4vw, 68px);
   line-height: 1.1;
@@ -153,11 +225,17 @@
 .detailImage {
   position: relative;
   aspect-ratio: 5 / 4;
+  overflow: hidden;
 }
 .detailImage img,
 .toolsImage img {
   object-fit: cover;
   filter: saturate(0.55);
+  transition: transform 0.7s cubic-bezier(0.2, 0.65, 0.3, 1);
+}
+.detailImage:hover img,
+.toolsImage:hover img {
+  transform: scale(1.025);
 }
 .detailImage img {
   object-position: center 45%;
@@ -167,7 +245,7 @@
   padding-left: 5vw;
 }
 .bodyCopy {
-  max-width: 560px;
+  max-width: 500px;
   margin-bottom: 24px;
   color: var(--muted);
   font-size: 16px;
@@ -220,6 +298,17 @@
   min-height: 248px;
   flex-shrink: 0;
   margin: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--landing-bg);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.reviewCard:hover {
+  transform: translateY(-2px);
+  border-color: #c9c7bc;
+  box-shadow: 0 10px 24px rgb(37 37 31 / 7%);
 }
 .reviewCard blockquote {
   font-size: 18px;
@@ -245,6 +334,17 @@
 .plan {
   --bs-card-border-color: var(--line);
   --bs-card-border-radius: 4px;
+  border-width: 1px;
+  background: var(--landing-bg);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.plan:hover {
+  transform: translateY(-2px);
+  border-color: #c9c7bc;
+  box-shadow: 0 10px 24px rgb(37 37 31 / 7%);
 }
 .plan :global(.card-body) {
   padding: clamp(24px, 3vw, 44px);
@@ -286,6 +386,25 @@
   border-radius: 0;
   font-size: 14px;
   margin-top: 10px;
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease;
+}
+.planButton:hover {
+  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.planCheckoutButton {
+  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.planCheckoutButton:hover {
+  color: #fff;
+  background: #4a4a42;
+  border-color: #4a4a42;
 }
 
 .planModalDialog {
@@ -402,19 +521,28 @@
   .header :global(.navbar-collapse.collapsing) {
     margin-top: 16px;
     padding: 22px;
-    background: #202320;
+    background: var(--landing-bg);
   }
   .header :global(.navbar-nav) {
     gap: 8px;
   }
-  .hero h1 {
-    font-size: clamp(56px, 9.2vw, 90px);
-  }
-  .heroImage {
-    object-position: 58% center;
+  .heroLayout {
+    grid-template-columns: 1fr;
+    gap: 36px;
   }
   .heroContent {
-    padding-bottom: 40px;
+    max-width: 720px;
+    padding-block: 0;
+  }
+  .hero h1 {
+    font-size: clamp(64px, 10vw, 104px);
+  }
+  .heroImage {
+    object-position: 58% 45%;
+  }
+  .heroVisual {
+    height: min(75vw, 580px);
+    min-height: 340px;
   }
   .section h2 {
     font-size: clamp(34px, 6vw, 50px);
@@ -451,12 +579,34 @@
     font-size: 26px;
   }
   .hero h1 {
-    margin-bottom: 24px;
-    font-size: clamp(32px, 10.2vw, 55px);
+    margin-bottom: 22px;
+    font-size: clamp(48px, 12vw, 68px);
     line-height: 1.05;
   }
   .heroImage {
     object-position: 52% center;
+  }
+  .hero {
+    padding-block: 48px 72px;
+  }
+  .heroLayout {
+    gap: 34px;
+  }
+  .heroVisual {
+    height: 112vw;
+    min-height: 320px;
+    max-height: 500px;
+  }
+  .heroCaption {
+    gap: 10px;
+    padding: 14px 16px;
+    font-size: 11px;
+  }
+  .heroDescription {
+    font-size: 15px;
+  }
+  .marqueeWord {
+    font-size: 32px;
   }
   .eyebrow {
     font-size: 10px;
@@ -466,5 +616,30 @@
   }
   .accordion :global(.accordion-button) {
     font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand,
+  .header :global(.nav-link),
+  .heroImage,
+  .textLink,
+  .textLink span,
+  .detailImage img,
+  .toolsImage img,
+  .reviewCard,
+  .plan,
+  .planButton,
+  .planCheckoutButton {
+    transition: none;
+  }
+
+  .heroVisual:hover .heroImage,
+  .textLink:hover span,
+  .detailImage:hover img,
+  .toolsImage:hover img,
+  .reviewCard:hover,
+  .plan:hover {
+    transform: none;
   }
 }
