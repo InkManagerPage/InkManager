@@ -4,11 +4,9 @@ import styles from './cotizacion.module.css';
 
 export function MarcoCotizacion({
   destinatario,
-  artista,
   children,
 }: {
   destinatario: string;
-  artista?: string;
   children: ReactNode;
 }) {
   return (
@@ -22,7 +20,6 @@ export function MarcoCotizacion({
           <p className={styles.destino}>
             <span>Consulta para</span>
             <strong>{destinatario}</strong>
-            {artista && <small>Artista de interés · {artista}</small>}
           </p>
         </header>
         <div className={styles.contenido}>{children}</div>

@@ -11,33 +11,60 @@ import {
   configuracionMeta,
   configuracionWhatsApp,
 } from "../whatsapp/whatsapp.proveedor.js";
-import { listarConversaciones } from "../whatsapp/whatsapp.repository.js";
-import { listarCanales } from "./mensajes.repository.js";
+import { historialWhatsApp, listarConversaciones } from "../whatsapp/whatsapp.repository.js";
+import { historialInstagram, listarCanales } from "./mensajes.repository.js";
+import { tienePlanIndividual } from "../pagos/acceso-plan.js";
+import { tamanoPaginaMensajes } from "./historial-mensajes.js";
+import { HttpError } from "../errors/http-error.js";
+
+export async function puedeUsarMensajes(a: AmbitoConsultas) {
+  return a.estudioId ? a.administra || a.puedeProponer : tienePlanIndividual(a.usuarioId);
+}
+
+async function cargarHilos(a: AmbitoConsultas, cantidadMensajes: number, solicitudId?: string) {
+  const [canales, whatsapp] = await Promise.all([
+    listarCanales(a, cantidadMensajes, solicitudId),
+    listarConversaciones(a, cantidadMensajes, solicitudId),
+  ]);
+  return { canales, whatsapp };
+}
 
 export async function resumenMensajes(
   a: AmbitoConsultas,
   cantidadMensajes = 1,
 ) {
-  if (!a.administra && !a.puedeProponer) return { canales: [], whatsapp: [] };
-  const [canales, whatsapp] = await Promise.all([
-    listarCanales(a, cantidadMensajes),
-    listarConversaciones(a, cantidadMensajes),
-  ]);
-  return { canales, whatsapp };
+  return await puedeUsarMensajes(a) ? cargarHilos(a, cantidadMensajes) : { canales: [], whatsapp: [] };
 }
 
-export async function bandejaMensajes(a: AmbitoConsultas) {
+export async function historialMensajes(
+  a: AmbitoConsultas, canal: "instagram" | "whatsapp", id: string, antes: string,
+) {
+  if (!(await puedeUsarMensajes(a)))
+    throw new HttpError(403, "No podés acceder al historial de mensajes.");
+  return canal === "instagram" ? historialInstagram(a, id, antes) : historialWhatsApp(a, id, antes);
+}
+
+export async function bandejaMensajes(a: AmbitoConsultas, solicitudId?: string) {
+  if (!(await puedeUsarMensajes(a))) {
+    return {
+      conectado: false,
+      administra: false,
+      mostrarWhatsApp: false,
+      requierePlanIndividual: !a.estudioId,
+      conversaciones: [],
+    };
+  }
   const metaWhatsApp = configuracionMeta();
   const piloto = configuracionWhatsApp();
   const tieneWhatsApp = Boolean(metaWhatsApp || piloto);
   const [hilos, instagram, whatsapp] = await Promise.all([
-    resumenMensajes(a, 60),
-    configuracionInstagram() && (a.administra || a.puedeProponer)
+    cargarHilos(a, tamanoPaginaMensajes, solicitudId),
+    configuracionInstagram()
       ? prisma.conexionCanal.findFirst({
           where: { canal: canalInstagram, ...ambitoInstagram(a) },
         })
       : null,
-    tieneWhatsApp && (a.administra || a.puedeProponer)
+    tieneWhatsApp
       ? configEnvio(a.estudioId, a.estudioId ? null : a.usuarioId).catch(
           () => null,
         )

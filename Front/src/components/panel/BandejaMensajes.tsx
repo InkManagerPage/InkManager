@@ -1,15 +1,19 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
+import Link from 'next/link';
 import { PanelMessages } from './PanelMessages';
 import { PageHeader } from './PanelUI';
 import { useConsultas } from '@/hooks/useConsultas';
 import { mutarPanel, usePanelData } from '@/hooks/usePanelData';
-import type { ConversacionPanel } from '@/types/panel-artista';
+import { usePanelFilters } from '@/hooks/usePanelFilters';
+import { apiFetch } from '@/lib/api-client';
+import type { ConversacionPanel, PaginaMensajes } from '@/types/panel-artista';
 
 type Canal = ConversacionPanel['canal'];
 type Bandeja = {
   conectado: boolean;
   administra: boolean;
+  requierePlanIndividual?: boolean;
   conversaciones: ConversacionPanel[];
 };
 const ruta = (canal: Canal, id: string) => '/mensajes/' + canal.toLowerCase() + '/' + id;
@@ -21,7 +25,10 @@ export function BandejaMensajes({
   actualizarResumen: () => Promise<void>;
   configuracion: '/artista/configuracion' | '/estudio/configuracion';
 }) {
-  const { datos, error, cargando, recargar } = usePanelData<Bandeja>('/mensajes', 8000);
+  const { params } = usePanelFilters();
+  const consulta = params.get('consulta');
+  const urlBandeja = consulta ? `/mensajes?consulta=${encodeURIComponent(consulta)}` : '/mensajes';
+  const { datos, error, cargando, recargar } = usePanelData<Bandeja>(urlBandeja, 8000);
   const consultas = useConsultas();
   const [borradores, setBorradores] = useState<Record<string, string>>({});
   const [errorLectura, setErrorLectura] = useState('');
@@ -68,6 +75,15 @@ export function BandejaMensajes({
       </>
     );
 
+  if (datos.requierePlanIndividual)
+    return (
+      <>
+        <PageHeader titulo="Mensajes" />
+        <p>Activá el Plan Individual para usar tu bandeja de mensajes.</p>
+        <Link href="/artista/suscripcion">Ver suscripción</Link>
+      </>
+    );
+
   async function enviarMensaje(id: string, canal: Canal, texto: string) {
     if (!intento.current || intento.current.id !== id || intento.current.texto !== texto)
       intento.current = { id, texto, clave: crypto.randomUUID() };
@@ -95,6 +111,13 @@ export function BandejaMensajes({
         };
       }}
       leerConversacion={leerConversacion}
+      cargarHistorial={async (id, canal, antes): Promise<PaginaMensajes> =>
+        (
+          await apiFetch(ruta(canal, id) + '/historial?antes=' + encodeURIComponent(antes), {
+            cache: 'no-store',
+          })
+        ).json()
+      }
       enviarMensaje={enviarMensaje}
       guardarBorradorMensaje={(id, texto) => setBorradores((d) => ({ ...d, [id]: texto }))}
       vincularConsulta={async (id, canal, solicitudId) => {

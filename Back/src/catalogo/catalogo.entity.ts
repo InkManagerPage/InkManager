@@ -21,6 +21,7 @@ export type TrabajoPublico = Pick<
   nombreArtista: string | null;
   ciudad: string | null;
   estudioId: string | null;
+  enlaceFormulario: string | null;
 };
 
 export interface CatalogoPublico {

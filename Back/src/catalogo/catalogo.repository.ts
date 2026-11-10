@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
+import { planIndividualVigente } from "../pagos/acceso-plan.js";
 
 export const trabajoPublicado = {
   estado: "PUBLICADO",
@@ -37,6 +38,9 @@ export function consultarCatalogo() {
     where: artistaVisible,
     select: {
       ...camposArtistaPublico,
+      estadoEnEstudio: true,
+      estudio: { select: { slug: true, propietario: { select: { rol: true, suspendidoAt: true } } } },
+      suscripciones: { where: planIndividualVigente(), take: 1, select: { id: true } },
       galeria: {
         where: trabajoPublicado,
         orderBy: { createdAt: "desc" },

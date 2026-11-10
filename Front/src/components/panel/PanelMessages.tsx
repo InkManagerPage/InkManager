@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { usePanelFilters } from '@/hooks/usePanelFilters';
-import type { ClientePanel, ConversacionPanel } from '@/types/panel-artista';
+import type {
+  ClientePanel,
+  ConversacionPanel,
+  MensajePanel,
+  PaginaMensajes,
+} from '@/types/panel-artista';
 import { Avatar, EmptyState, PageHeader, PanelIcon, SearchField } from './PanelUI';
 import { mostrarFecha } from '@/lib/panel-artista';
 import { nombreCanal } from '@/lib/canales-consulta';
@@ -14,6 +19,11 @@ export interface PanelMessagesProps {
   datos: { conversaciones: ConversacionPanel[]; borradoresMensajes?: Record<string, string> };
   buscarCliente: (id: string) => ClientePanel;
   leerConversacion: (id: string, canal: ConversacionPanel['canal'], hasta: string) => Promise<void>;
+  cargarHistorial: (
+    id: string,
+    canal: ConversacionPanel['canal'],
+    antes: string,
+  ) => Promise<PaginaMensajes>;
   enviarMensaje: (id: string, canal: ConversacionPanel['canal'], texto: string) => Promise<void>;
   guardarBorradorMensaje: (id: string, texto: string) => void;
   vincularConsulta: (
@@ -36,6 +46,12 @@ const estadosMensaje = {
   INCIERTO: 'Envío sin confirmar',
 };
 
+function reunirMensajes(...paginas: MensajePanel[][]) {
+  return [...new Map(paginas.flat().map((mensaje) => [mensaje.id, mensaje])).values()].sort(
+    (a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id),
+  );
+}
+
 function CanalChat({ canal }: { canal: ConversacionPanel['canal'] }) {
   if (canal === 'INSTAGRAM')
     return (
@@ -51,6 +67,7 @@ export function PanelMessages(props: PanelMessagesProps) {
     datos,
     buscarCliente,
     leerConversacion,
+    cargarHistorial,
     enviarMensaje,
     guardarBorradorMensaje,
     vincularConsulta,
@@ -64,11 +81,15 @@ export function PanelMessages(props: PanelMessagesProps) {
   const setBusqueda = (value: string) => update({ q: value || null }, true);
   const soloSinLeer = params.get('sinLeer') === '1';
   const canal = params.get('canal') || '';
+  const consulta = params.get('consulta');
   const canales = [...new Set(datos.conversaciones.map((hilo) => hilo.canal))];
   const borradores = datos.borradoresMensajes || {};
   const cercaDelFinal = useRef(true);
   const hiloAnterior = useRef<string | undefined>(undefined);
   const fin = useRef<HTMLDivElement>(null);
+  const posicionHistorial = useRef<{ id: string; altura: number; arriba: number } | null>(null);
+  const [historiales, setHistoriales] = useState<Record<string, PaginaMensajes>>({});
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [ahora, setAhora] = useState(() => Date.now());
@@ -77,6 +98,7 @@ export function PanelMessages(props: PanelMessagesProps) {
     return () => clearInterval(timer);
   }, []);
   const conversaciones = datos.conversaciones
+    .filter((item) => !consulta || item.solicitudId === consulta)
     .filter((item) => !canal || item.canal === canal)
     .filter((item) => !soloSinLeer || item.sinLeer > 0)
     .filter((item) =>
@@ -86,9 +108,17 @@ export function PanelMessages(props: PanelMessagesProps) {
     )
     .sort((a, b) => (b.mensajes.at(-1)?.fecha || '').localeCompare(a.mensajes.at(-1)?.fecha || ''));
   const seleccionada =
-    datos.conversaciones.find((item) => item.id === params.get('conversacion')) ||
-    (params.has('conversacion') || soloSinLeer ? undefined : conversaciones[0]);
-  const cantidad = seleccionada?.mensajes.length || 0;
+    datos.conversaciones.find(
+      (item) =>
+        item.id === params.get('conversacion') && (!consulta || item.solicitudId === consulta),
+    ) || (params.has('conversacion') || soloSinLeer ? undefined : conversaciones[0]);
+  const historial = seleccionada && historiales[seleccionada.id];
+  const recientes = seleccionada?.mensajes;
+  const mensajes = useMemo(
+    () => (historial ? reunirMensajes(historial.mensajes, recientes ?? []) : recientes ?? []),
+    [historial, recientes],
+  );
+  const anterior = historial ? historial.anterior : seleccionada?.anterior;
   const texto = seleccionada ? borradores[seleccionada.id] || '' : '';
   const ultimoRecibido = seleccionada?.mensajes.findLast((m) => !m.propio)?.fecha;
   const idSeleccionado = seleccionada?.id;
@@ -106,11 +136,17 @@ export function PanelMessages(props: PanelMessagesProps) {
   function setTexto(valor: string) {
     if (seleccionada) guardarBorradorMensaje(seleccionada.id, valor);
   }
-  useEffect(() => {
-    if (fin.current && (hiloAnterior.current !== seleccionada?.id || cercaDelFinal.current))
-      fin.current.scrollTop = fin.current.scrollHeight;
-    hiloAnterior.current = seleccionada?.id;
-  }, [seleccionada?.id, cantidad]);
+  useLayoutEffect(() => {
+    const contenedor = fin.current;
+    const posicion = posicionHistorial.current;
+    if (contenedor && posicion && posicion.id === idSeleccionado) {
+      contenedor.scrollTop = posicion.arriba + contenedor.scrollHeight - posicion.altura;
+    } else if (contenedor && (hiloAnterior.current !== idSeleccionado || cercaDelFinal.current)) {
+      contenedor.scrollTop = contenedor.scrollHeight;
+    }
+    posicionHistorial.current = null;
+    hiloAnterior.current = idSeleccionado;
+  }, [idSeleccionado, historial, mensajes.length]);
   useEffect(() => {
     if (
       idSeleccionado &&
@@ -124,6 +160,32 @@ export function PanelMessages(props: PanelMessagesProps) {
   function abrir(id: string) {
     setError('');
     update({ conversacion: id });
+  }
+  async function verMensajesAnteriores() {
+    if (!seleccionada || !anterior || cargandoHistorial) return;
+    const { id, canal, mensajes: recientes } = seleccionada;
+    setCargandoHistorial(true);
+    setError('');
+    try {
+      const pagina = await cargarHistorial(id, canal, anterior);
+      if (fin.current && hiloAnterior.current === id)
+        posicionHistorial.current = {
+          id,
+          altura: fin.current.scrollHeight,
+          arriba: fin.current.scrollTop,
+        };
+      setHistoriales((previos) => ({
+        ...previos,
+        [id]: {
+          mensajes: reunirMensajes(pagina.mensajes, previos[id]?.mensajes ?? [], recientes),
+          anterior: pagina.anterior,
+        },
+      }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No pudimos cargar los mensajes anteriores.');
+    } finally {
+      setCargandoHistorial(false);
+    }
   }
   async function enviar(event: FormEvent) {
     event.preventDefault();
@@ -182,6 +244,17 @@ export function PanelMessages(props: PanelMessagesProps) {
             Sin leer
           </button>
         </div>
+        {consulta && (
+          <button
+            type="button"
+            className={styles.textButton}
+            onClick={() =>
+              update({ consulta: null, conversacion: null, sinLeer: null, canal: null, q: null })
+            }
+          >
+            Ver todas las conversaciones
+          </button>
+        )}
         {(canales.length > 1 || canal) && (
           <select
             className="form-select w-auto"
@@ -244,7 +317,14 @@ export function PanelMessages(props: PanelMessagesProps) {
                 );
               })
             ) : (
-              <EmptyState titulo="Sin conversaciones" detalle="Probá otro nombre o proyecto." />
+              <EmptyState
+                titulo="Sin conversaciones"
+                detalle={
+                  consulta
+                    ? 'No hay una conversación vinculada a esta consulta.'
+                    : 'Probá otro nombre o proyecto.'
+                }
+              />
             )}
           </div>
         </aside>
@@ -302,11 +382,21 @@ export function PanelMessages(props: PanelMessagesProps) {
               role="log"
               aria-label={`Conversación con ${buscarCliente(seleccionada.clienteId).nombre}`}
             >
-              {seleccionada.mensajes.length ? (
-                seleccionada.mensajes.map((mensaje, indice) => {
+              {anterior &&
+                (canalSeleccionado === 'INSTAGRAM' || canalSeleccionado === 'WHATSAPP') && (
+                  <button
+                    className={`${styles.textButton} align-self-center`}
+                    type="button"
+                    disabled={cargandoHistorial}
+                    onClick={() => void verMensajesAnteriores()}
+                  >
+                    {cargandoHistorial ? 'Cargando mensajes…' : 'Cargar mensajes anteriores'}
+                  </button>
+                )}
+              {mensajes.length ? (
+                mensajes.map((mensaje, indice) => {
                   const dia = mensaje.fecha.slice(0, 10);
-                  const nuevoDia =
-                    indice === 0 || seleccionada.mensajes[indice - 1]?.fecha.slice(0, 10) !== dia;
+                  const nuevoDia = indice === 0 || mensajes[indice - 1]?.fecha.slice(0, 10) !== dia;
                   return (
                     <div key={mensaje.id}>
                       {nuevoDia && (

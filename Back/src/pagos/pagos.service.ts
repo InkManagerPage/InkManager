@@ -32,6 +32,7 @@ import { HttpError } from "../errors/http-error.js";
 import { enviarCorreo } from "../correos/correos.service.js";
 import { correoCuenta } from "../correos/correos.templates.js";
 import type { UsuarioSesion } from "../usuarios/usuarios.entity.js";
+import { periodoPlanVigente } from "./acceso-plan.js";
 import {
   obtenerPlanes,
   obtenerPrecio,
@@ -214,36 +215,15 @@ async function otorgarPermisosSuscripcion(
   }
 }
 
-/**
- * Revoca permisos/rol al usuario cuando su suscripción es cancelada.
- * Si no tiene otras suscripciones activas, lo devuelve a CLIENTE.
- */
 async function revocarPermisosSuscripcion(usuarioId: string): Promise<void> {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { 
-      id: true, 
-      suscripciones: {
-        select: { estado: true },
-      },
+  await prisma.usuario.updateMany({
+    where: {
+      id: usuarioId,
+      OR: [{ rol: { not: "ARTISTA" } }, { estudioId: null }],
+      suscripciones: { none: periodoPlanVigente() },
     },
+    data: { rol: "CLIENTE", planSuscripcionActivo: null },
   });
-
-  if (!usuario) return;
-
-  const tieneOtraSuscripcionActiva = usuario.suscripciones?.some(
-    (s) => s.estado === "ACTIVA",
-  );
-
-  if (!tieneOtraSuscripcionActiva) {
-    await prisma.usuario.update({
-      where: { id: usuarioId },
-      data: {
-        rol: "CLIENTE",
-        planSuscripcionActivo: null,
-      } as any,
-    });
-  }
 }
 
 export async function crearSuscripcion(

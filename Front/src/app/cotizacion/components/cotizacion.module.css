@@ -45,7 +45,6 @@
 }
 
 .destino span,
-.destino small,
 .progreso {
   color: #5b5d56;
   font-size: 0.85rem;
@@ -365,9 +364,6 @@
     margin-top: 0.7rem;
     padding: 0;
     border: 0;
-  }
-  .destino small {
-    flex-basis: 100%;
   }
 }
 

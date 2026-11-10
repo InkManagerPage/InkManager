@@ -44,6 +44,7 @@ export interface TrabajoPublico {
   nombreArtista: string;
   ciudad: string;
   estudioId: string | null;
+  enlaceFormulario: string | null;
   createdAt: string;
 }
 

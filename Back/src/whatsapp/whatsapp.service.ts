@@ -3,6 +3,8 @@ import type { EstadoMensajeWhatsApp } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
+import { puedeUsarMensajes } from "../mensajes/mensajes.service.js";
+import { planIndividualVigente } from "../pagos/acceso-plan.js";
 import {
   objetoEntrada,
   validarIdConsulta,
@@ -115,6 +117,7 @@ async function destinoWhatsApp(numeroId: string, wabaId: string | undefined) {
             rol: "ARTISTA",
             estudioId: null,
             suspendidoAt: null,
+            suscripciones: { some: planIndividualVigente() },
           },
           select: { id: true },
         })
@@ -211,7 +214,7 @@ export async function recibirWhatsApp(datos: Webhook) {
 
 export async function bandejaWhatsApp(usuarioId: string) {
   const a = await resolverAmbito(usuarioId);
-  if (!a.administra && !a.puedeProponer)
+  if (!(await puedeUsarMensajes(a)))
     return { conectado: false, conversaciones: [] };
   const [config, conversaciones] = await Promise.all([
     configEnvio(a.estudioId, a.estudioId ? null : usuarioId),
@@ -228,7 +231,7 @@ export async function bandejaWhatsApp(usuarioId: string) {
 
 async function conversacionPermitida(usuarioId: string, id: unknown) {
   const a = await resolverAmbito(usuarioId);
-  if (!a.administra && !a.puedeProponer)
+  if (!(await puedeUsarMensajes(a)))
     throw new HttpError(403, "No podés gestionar mensajes.");
   const hilo = await prisma.conversacionWhatsApp.findFirst({
     where: { id: validarIdConsulta(id), ...filtroConversaciones(a) },

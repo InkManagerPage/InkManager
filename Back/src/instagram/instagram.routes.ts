@@ -78,13 +78,10 @@ const sesionDe = (req: Request) =>
 export const instagramRouter = Router();
 instagramRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
 instagramRouter.get("/conexion", async (req, res) => {
-  const a = await resolverAmbito(req.usuario!.id);
-  if (!a.administra)
-    throw new HttpError(403, "Solo el titular puede gestionar la conexión.");
-  res.json(await estadoInstagram(a));
+  res.json(await estadoInstagram(await resolverAmbito(req.usuario!.id)));
 });
 instagramRouter.get("/conectar", async (req, res) => {
-  const { state, url } = iniciarInstagram(
+  const { state, url } = await iniciarInstagram(
     await resolverAmbito(req.usuario!.id),
     sesionDe(req),
   );

@@ -12,19 +12,33 @@ export async function obtenerCatalogo(): Promise<CatalogoPublico> {
       artista.ciudad?.trim(),
   );
   return {
-    artistas: publicos.map(({ galeria: _trabajos, ...artista }) => ({
-      ...artista,
-      ciudad: obtenerUbicacion(artista.ciudadId)?.ubicacion || artista.ciudad,
-    })),
-    trabajos: publicos.flatMap((artista) =>
-      artista.galeria.map((trabajo) => ({
+    artistas: publicos.map(
+      ({ galeria: _trabajos, estudio: _estudio, estadoEnEstudio: _estado, suscripciones: _planes, ...artista }) => ({
+        ...artista,
+        ciudad: obtenerUbicacion(artista.ciudadId)?.ubicacion || artista.ciudad,
+      }),
+    ),
+    trabajos: publicos.flatMap((artista) => {
+      const estudio = artista.estudio;
+      const enlaceFormulario = artista.estudioId
+        ? estudio &&
+          artista.estadoEnEstudio === "ACTIVO" &&
+          estudio.propietario?.rol === "ESTUDIO_ADMIN" &&
+          !estudio.propietario.suspendidoAt
+          ? `/cotizacion/${encodeURIComponent(estudio.slug)}`
+          : null
+        : artista.suscripciones.length
+          ? `/cotizacion/artista/${encodeURIComponent(artista.id)}`
+          : null;
+      return artista.galeria.map((trabajo) => ({
         ...trabajo,
         artistaId: artista.id,
         nombreArtista: artista.nombreArtistico,
         ciudad: obtenerUbicacion(artista.ciudadId)?.ubicacion || artista.ciudad,
         estudioId: artista.estudioId,
-      })),
-    ),
+        enlaceFormulario,
+      }));
+    }),
     estilos: estilosCatalogo,
     ciudades: [
       ...new Set(

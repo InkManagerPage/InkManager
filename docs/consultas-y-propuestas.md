@@ -26,9 +26,15 @@ La referencia funcional es el [formulario de Zen House Tattoo](https://www.zenho
 | Ejemplos visuales                     | `referencias`; la referencia admite hasta cuatro imágenes                            |
 | Nombre, email y WhatsApp              | Campos del contacto                                                                  |
 
-El titular puede abrir o copiar el enlace desde **Configuración → Formulario de consultas**. Tanto ese enlace como el formulario del catálogo permiten solicitar presupuesto sin una cuenta y muestran el nombre del destinatario. El envío incluye nombre completo, email, teléfono con código de país, una descripción de 20 a 1500 caracteres y una referencia visual opcional en JPG, PNG o WebP. En el paso de ubicación el cliente marca entre una y tres áreas en la foto del modelo corporal. Puede moverlas, girarlas, cambiarles el tamaño y eliminarlas. El navegador genera un JPG con las marcas y lo envía en el campo `imagenZonaMarcada`, separado de `referencias`. La foto se puede ampliar en el detalle de la consulta en ambos paneles. La aceptación de promociones por email es independiente y opcional. Si el artista integra un estudio, la consulta llega al equipo y registra el nombre del artista de interés.
+El titular, los artistas activos de su equipo y los independientes con un Plan Individual vigente pueden copiar el enlace desde **Configuración → Formulario de consultas**. El equipo comparte el formulario del estudio. El catálogo dirige los trabajos de esos artistas al mismo enlace y los enlaces anteriores de sus formularios redirigen al del estudio. El independiente con plan vigente tiene un formulario propio.
+
+El cliente puede pedir presupuesto sin una cuenta. El formulario muestra el destinatario y pide nombre completo, email, teléfono con código de país, una descripción de 20 a 1500 caracteres y una referencia visual opcional en JPG, PNG o WebP. El cliente marca entre una y tres áreas en la foto del modelo corporal. El navegador genera un JPG con las marcas y lo envía en `imagenZonaMarcada`, separado de `referencias`. La foto se puede ampliar en el detalle de la consulta en ambos paneles. La aceptación de promociones por email es opcional.
 
 El envío público guarda la consulta y su contacto en el ámbito correspondiente. Los envíos reutilizan la ficha por correo sin cambiar sus datos y los reintentos con la misma clave no duplican la consulta. El teléfono enviado y la aceptación de promociones se conservan por consulta. Cuando el cliente completa el formulario recibido por Instagram, el envío se vincula al hilo original y conserva ese canal. Los demás envíos se registran como web.
+
+El titular administra las cuentas asociadas del estudio y puede vincular una conversación a una consulta. Una vez asignada, el artista activo puede abrir la conversación desde el detalle y responder en la bandeja con el canal del estudio. El acceso sigue la asignación actual. La bandeja personal y las conexiones propias del independiente requieren un Plan Individual vigente.
+
+La conversación incluye los mensajes guardados antes de la asignación. Para recorrer hilos largos, **Cargar mensajes anteriores** agrega hasta 60 mensajes por vez. Cada página vuelve a comprobar la asignación.
 
 ## Permisos y estados
 

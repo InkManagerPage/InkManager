@@ -10,6 +10,7 @@ import {
 } from "../config/seguridad-integraciones.js";
 import { HttpError } from "../errors/http-error.js";
 import type { AmbitoConsultas } from "../solicitudes/solicitudes.entity.js";
+import { tienePlanIndividual } from "../pagos/acceso-plan.js";
 import {
   autorizarInstagram,
   configuracionInstagram,
@@ -51,6 +52,7 @@ function identidad(
 }
 
 export async function estadoInstagram(a: AmbitoConsultas) {
+  await permisoConexion(a);
   const c = await buscarConexion(a);
   return {
     disponible: Boolean(configuracionInstagram()),
@@ -68,8 +70,14 @@ function permiso(a: AmbitoConsultas) {
     throw new HttpError(403, "Solo el titular puede conectar Instagram.");
 }
 
-export function iniciarInstagram(a: AmbitoConsultas, sesionId: string) {
+async function permisoConexion(a: AmbitoConsultas) {
   permiso(a);
+  if (!a.estudioId && !(await tienePlanIndividual(a.usuarioId)))
+    throw new HttpError(403, "Necesitás un Plan Individual vigente para conectar Instagram.");
+}
+
+export async function iniciarInstagram(a: AmbitoConsultas, sesionId: string) {
+  await permisoConexion(a);
   const config = configuracionInstagram();
   if (!config)
     throw new HttpError(503, "Instagram todavía no está habilitado.");
@@ -117,7 +125,7 @@ export function validarEstadoInstagram(
 }
 
 export async function guardarInstagram(a: AmbitoConsultas, code: unknown) {
-  permiso(a);
+  await permisoConexion(a);
   const config = configuracionInstagram();
   if (!config)
     throw new HttpError(503, "Instagram todavía no está habilitado.");

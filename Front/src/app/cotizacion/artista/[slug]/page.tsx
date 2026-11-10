@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api-client';
 import { SolicitudPublica } from '../../components/SolicitudPublica';
 import { MarcoCotizacion } from '../../components/MarcoCotizacion';
@@ -15,13 +15,11 @@ export default async function CotizacionArtistaPage({
     if (error instanceof ApiError && (error.status === 404 || error.status === 400)) notFound();
     throw error;
   });
-  const artista: { nombre: string; estudio: string | null } = await respuesta.json();
+  const artista: { nombre: string; estudioSlug: string | null } = await respuesta.json();
+  if (artista.estudioSlug) redirect(`/cotizacion/${encodeURIComponent(artista.estudioSlug)}`);
 
   return (
-    <MarcoCotizacion
-      destinatario={artista.estudio || artista.nombre}
-      artista={artista.estudio ? artista.nombre : undefined}
-    >
+    <MarcoCotizacion destinatario={artista.nombre}>
       <SolicitudPublica key={id} destino={{ artista: id }} />
     </MarcoCotizacion>
   );

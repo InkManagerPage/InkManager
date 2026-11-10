@@ -261,9 +261,10 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
   const propia = c.propuestas.find((p) => p.artistaId === ctx.usuarioId);
   const base = usuario?.rol === 'ESTUDIO_ADMIN' ? '/estudio' : '/artista';
   const turnos = datos.citas.filter((t) => t.solicitudId === c.id);
+  const puedeVerMensajes = ctx.administra || (ctx.puedeProponer && c.artistaId === ctx.usuarioId);
   const puedeAgendar =
     c.estado === 'ASIGNADA' &&
-    (ctx.administra || (ctx.puedeProponer && c.artistaId === ctx.usuarioId)) &&
+    puedeVerMensajes &&
     datos.equipo.some((a) => a.id === c.artistaId && a.estado === 'ACTIVO');
   return (
     <>
@@ -315,7 +316,7 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
           </dd>
         </div>
       </dl>
-      {(puedeAgendar || turnos.length > 0) && (
+      {(puedeVerMensajes || turnos.length > 0) && (
         <div className={styles.headerActions}>
           {puedeAgendar && (
             <Link className={styles.button} href={`${base}/agenda?nueva=1&solicitud=${c.id}`}>
@@ -328,6 +329,11 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
               href={`${base}/agenda?consulta=${c.id}&rango=todos&vista=LISTA&canceladas=1`}
             >
               Ver turnos ({turnos.length})
+            </Link>
+          )}
+          {puedeVerMensajes && (
+            <Link className={styles.secondaryButton} href={`${base}/mensajes?consulta=${c.id}`}>
+              Ver conversación
             </Link>
           )}
         </div>

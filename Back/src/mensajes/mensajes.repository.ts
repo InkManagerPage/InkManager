@@ -2,6 +2,7 @@ import type { CanalMensajes, Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { registrarAviso } from "../operacion/avisos.repository.js";
 import type { AmbitoConsultas } from "../solicitudes/solicitudes.entity.js";
+import { anterioresA, camposMensaje, ordenMensajes, presentarMensajes, tamanoPaginaMensajes } from "./historial-mensajes.js";
 
 export const ventanaRespuesta = 24 * 60 * 60 * 1000;
 
@@ -18,9 +19,10 @@ export function filtroCanal(
 export async function listarCanales(
   a: AmbitoConsultas,
   cantidadMensajes: number,
+  solicitudId?: string,
 ) {
   const filas = await prisma.conversacionCanal.findMany({
-    where: filtroCanal(a),
+    where: { ...filtroCanal(a), solicitudId },
     orderBy: [{ ultimaActividad: "desc" }, { id: "desc" }],
     take: 50,
     select: {
@@ -31,15 +33,9 @@ export async function listarCanales(
       solicitudId: true,
       ultimaEntradaAt: true,
       mensajes: {
-        select: {
-          id: true,
-          texto: true,
-          propio: true,
-          fecha: true,
-          estado: true,
-        },
-        orderBy: [{ fecha: "desc" }, { id: "desc" }],
-        take: cantidadMensajes,
+        select: camposMensaje,
+        orderBy: ordenMensajes,
+        take: cantidadMensajes + 1,
       },
       _count: {
         select: { mensajes: { where: { propio: false, leidoAt: null } } },
@@ -58,14 +54,23 @@ export async function listarCanales(
       c.ultimaEntradaAt.getTime() + ventanaRespuesta,
     ).toISOString(),
     sinLeer: c._count.mensajes,
-    mensajes: c.mensajes.reverse().map((m) => ({
-      ...m,
-      estado:
-        m.estado === "ENVIANDO" && Date.now() - m.fecha.getTime() > 90000
-          ? ("INCIERTO" as const)
-          : m.estado,
-    })),
+    ...presentarMensajes(c.mensajes, cantidadMensajes),
   }));
+}
+
+export async function historialInstagram(a: AmbitoConsultas, conversacionId: string, antes: string) {
+  const ambito = { conversacionId, conversacion: { canal: "INSTAGRAM" as const, ...filtroCanal(a) } };
+  const cursor = await prisma.mensajeCanal.findFirst({
+    where: { ...ambito, id: antes },
+    select: { id: true, fecha: true },
+  });
+  const filas = await prisma.mensajeCanal.findMany({
+    where: { ...ambito, ...anterioresA(cursor) },
+    select: camposMensaje,
+    orderBy: ordenMensajes,
+    take: tamanoPaginaMensajes + 1,
+  });
+  return presentarMensajes(filas, tamanoPaginaMensajes);
 }
 
 export async function bloquearConversacionCanal(

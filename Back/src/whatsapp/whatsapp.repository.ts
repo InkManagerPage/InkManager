@@ -2,6 +2,7 @@ import { Prisma, type EstadoMensajeWhatsApp } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { registrarAviso } from "../operacion/avisos.repository.js";
 import type { AmbitoConsultas } from "../solicitudes/solicitudes.entity.js";
+import { anterioresA, camposMensaje, ordenMensajes, presentarMensajes, tamanoPaginaMensajes } from "../mensajes/historial-mensajes.js";
 
 export function filtroConversaciones(
   a: AmbitoConsultas,
@@ -14,20 +15,13 @@ export function filtroConversaciones(
   };
 }
 
-const detalleMensaje = {
-  id: true,
-  texto: true,
-  propio: true,
-  fecha: true,
-  estado: true,
-} satisfies Prisma.MensajeWhatsAppSelect;
-
 export async function listarConversaciones(
   a: AmbitoConsultas,
-  cantidadMensajes = 60,
+  cantidadMensajes = tamanoPaginaMensajes,
+  solicitudId?: string,
 ) {
   const filas = await prisma.conversacionWhatsApp.findMany({
-    where: filtroConversaciones(a),
+    where: { ...filtroConversaciones(a), solicitudId },
     orderBy: [{ ultimaActividad: "desc" }, { id: "desc" }],
     take: 50,
     select: {
@@ -38,9 +32,9 @@ export async function listarConversaciones(
       nombre: true,
       remitente: true,
       mensajes: {
-        select: detalleMensaje,
-        orderBy: [{ fecha: "desc" }, { id: "desc" }],
-        take: cantidadMensajes,
+        select: camposMensaje,
+        orderBy: ordenMensajes,
+        take: cantidadMensajes + 1,
       },
       _count: {
         select: { mensajes: { where: { propio: false, leidoAt: null } } },
@@ -60,14 +54,23 @@ export async function listarConversaciones(
       c.ultimaEntradaAt.getTime() + 86400000,
     ).toISOString(),
     sinLeer: c._count.mensajes,
-    mensajes: c.mensajes.reverse().map((m) => ({
-      ...m,
-      estado:
-        m.estado === "ENVIANDO" && Date.now() - m.fecha.getTime() > 90000
-          ? ("INCIERTO" as const)
-          : m.estado,
-    })),
+    ...presentarMensajes(c.mensajes, cantidadMensajes),
   }));
+}
+
+export async function historialWhatsApp(a: AmbitoConsultas, conversacionId: string, antes: string) {
+  const ambito = { conversacionId, conversacion: filtroConversaciones(a) };
+  const cursor = await prisma.mensajeWhatsApp.findFirst({
+    where: { ...ambito, id: antes },
+    select: { id: true, fecha: true },
+  });
+  const filas = await prisma.mensajeWhatsApp.findMany({
+    where: { ...ambito, ...anterioresA(cursor) },
+    select: camposMensaje,
+    orderBy: ordenMensajes,
+    take: tamanoPaginaMensajes + 1,
+  });
+  return presentarMensajes(filas, tamanoPaginaMensajes);
 }
 
 export async function registrarEntrada(datos: {

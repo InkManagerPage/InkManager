@@ -6,6 +6,7 @@ import {
   obtenerBandeja,
   obtenerEstudioPublico,
   obtenerArtistaPublico,
+  obtenerEnlaceFormularioArtista,
 } from "./solicitudes.service.js";
 
 export async function listar(req: Request, res: Response) {
@@ -26,7 +27,12 @@ export async function mostrarArtista(req: Request, res: Response) {
   res.set("Cache-Control", "no-store").json({
     nombre: artista.nombreArtistico || "Artista",
     estudio: artista.estudio?.nombre ?? null,
+    estudioSlug: artista.estudio?.slug ?? null,
   });
+}
+
+export async function mostrarEnlaceArtista(req: Request, res: Response) {
+  res.set("Cache-Control", "no-store").json(await obtenerEnlaceFormularioArtista(req.usuario!.id));
 }
 
 function archivos(req: Request) {

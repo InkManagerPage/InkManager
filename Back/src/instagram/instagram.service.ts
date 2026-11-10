@@ -27,6 +27,8 @@ import {
 } from "./instagram.proveedor.js";
 import { procesarMensajeBot } from "./instagram-bot.service.js";
 import { estudioPiloto } from "./instagram-flujo.repository.js";
+import { puedeUsarMensajes } from "../mensajes/mensajes.service.js";
+import { planIndividualVigente } from "../pagos/acceso-plan.js";
 
 type Evento = {
   sender?: { id?: string };
@@ -72,7 +74,7 @@ export async function recibirInstagram(datos: Webhook) {
               rol: "ESTUDIO_ADMIN",
               estudioId: c.estudioId,
             }
-          : { id: c.artistaId!, rol: "ARTISTA", estudioId: null }),
+          : { id: c.artistaId!, rol: "ARTISTA", estudioId: null, suscripciones: { some: planIndividualVigente() } }),
       },
       select: { id: true },
     });
@@ -146,7 +148,7 @@ export async function recibirInstagram(datos: Webhook) {
 
 async function hiloPermitido(usuarioId: string, identificador: unknown) {
   const a = await resolverAmbito(usuarioId);
-  if (!a.administra && !a.puedeProponer)
+  if (!(await puedeUsarMensajes(a)))
     throw new HttpError(403, "No podés gestionar mensajes.");
   const hilo = await prisma.conversacionCanal.findFirst({
     where: {

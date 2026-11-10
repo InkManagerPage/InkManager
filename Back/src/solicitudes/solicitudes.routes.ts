@@ -9,6 +9,7 @@ import {
   crearParaArtista,
   mostrarEstudio,
   mostrarArtista,
+  mostrarEnlaceArtista,
 } from "./solicitudes.controller.js";
 import { guardar } from "../cotizaciones/cotizaciones.controller.js";
 import { upload, uploadSolicitud } from "../middlewares/multer.js";
@@ -49,6 +50,7 @@ solicitudesRouter.use(
 );
 
 solicitudesRouter.get("/", listar);
+solicitudesRouter.get("/formulario", requerirRoles("ARTISTA"), mostrarEnlaceArtista);
 
 solicitudesRouter.patch("/:id", actualizar);
 

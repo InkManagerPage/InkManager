@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useFormikContext } from 'formik';
 import { CuentasAsociadas } from '@/components/panel/CuentasAsociadas';
+import { EnlaceFormulario } from '@/components/panel/EnlaceFormulario';
 import { PageHeader } from '@/components/panel/PanelUI';
 import { PanelForm, PanelField, PanelSubmitButton } from '@/components/panel/PanelForm';
 import { LocationFields } from '@/components/forms/LocationFields';
@@ -166,42 +167,17 @@ function EstadoEstudio({
 export function StudioSettings() {
   const { operacion, errorOperacion, recargarOperacion } = useStudio();
   const [aviso, setAviso] = useState('');
-  const [avisoEnlace, setAvisoEnlace] = useState('');
   const perfil = operacion?.estudio;
   if (!perfil)
     return (
       <EstadoEstudio titulo="Configuración" error={errorOperacion} recargar={recargarOperacion} />
     );
-  const enlaceFormulario = `/cotizacion/${encodeURIComponent(perfil.slug)}`;
-
-  async function copiarFormulario() {
-    try {
-      await navigator.clipboard.writeText(new URL(enlaceFormulario, window.location.origin).href);
-      setAvisoEnlace('Enlace copiado.');
-    } catch {
-      setAvisoEnlace('Abrí el formulario para copiar el enlace desde la barra de direcciones.');
-    }
-  }
 
   return (
     <>
       <PageHeader titulo="Configuración" />
       <CuentasAsociadas estudio />
-      <section className={styles.settingsSection}>
-        <div>
-          <h2>Formulario de consultas</h2>
-          <p>Compartí el enlace para recibir consultas sin registro.</p>
-        </div>
-        <div>
-          <Link href={enlaceFormulario} target="_blank" rel="noopener" className={styles.textButton}>
-            Abrir formulario
-          </Link>{' '}
-          <button type="button" className={styles.textButton} onClick={copiarFormulario}>
-            Copiar enlace
-          </button>
-          <p role="status" className={studio.formNote}>{avisoEnlace}</p>
-        </div>
-      </section>
+      <EnlaceFormulario enlace={`/cotizacion/${encodeURIComponent(perfil.slug)}`} estudio />
       <section className={styles.settingsSection}>
         <div>
           <h2>Disponibilidad del equipo</h2>

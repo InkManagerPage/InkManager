@@ -80,11 +80,9 @@ export default function PortfolioList({
 
                 {artista?.biografia && <p className={styles.biography}>{artista.biografia}</p>}
 
-                {/* Botón para solicitar presupuesto */}
-
-                {artista && (
+                {seleccionado.enlaceFormulario && (
                   <Link
-                    href={`/cotizacion/artista/${encodeURIComponent(artista.id)}`}
+                    href={seleccionado.enlaceFormulario}
                     className={authStyles.submit}
                     style={{
                       display: 'flex',

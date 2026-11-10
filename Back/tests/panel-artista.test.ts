@@ -92,7 +92,9 @@ function seleccionar(row: Row | undefined, select?: Row): Row | null {
                 foto.usuarioId === row.id && coincide(foto, regla.where),
             )
             .map((foto) => seleccionar(foto, regla.select))
-        : row[campo],
+        : campo === "suscripciones"
+          ? []
+          : row[campo],
     ]),
   );
 }
@@ -500,6 +502,7 @@ test("catálogo excluye borradores y perfiles incompletos y no expone datos priv
     datos.trabajos.map((foto: Row) => foto.id),
     [visible.id],
   );
+  assert.equal(datos.trabajos[0].enlaceFormulario, null);
   const texto = JSON.stringify(datos);
   for (const privado of [
     "hash-privado",

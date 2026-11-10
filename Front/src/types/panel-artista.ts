@@ -66,10 +66,15 @@ export interface ConversacionPanel {
   canal: CanalConsulta;
   sinLeer: number;
   mensajes: MensajePanel[];
+  anterior?: string | null;
   nombre?: string;
   telefono?: string;
   ventanaHasta?: string;
   solicitudId?: string | null;
+}
+export interface PaginaMensajes {
+  mensajes: MensajePanel[];
+  anterior: string | null;
 }
 export interface NotificacionPanel {
   id: string;

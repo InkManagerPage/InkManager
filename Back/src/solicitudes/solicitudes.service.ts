@@ -269,6 +269,17 @@ export async function obtenerArtistaPublico(id: unknown) {
   return artista;
 }
 
+export async function obtenerEnlaceFormularioArtista(usuarioId: string) {
+  const artista = await repo.buscarArtistaParaSolicitud(usuarioId);
+  return {
+    enlace: artista?.estudio
+      ? `/cotizacion/${encodeURIComponent(artista.estudio.slug)}`
+      : artista
+        ? `/cotizacion/artista/${encodeURIComponent(artista.id)}`
+        : null,
+  };
+}
+
 type ArchivosSolicitud = {
   zona?: Express.Multer.File | undefined;
   referencia?: Express.Multer.File | undefined;
@@ -359,18 +370,14 @@ export async function crearSolicitudEstudio(
 export async function crearSolicitudCliente(
   artistaId: unknown, entrada: unknown, archivos: ArchivosSolicitud,
 ) {
+  const artista = await obtenerArtistaPublico(artistaId);
+  if (artista.estudio) return crearSolicitudEstudio(artista.estudio.slug, entrada, archivos);
   const body = objetoEntrada(entrada);
   const datos = validarSolicitudPublica(body);
   const contacto = validarContactoPresupuesto(body);
   const id = validarIdConsulta(body.claveEnvio);
-  const artista = await obtenerArtistaPublico(artistaId);
-  const destino = artista.estudioId
-    ? { id, estudioId: artista.estudioId }
-    : { id, estudioId: null, artistaDestinoId: artista.id };
-  if (artista.estudioId && artista.nombreArtistico)
-    datos.notas = `Artista de interés: ${artista.nombreArtistico}\n${datos.notas}`.trim();
   await guardarSolicitud({
-    datos, destino, contacto, archivos, plazo: artista.estudio?.plazoPropuestasHoras ?? 0,
-    avisarA: artista.estudio?.propietarioId, promociones: body.promociones === "true",
+    datos, destino: { id, estudioId: null, artistaDestinoId: artista.id },
+    contacto, archivos, plazo: 0, promociones: body.promociones === "true",
   });
 }
