@@ -19,12 +19,8 @@ async function construirFormData(values: CotizacionValues) {
   data.set('generoCuerpo', generos[values.generoLienzo] ?? '');
   data.set('zonaGeneral', zonas[values.zonaCuerpo] ?? '');
   data.set('subZona', values.zonaEspecifica);
-  data.set('tamano', values.tamanoProporcion);
   data.set('descripcion', values.descripcion);
-  data.set(
-    'notas',
-    `Plazo deseado: ${values.tiempoEstimado}\nTatuajes previos: ${values.tieneTatuajesPrevios ? 'Sí' : 'No'}`,
-  );
+  data.set('notas', `Tatuajes previos: ${values.tieneTatuajesPrevios ? 'Sí' : 'No'}`);
   const modelo = modeloCorporal(values.generoLienzo, values.zonaCuerpo, values.zonaEspecifica);
   const [zonaMarcada, referencia] = await Promise.all([
     exportarZonaMarcada(modelo.src, values.marcasZona),

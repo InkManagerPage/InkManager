@@ -1,44 +1,22 @@
-import type { CotizacionValues } from '@/types/cotizacion';
-import styles from '@/components/auth/auth.module.css';
+import type { PasoCotizacionProps } from '@/types/cotizacion';
+import { OpcionesConFoto } from '../OpcionesConFoto';
 
-interface StepProps {
-  values: CotizacionValues;
-  setFieldValue: (field: keyof CotizacionValues, value: unknown) => void;
-}
+const opciones = [
+  { valor: 'Mujer', foto: '/images/modelos-corporales/female/general-female.jpg' },
+  { valor: 'Hombre', foto: '/images/modelos-corporales/male/general-male.jpg' },
+];
 
-export function StepModelo({ values, setFieldValue }: StepProps) {
+export function StepModelo({ values, setFieldValue }: PasoCotizacionProps) {
   return (
-    <div className={styles.field}>
-      <label
-        className={styles.legend}
-        style={{ fontSize: '18px', fontWeight: 600, textAlign: 'center', marginBottom: '16px' }}
-      >
-        ¿Sobre qué modelo planificamos el tatuaje?
-      </label>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-        {['Mujer', 'Hombre'].map((genero) => (
-          <button
-            type="button"
-            aria-pressed={values.generoLienzo === genero}
-            key={genero}
-            onClick={() => {
-              if (values.generoLienzo === genero) return;
-              setFieldValue('generoLienzo', genero);
-              setFieldValue('marcasZona', []);
-            }}
-            style={{
-              border: values.generoLienzo === genero ? '2px solid #202320' : '1px solid #cccec7',
-              borderRadius: '12px',
-              padding: '16px',
-              cursor: 'pointer',
-              textAlign: 'center',
-              background: values.generoLienzo === genero ? '#f9f9f8' : '#fff',
-            }}
-          >
-            <strong>{genero}</strong>
-          </button>
-        ))}
-      </div>
-    </div>
+    <OpcionesConFoto
+      grupo="modelo"
+      opciones={opciones}
+      seleccion={values.generoLienzo}
+      cuerpo
+      onSelect={(genero) => {
+        setFieldValue('generoLienzo', genero);
+        setFieldValue('marcasZona', []);
+      }}
+    />
   );
 }

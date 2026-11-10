@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { CotizacionForm } from '@/components/forms/CotizacionForm';
-import styles from '@/components/auth/auth.module.css';
+import styles from './cotizacion.module.css';
 import { crearSolicitud } from '@/services/cotizacion.service';
 import type { CotizacionValues } from '@/types/cotizacion';
 
@@ -29,15 +29,15 @@ export function SolicitudPublica({
   }
 
   return enviada ? (
-    <div className={styles.successPanel} role="status">
-      <h2 className={styles.successTitle}>Consulta enviada</h2>
-      <p className={styles.successText}>
+    <div role="status">
+      <h2 className={styles.pasoTitulo}>Consulta enviada</h2>
+      <p>
         {enlaceInstagram
           ? 'Volvé al chat de Instagram para seguir con tu consulta.'
           : 'El equipo ya tiene los datos de tu idea.'}
       </p>
     </div>
   ) : (
-    <CotizacionForm pedirContacto onSubmit={enviar} error={error} />
+    <CotizacionForm onSubmit={enviar} error={error} />
   );
 }

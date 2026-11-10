@@ -46,6 +46,9 @@ function opcion<T extends string>(valor: unknown, opciones: readonly T[]): T {
 export function validarSolicitudPublica(entrada: unknown) {
   const datos = objetoEntrada(entrada);
   const [estilo] = validarEstilos([datos.estilo]);
+  const descripcion = texto(datos.descripcion, 1500, "Describí el tatuaje en entre 20 y 1500 caracteres.");
+  if (!/^[\s\S]{20,1500}$/.test(descripcion))
+    throw new HttpError(400, "La descripción debe tener al menos 20 caracteres.");
   return {
     estilo: estilo!,
     tipoColor: opcion(datos.tipoColor, Object.values(TipoColor)),
@@ -53,7 +56,7 @@ export function validarSolicitudPublica(entrada: unknown) {
     zonaGeneral: opcion(datos.zonaGeneral, Object.values(ZonaCuerpoGeneral)),
     subZona: texto(datos.subZona, 80, "Indicá una zona específica válida."),
     tamano: texto(datos.tamano, 80, "El tamaño debe tener hasta 80 caracteres.", false),
-    descripcion: texto(datos.descripcion, 1500, "Describí el tatuaje en hasta 1500 caracteres."),
+    descripcion,
     notas: texto(datos.notas, 400, "Las notas deben tener hasta 400 caracteres.", false),
   };
 }

@@ -263,6 +263,12 @@ export async function obtenerEstudioPublico(slug: unknown) {
   return estudio;
 }
 
+export async function obtenerArtistaPublico(id: unknown) {
+  const artista = await repo.buscarArtistaParaSolicitud(validarIdConsulta(id));
+  if (!artista) throw new HttpError(404, "El artista no está disponible para recibir consultas.");
+  return artista;
+}
+
 type ArchivosSolicitud = {
   zona?: Express.Multer.File | undefined;
   referencia?: Express.Multer.File | undefined;
@@ -357,12 +363,10 @@ export async function crearSolicitudCliente(
   const datos = validarSolicitudPublica(body);
   const contacto = validarContactoPresupuesto(body);
   const id = validarIdConsulta(body.claveEnvio);
-  const artistaDestinoId = validarIdConsulta(artistaId);
-  const artista = await repo.buscarArtistaParaSolicitud(artistaDestinoId);
-  if (!artista) throw new HttpError(404, "El artista no está disponible para recibir consultas.");
+  const artista = await obtenerArtistaPublico(artistaId);
   const destino = artista.estudioId
     ? { id, estudioId: artista.estudioId }
-    : { id, estudioId: null, artistaDestinoId };
+    : { id, estudioId: null, artistaDestinoId: artista.id };
   if (artista.estudioId && artista.nombreArtistico)
     datos.notas = `Artista de interés: ${artista.nombreArtistico}\n${datos.notas}`.trim();
   await guardarSolicitud({

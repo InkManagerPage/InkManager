@@ -221,7 +221,7 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
       claveEnvio, nombre: "Nombre de Prueba", email: "Persona@example.test",
       telefono: "+54 9 11 1234 5678",
       tipoColor: "COLOR", generoCuerpo: "FEMENINO", zonaGeneral: "BRAZO",
-      estilo: "Fine Line", subZona: "Antebrazo", tamano: "12 cm", descripcion: "Rama de olivo",
+      estilo: "Fine Line", subZona: "Antebrazo", tamano: "12 cm", descripcion: "Quiero una rama de olivo en el antebrazo.",
     })) form.set(campo, valor);
     form.set("imagenZonaMarcada", new Blob([png], { type: "image/png" }), "zona-marcada.png");
     form.set("referencias", new Blob([png], { type: "image/png" }), "referencia.png");
@@ -233,6 +233,9 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
   const incompleta = consulta();
   incompleta.delete("email");
   assert.equal((await request(ruta, { method: "POST", body: incompleta })).status, 400);
+  const breve = consulta();
+  breve.set("descripcion", "  " + "a".repeat(19) + "  ");
+  assert.equal((await request(ruta, { method: "POST", body: breve })).status, 400);
   assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
   assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
   assert.equal(guardadas, 1);

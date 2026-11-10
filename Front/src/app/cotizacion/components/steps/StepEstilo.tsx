@@ -1,68 +1,81 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CotizacionValues } from '@/types/cotizacion';
+import type { PasoCotizacionProps } from '@/types/cotizacion';
 import { apiFetch } from '@/lib/api-client';
-import styles from '@/components/auth/auth.module.css';
+import { OpcionesConFoto } from '../OpcionesConFoto';
+import styles from '../cotizacion.module.css';
 
-interface StepProps {
-  values: CotizacionValues;
-  setFieldValue: (field: keyof CotizacionValues, value: unknown) => void;
-}
+const fotos: Record<string, string> = {
+  'Arte Clásico': 'newAge',
+  Blackwork: 'blackwork',
+  'Fine Line': 'fineLine',
+  Geométrico: 'other',
+  Ilustrativo: 'surrealism',
+  Japonés: 'japanese',
+  Neotradicional: 'neoTraditional',
+  Ornamental: 'ornamental',
+  Realismo: 'realism',
+  Tradicional: 'traditional',
+};
 
-export function StepEstilo({ values, setFieldValue }: StepProps) {
-  const [estilosDisponibles, setEstilosDisponibles] = useState<string[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
-
+export function StepEstilo({ values, setFieldValue }: PasoCotizacionProps) {
+  const [catalogo, setCatalogo] = useState<string[] | null>(null);
+  const [error, setError] = useState(false);
   useEffect(() => {
     const controlador = new AbortController();
-    async function cargarEstilos() {
-      try {
-        const response = await apiFetch('/estilos', { signal: controlador.signal });
-        const estilos: string[] = await response.json();
-        if (!controlador.signal.aborted) setEstilosDisponibles(estilos);
-      } catch {
-        if (!controlador.signal.aborted)
-          setError('No pudimos cargar los estilos. Volvé al paso anterior e intentá de nuevo.');
-      } finally {
-        if (!controlador.signal.aborted) setCargando(false);
-      }
-    }
-
-    void cargarEstilos();
+    void apiFetch('/estilos', { signal: controlador.signal })
+      .then((res) => res.json())
+      .then((estilos) => {
+        if (!controlador.signal.aborted) setCatalogo(estilos);
+      })
+      .catch(() => {
+        if (!controlador.signal.aborted) setError(true);
+      });
     return () => controlador.abort();
   }, []);
 
+  if (error)
+    return (
+      <p role="alert">No pudimos cargar los estilos. Volvé al paso anterior e intentá de nuevo.</p>
+    );
+  if (!catalogo) return <p role="status">Cargando estilos…</p>;
+  const carpeta = values.esColor ? 'color' : 'negro-y-gris';
+  const conFoto = catalogo
+    .filter((estilo) => Object.hasOwn(fotos, estilo))
+    .map((estilo) => ({
+      valor: estilo,
+      foto: `/images/cotizacion/estilos/${carpeta}/${fotos[estilo]}.jpg`,
+    }));
+  const otros = catalogo.filter((estilo) => !Object.hasOwn(fotos, estilo));
+  const seleccionar = (estilo: string) => setFieldValue('estilo', estilo);
+
   return (
-    <div className={styles.field}>
-      <label htmlFor="estilo" className={styles.legend}>
-        Selecciona el estilo preferido
-      </label>
-
-      <select
-        id="estilo"
-        value={values.estilo}
-        onChange={(e) => setFieldValue('estilo', e.target.value)}
-        className={`form-control ${styles.input}`}
-        style={{ width: '100%', padding: '12px', borderRadius: '8px' }}
-        disabled={cargando || !!error}
-        required
-      >
-        <option value="">{cargando ? 'Cargando estilos...' : 'Selecciona un estilo...'}</option>
-
-        {estilosDisponibles.map((estilo) => (
-          <option key={estilo} value={estilo}>
-            {estilo}
-          </option>
-        ))}
-      </select>
-
-      {error && (
-        <p role="alert" className={styles.error}>
-          {error}
-        </p>
+    <>
+      <OpcionesConFoto
+        grupo="estilo"
+        opciones={conFoto}
+        seleccion={values.estilo}
+        onSelect={seleccionar}
+      />
+      {otros.length > 0 && (
+        <details className={styles.masEstilos} open={otros.includes(values.estilo) || undefined}>
+          <summary>Más estilos{otros.includes(values.estilo) ? ` · ${values.estilo}` : ''}</summary>
+          <div className={styles.textoOpciones}>
+            {otros.map((estilo) => (
+              <label key={estilo}>
+                <input
+                  type="radio"
+                  name="estilo"
+                  checked={values.estilo === estilo}
+                  onChange={() => seleccionar(estilo)}
+                />
+                {estilo}
+              </label>
+            ))}
+          </div>
+        </details>
       )}
-    </div>
+    </>
   );
 }

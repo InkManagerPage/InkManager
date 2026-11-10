@@ -1,62 +1,114 @@
-.editor {
-  margin-bottom: 1.25rem;
-}
-
-.titulo {
-  font-size: 1.125rem;
-}
-
 .ayuda {
-  color: #62665f;
-  font-size: 0.875rem;
+  color: #5b5d56;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 .foto {
   position: relative;
   margin-inline: auto;
-  border-radius: 0.5rem;
+  max-width: calc(100% - 2.5rem);
 }
 
 .foto img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: inherit;
+  user-select: none;
 }
 
-.superficie {
+.superficie,
+.mover {
   position: absolute;
   inset: 0;
+  width: 100%;
   padding: 0;
   border: 0;
-  border-radius: inherit;
   background: transparent;
-  cursor: crosshair;
-  overflow: hidden;
   touch-action: none;
 }
 
+.superficie {
+  cursor: crosshair;
+}
 .superficie[aria-disabled='true'] {
   cursor: default;
 }
+.mover {
+  cursor: move;
+}
 
-.superficie:focus-visible {
-  outline: 2px solid #30442a;
-  outline-offset: 3px;
+.superficie:focus-visible,
+.mover:focus-visible,
+.control:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #24362c;
 }
 
 .recorte,
+.borrador,
 .cursor {
   position: absolute;
+}
+
+.recorte,
+.borrador {
+  border: 2px solid;
+  box-sizing: border-box;
   pointer-events: none;
 }
 
-.recorte {
-  border: 2px solid;
+.recorte:focus-within,
+.recorte:hover {
+  z-index: 1;
+}
+
+.recorte button {
+  pointer-events: auto;
+}
+
+.control {
+  position: absolute;
+  display: grid;
+  z-index: 1;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #144050;
+  border-radius: 50%;
+  background: #75e0f2;
+  color: #102d36;
+  font-size: 1.1rem;
+  line-height: 1;
+  touch-action: none;
+}
+
+.rotar {
+  left: -4px;
+  top: -4px;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+}
+
+.eliminar {
+  right: -4px;
+  top: -4px;
+  transform: translate(50%, -50%);
+  cursor: pointer;
+}
+
+.redimensionar {
+  right: -4px;
+  bottom: -4px;
+  transform: translate(50%, 50%);
+  cursor: nwse-resize;
 }
 
 .cursor {
   display: none;
+  pointer-events: none;
   width: 13px;
   height: 13px;
   border: 2px solid white;
@@ -69,10 +121,15 @@
   display: block;
 }
 
-.acciones {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  margin-top: 0.5rem;
+.total {
+  display: block;
+  color: #5b5d56;
+  margin-top: 1.1rem;
+}
+
+@media (pointer: coarse) {
+  .control {
+    width: 36px;
+    height: 36px;
+  }
 }

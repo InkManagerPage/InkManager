@@ -1,52 +1,56 @@
-import type { CotizacionValues } from '@/types/cotizacion';
-import styles from '@/components/auth/auth.module.css';
+import { useRef } from 'react';
+import type { PasoCotizacionProps } from '@/types/cotizacion';
+import { descripcionValida } from '@/lib/descripcion-tatuaje';
+import styles from '../cotizacion.module.css';
 
-interface StepProps {
-  values: CotizacionValues;
-  setFieldValue: (field: keyof CotizacionValues, value: unknown) => void;
-}
-
-export function StepDescripcion({ values, setFieldValue }: StepProps) {
+export function StepDescripcion({ values, setFieldValue }: PasoCotizacionProps) {
+  const referencia = useRef<HTMLInputElement>(null);
   return (
-    <div>
-      <div className={styles.field}>
-        <label htmlFor="descripcion" className={styles.legend}>
-          Descripción obligatoria de tu idea
-        </label>
+    <div className={styles.campos}>
+      <div>
+        <label htmlFor="descripcion">Descripción</label>
         <textarea
           id="descripcion"
-          rows={4}
+          rows={5}
           maxLength={1500}
           value={values.descripcion}
-          onChange={(e) => setFieldValue('descripcion', e.target.value)}
-          placeholder="Cuéntanos los detalles, elementos principales y significado..."
-          className={`form-control ${styles.input}`}
-          style={{ width: '100%', padding: '12px', resize: 'none', borderRadius: '8px' }}
+          aria-describedby="contador-descripcion"
+          onChange={(evento) => setFieldValue('descripcion', evento.target.value)}
+          placeholder="Por ejemplo, una rama de olivo en el antebrazo con trazo fino."
+          className={styles.campo}
           required
         />
+        <p
+          id="contador-descripcion"
+          className={styles.contador}
+          data-valido={descripcionValida(values.descripcion)}
+        >
+          {values.descripcion.trim().length} / 20 caracteres mínimos
+        </p>
       </div>
-      <div className={styles.field} style={{ marginTop: '16px' }}>
-        <label htmlFor="referencia" className={styles.legend}>
-          Imagen de referencia (opcional)
+      <div>
+        <label htmlFor="referencia">
+          Imagen de referencia <span>(opcional)</span>
         </label>
         <input
           id="referencia"
+          ref={referencia}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => setFieldValue('imagenReferencia', e.currentTarget.files?.[0] ?? null)}
-          className={`form-control ${styles.input}`}
-          style={{ width: '100%' }}
+          className="form-control"
+          onChange={(evento) =>
+            setFieldValue('imagenReferencia', evento.currentTarget.files?.[0] ?? null)
+          }
         />
         {values.imagenReferencia && (
-          <p style={{ fontSize: '12px', color: '#30442a', marginTop: '6px', fontWeight: 500 }}>
-            {values.imagenReferencia.name}{' '}
+          <p className={styles.archivo}>
+            <span>{values.imagenReferencia.name}</span>
             <button
               type="button"
-              className="btn btn-link btn-sm"
+              className={styles.secundario}
               onClick={() => {
                 setFieldValue('imagenReferencia', null);
-                const campo = document.getElementById('referencia');
-                if (campo instanceof HTMLInputElement) campo.value = '';
+                if (referencia.current) referencia.current.value = '';
               }}
             >
               Quitar

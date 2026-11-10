@@ -3,6 +3,7 @@ export interface MarcaZona {
   y: number;
   ancho: number;
   alto: number;
+  rotacion: number;
 }
 
 export interface CotizacionValues {
@@ -27,13 +28,16 @@ export interface CotizacionValues {
 
   // Paso 6: Ubicación del tatuaje
   marcasZona: MarcaZona[];
-  tamanoProporcion: string;
 
   // Paso 7: Descripción y referencia
   descripcion: string;
   imagenReferencia: File | null;
 
   // Paso 8: Información adicional
-  tiempoEstimado: string;
   tieneTatuajesPrevios: boolean | null;
+}
+
+export interface PasoCotizacionProps {
+  values: CotizacionValues;
+  setFieldValue: (field: keyof CotizacionValues, value: unknown) => void;
 }

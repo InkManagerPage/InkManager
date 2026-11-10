@@ -5,6 +5,7 @@ import {
   crearSolicitudEstudio,
   obtenerBandeja,
   obtenerEstudioPublico,
+  obtenerArtistaPublico,
 } from "./solicitudes.service.js";
 
 export async function listar(req: Request, res: Response) {
@@ -18,6 +19,14 @@ export async function actualizar(req: Request, res: Response) {
 export async function mostrarEstudio(req: Request, res: Response) {
   const estudio = await obtenerEstudioPublico(req.params.slug);
   res.set("Cache-Control", "no-store").json({ nombre: estudio.nombre });
+}
+
+export async function mostrarArtista(req: Request, res: Response) {
+  const artista = await obtenerArtistaPublico(req.params.id);
+  res.set("Cache-Control", "no-store").json({
+    nombre: artista.nombreArtistico || "Artista",
+    estudio: artista.estudio?.nombre ?? null,
+  });
 }
 
 function archivos(req: Request) {

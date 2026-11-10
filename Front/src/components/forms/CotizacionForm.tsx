@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Form, Formik } from 'formik';
-import type { CotizacionValues } from '@/types/cotizacion';
-import styles from '@/components/auth/auth.module.css';
+import type { CotizacionValues, PasoCotizacionProps } from '@/types/cotizacion';
+import { descripcionValida } from '@/lib/descripcion-tatuaje';
+import styles from '@/app/cotizacion/components/cotizacion.module.css';
 
 import { StepColor } from '@/app/cotizacion/components/steps/StepColor';
 import { StepEstilo } from '@/app/cotizacion/components/steps/StepEstilo';
@@ -14,12 +15,6 @@ import { StepUbicacionArea } from '@/app/cotizacion/components/steps/StepUbicaci
 import { StepDescripcion } from '@/app/cotizacion/components/steps/StepDescripcion';
 import { StepExtra } from '@/app/cotizacion/components/steps/StepExtra';
 import { StepContacto } from '@/app/cotizacion/components/steps/StepContacto';
-
-interface CotizacionFormProps {
-  onSubmit: (values: CotizacionValues) => Promise<void>;
-  pedirContacto?: boolean;
-  error?: string;
-}
 
 const initialValues: CotizacionValues = {
   nombre: '',
@@ -32,121 +27,144 @@ const initialValues: CotizacionValues = {
   zonaCuerpo: '',
   zonaEspecifica: '',
   marcasZona: [],
-  tamanoProporcion: '',
   descripcion: '',
   imagenReferencia: null,
-  tiempoEstimado: '',
   tieneTatuajesPrevios: null,
 };
 
-const pasos = [
+const pasos: {
+  titulo: string;
+  Componente: (props: PasoCotizacionProps) => React.JSX.Element;
+  validar: (v: CotizacionValues) => boolean;
+  mensaje: string;
+}[] = [
   {
+    titulo: '¿Color o negro y gris?',
     Componente: StepColor,
-    validar: (v: CotizacionValues) => v.esColor !== null,
+    validar: (v) => v.esColor !== null,
     mensaje: 'Elegí el tipo de color.',
   },
   {
+    titulo: 'Elegí un estilo',
     Componente: StepEstilo,
-    validar: (v: CotizacionValues) => Boolean(v.estilo),
+    validar: (v) => Boolean(v.estilo),
     mensaje: 'Elegí un estilo.',
   },
   {
+    titulo: 'Elegí un modelo corporal',
     Componente: StepModelo,
-    validar: (v: CotizacionValues) => Boolean(v.generoLienzo),
+    validar: (v) => Boolean(v.generoLienzo),
     mensaje: 'Elegí un modelo corporal.',
   },
   {
+    titulo: '¿En qué zona va el tatuaje?',
     Componente: StepZonaGeneral,
-    validar: (v: CotizacionValues) => Boolean(v.zonaCuerpo),
+    validar: (v) => Boolean(v.zonaCuerpo),
     mensaje: 'Elegí una zona del cuerpo.',
   },
   {
+    titulo: 'Elegí la zona específica',
     Componente: StepZonaEspecifica,
-    validar: (v: CotizacionValues) => Boolean(v.zonaEspecifica),
+    validar: (v) => Boolean(v.zonaEspecifica),
     mensaje: 'Elegí la zona específica.',
   },
   {
+    titulo: 'Marcá el área del tatuaje',
     Componente: StepUbicacionArea,
-    validar: (v: CotizacionValues) => v.marcasZona.length > 0,
+    validar: (v) => v.marcasZona.length > 0,
     mensaje: 'Marcá al menos un área en la foto para continuar.',
   },
   {
+    titulo: 'Contanos tu idea',
     Componente: StepDescripcion,
-    validar: (v: CotizacionValues) => Boolean(v.descripcion.trim()),
-    mensaje: 'Describí tu idea.',
+    validar: (v) => descripcionValida(v.descripcion),
+    mensaje: 'La descripción debe tener al menos 20 caracteres.',
   },
   {
+    titulo: '¿Ya tenés tatuajes?',
     Componente: StepExtra,
-    validar: (v: CotizacionValues) => Boolean(v.tiempoEstimado) && v.tieneTatuajesPrevios !== null,
-    mensaje: 'Completá el plazo y si ya tenés tatuajes.',
+    validar: (v) => v.tieneTatuajesPrevios !== null,
+    mensaje: 'Elegí si ya tenés tatuajes.',
+  },
+  {
+    titulo: 'Tus datos de contacto',
+    Componente: StepContacto,
+    validar: (v) => v.nombre.trim().length >= 2,
+    mensaje: 'Ingresá tu nombre completo.',
   },
 ];
 
-export function CotizacionForm({ onSubmit, pedirContacto = false, error }: CotizacionFormProps) {
+export function CotizacionForm({
+  onSubmit,
+  error,
+}: {
+  onSubmit: (values: CotizacionValues) => Promise<void>;
+  error?: string;
+}) {
   const [paso, setPaso] = useState(0);
   const [errorPaso, setErrorPaso] = useState('');
-  const total = pasos.length + Number(pedirContacto);
-  const actual = pasos[paso];
-  const esUltimo = paso === total - 1;
+  const titulo = useRef<HTMLHeadingElement>(null);
+  const actual = pasos[paso]!;
+  const esUltimo = paso === pasos.length - 1;
+
+  function irA(paso: number) {
+    setErrorPaso('');
+    setPaso(paso);
+    requestAnimationFrame(() => titulo.current?.focus());
+  }
 
   return (
     <Formik<CotizacionValues>
       initialValues={initialValues}
       onSubmit={async (values) => {
-        setErrorPaso('');
-        if (actual && !actual.validar(values)) {
+        if (!actual.validar(values)) {
           setErrorPaso(actual.mensaje);
-        } else if (!esUltimo) {
-          setPaso(paso + 1);
-        } else if (pedirContacto && values.nombre.trim().length < 2) {
-          setErrorPaso('Ingresá tu nombre completo.');
-        } else {
+        } else if (esUltimo) {
+          setErrorPaso('');
           await onSubmit(values);
+        } else {
+          irA(paso + 1);
         }
       }}
     >
-      {({ values, setFieldValue, isSubmitting }) => (
-        <Form>
-          <fieldset disabled={isSubmitting}>
-            <p aria-live="polite" className={styles.eyebrow}>
-              Paso {paso + 1} de {total}
-            </p>
-            <progress
-              className="w-100 mb-3"
-              aria-label="Progreso del formulario"
-              value={paso + 1}
-              max={total}
-            />
-            {actual ? (
+      {({ values, setFieldValue, isSubmitting }) => {
+        const errorVisible = errorPaso && !actual.validar(values) ? errorPaso : esUltimo && error;
+        return (
+          <Form>
+            <fieldset disabled={isSubmitting} aria-labelledby="titulo-paso">
+              <div className={styles.progreso}>
+                <span>
+                  Paso {paso + 1} de {pasos.length}
+                </span>
+                <progress
+                  aria-label="Progreso del formulario"
+                  value={paso + 1}
+                  max={pasos.length}
+                />
+              </div>
+              <h2 ref={titulo} id="titulo-paso" tabIndex={-1} className={styles.pasoTitulo}>
+                {actual.titulo}
+              </h2>
               <actual.Componente values={values} setFieldValue={setFieldValue} />
-            ) : (
-              <StepContacto />
-            )}
-            {(errorPaso || (esUltimo && error)) && (
-              <p className={styles.error} role="alert">
-                {errorPaso || error}
-              </p>
-            )}
-            <div className="d-flex gap-3 mt-4">
-              {paso > 0 && (
-                <button
-                  type="button"
-                  className={styles.outline}
-                  onClick={() => {
-                    setErrorPaso('');
-                    setPaso(paso - 1);
-                  }}
-                >
-                  Anterior
-                </button>
+              {errorVisible && (
+                <p className={styles.error} role="alert">
+                  {errorVisible}
+                </p>
               )}
-              <button type="submit" className={styles.submit}>
-                {esUltimo ? (isSubmitting ? 'Enviando…' : 'Enviar consulta') : 'Siguiente'}
-              </button>
-            </div>
-          </fieldset>
-        </Form>
-      )}
+              <div className={styles.acciones}>
+                {paso > 0 && (
+                  <button type="button" className={styles.secundario} onClick={() => irA(paso - 1)}>
+                    Anterior
+                  </button>
+                )}
+                <button type="submit" className={styles.primario}>
+                  {esUltimo ? (isSubmitting ? 'Enviando…' : 'Enviar consulta') : 'Siguiente'}
+                </button>
+              </div>
+            </fieldset>
+          </Form>
+        );
+      }}
     </Formik>
   );
 }

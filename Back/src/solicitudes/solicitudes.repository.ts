@@ -204,9 +204,10 @@ export function buscarArtistaParaSolicitud(id: string) {
       ],
     },
     select: {
+      id: true,
       estudioId: true,
       nombreArtistico: true,
-      estudio: { select: { plazoPropuestasHoras: true, propietarioId: true } },
+      estudio: { select: { nombre: true, plazoPropuestasHoras: true, propietarioId: true } },
     },
   });
 }

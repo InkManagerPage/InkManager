@@ -37,7 +37,6 @@ export const zonasCorporales: Record<string, Record<string, string>> = {
   Brazo: {
     'Parte interna': 'armInnerFace',
     'Parte externa': 'armOuterFace',
-    'Parte trasera': 'armOuterFace',
     'Manga completa': 'armOuterFace',
   },
   Mano: { Palma: 'handInnerFace', 'Dorso / Dedos': 'handOuterFace' },
@@ -46,7 +45,6 @@ export const zonasCorporales: Record<string, Record<string, string>> = {
     'Parte delantera': 'legsFrontFace',
     'Parte trasera / Gemelos': 'legBackFace',
     'Parte externa': 'legLateral',
-    'Parte interna': 'legsFrontFace',
   },
   'Cabeza / Cuello': {
     'Nuca / Parte trasera': 'faceBack',
@@ -56,8 +54,8 @@ export const zonasCorporales: Record<string, Record<string, string>> = {
 };
 
 export const maximoMarcas = 3;
-export const bordeMarca = '#ffd447';
-export const rellenoMarca = 'rgba(255, 212, 71, 0.27)';
+export const bordeMarca = '#75e0f2';
+export const rellenoMarca = 'rgba(55, 190, 217, 0.22)';
 
 export function modeloCorporal(genero: string, zona: string, subzona: string) {
   const modelo = genero === 'Mujer' ? 'female' : 'male';
@@ -96,8 +94,14 @@ export async function exportarZonaMarcada(src: string, marcas: MarcaZona[]): Pro
   ctx.strokeStyle = bordeMarca;
   ctx.lineWidth = Math.max(4, ancho / 130);
   for (const m of marcas) {
-    ctx.fillRect(m.x * ancho, m.y * alto, m.ancho * ancho, m.alto * alto);
-    ctx.strokeRect(m.x * ancho, m.y * alto, m.ancho * ancho, m.alto * alto);
+    const anchoMarca = m.ancho * ancho;
+    const altoMarca = m.alto * alto;
+    ctx.save();
+    ctx.translate(m.x * ancho + anchoMarca / 2, m.y * alto + altoMarca / 2);
+    ctx.rotate((m.rotacion * Math.PI) / 180);
+    ctx.fillRect(-anchoMarca / 2, -altoMarca / 2, anchoMarca, altoMarca);
+    ctx.strokeRect(-anchoMarca / 2, -altoMarca / 2, anchoMarca, altoMarca);
+    ctx.restore();
   }
 
   const foto = await new Promise<Blob | null>((resolve) =>
