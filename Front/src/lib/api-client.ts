@@ -1,9 +1,5 @@
-// En el navegador usamos el mismo dominio para conservar la cookie de sesión (producción)
-// En desarrollo, usamos la URL explícita del backend desde NEXT_PUBLIC_API_URL
-const clientApiUrl = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL 
-  ? process.env.NEXT_PUBLIC_API_URL 
-  : '/api';
-export const apiUrl = clientApiUrl;
+// El navegador usa el proxy de Next.js para mantener la cookie en el mismo dominio.
+export const apiUrl = '/api';
 const serverApiUrl =
   process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000/api';
 export class ApiError extends Error {
