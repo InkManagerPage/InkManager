@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { EstadoMensajeCanal } from "@prisma/client";
+import type { ConversacionCanal, EstadoMensajeCanal } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import {
@@ -25,6 +25,8 @@ import {
   idInstagram,
   nombreRemitente,
 } from "./instagram.proveedor.js";
+import { procesarMensajeBot } from "./instagram-bot.service.js";
+import { estudioPiloto } from "./instagram-flujo.repository.js";
 
 type Evento = {
   sender?: { id?: string };
@@ -52,7 +54,7 @@ export async function recibirInstagram(datos: Webhook) {
     if (!idInstagram(cuentaId) || !Array.isArray(entrada.messaging)) continue;
     const c = await prisma.conexionCanal.findUnique({
       where: { canal_cuentaId: { canal: canalInstagram, cuentaId } },
-      include: { estudio: { select: { propietarioId: true } } },
+      include: { estudio: { select: { propietarioId: true, slug: true } } },
     });
     if (!c) continue;
     if (!c.activa && credencialVigenteInstagram(c))
@@ -116,7 +118,7 @@ export async function recibirInstagram(datos: Webhook) {
           remitente,
         )) ||
           "Contacto " + remitente.slice(-4));
-      await guardarMensajeCanal({
+      const conversacion = await guardarMensajeCanal({
         canal: canalInstagram,
         cuentaId,
         estudioId: c.estudioId,
@@ -133,6 +135,11 @@ export async function recibirInstagram(datos: Webhook) {
             ? mensaje.text.slice(0, 4096)
             : "Este mensaje contiene contenido multimedia.",
       });
+      const piloto = estudioPiloto();
+      if (!propio && conversacion && piloto && c.estudio?.slug === piloto &&
+        Date.now() - instante < ventanaRespuesta && typeof mensaje.text === "string") {
+        await procesarMensajeBot(conversacion.id, destinatario.id, mensaje.mid, mensaje.text, enviarEnHiloInstagram);
+      }
     }
   }
 }
@@ -163,15 +170,20 @@ export async function responderInstagram(
   if (!texto || texto.length > 1000)
     throw new HttpError(400, "Escribí un mensaje de hasta 1000 caracteres.");
   const { hilo } = await hiloPermitido(usuarioId, id);
+  await enviarEnHiloInstagram(hilo, claveEnvio, texto);
+}
+
+export async function enviarEnHiloInstagram(hilo: ConversacionCanal, claveEnvio: string, texto: string) {
   async function comprobarEnvio() {
     const previo = await prisma.mensajeCanal.findUnique({
       where: { claveEnvio },
     });
-    if (previo && (previo.conversacionId !== hilo.id || previo.texto !== texto))
+    if (previo && (previo.conversacionId !== hilo.id || (!claveEnvio.startsWith("bot:") && previo.texto !== texto)))
       throw new HttpError(409, "El envío ya fue utilizado.");
-    return Boolean(previo);
+    return previo?.estado;
   }
-  if (await comprobarEnvio()) return;
+  const previo = await comprobarEnvio();
+  if (previo) return previo;
   const config = configuracionInstagram();
   const conexion = await prisma.conexionCanal.findUnique({
     where: {
@@ -212,8 +224,7 @@ export async function responderInstagram(
     skipDuplicates: true,
   });
   if (!count) {
-    await comprobarEnvio();
-    return;
+    return (await comprobarEnvio()) ?? "ENVIANDO";
   }
   let proveedorId: string | undefined;
   let estado: EstadoMensajeCanal;
@@ -258,6 +269,7 @@ export async function responderInstagram(
         data: { expiraAt: new Date() },
       });
   });
+  return estado;
 }
 
 export async function leerInstagram(

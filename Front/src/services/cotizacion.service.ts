@@ -30,23 +30,26 @@ async function construirFormData(values: CotizacionValues) {
   return data;
 }
 
-export async function crearSolicitud(values: CotizacionValues, slug: string, claveEnvio: string) {
+export async function crearSolicitud(
+  values: CotizacionValues,
+  destino: { estudio: string } | { artista: string },
+  claveEnvio: string,
+  enlaceInstagram?: string,
+) {
   const body = await construirFormData(values);
   body.set('claveEnvio', claveEnvio);
   body.set('nombre', values.nombre);
   body.set('email', values.email);
   body.set('telefono', values.telefono);
-  await apiFetch(`/consultas/publicas/${encodeURIComponent(slug)}`, {
+  body.set('promociones', String(values.promociones));
+  if (enlaceInstagram !== undefined) body.set('enlaceInstagram', enlaceInstagram);
+  const ruta =
+    'estudio' in destino
+      ? encodeURIComponent(destino.estudio)
+      : `artista/${encodeURIComponent(destino.artista)}`;
+  await apiFetch(`/consultas/publicas/${ruta}`, {
     method: 'POST',
     body,
-    signal: AbortSignal.timeout(60000),
-  });
-}
-
-export async function crearSolicitudParaArtista(values: CotizacionValues, artistaId: string) {
-  await apiFetch(`/consultas/publicas/artista/${encodeURIComponent(artistaId)}`, {
-    method: 'POST',
-    body: await construirFormData(values),
     signal: AbortSignal.timeout(60000),
   });
 }

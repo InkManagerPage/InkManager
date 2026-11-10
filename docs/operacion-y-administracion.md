@@ -28,6 +28,15 @@ Los titulares y los artistas independientes administran sus conexiones. Los arti
 
 Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servidor y, si vence o se revoca, la pantalla permite autorizarlo otra vez. Las instalaciones con el inicio de sesión anterior pueden seguir usando `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` e `INSTAGRAM_WEBHOOK_SECRET`. La bandeja guarda DMs nuevos y muestra los mensajes enviados desde Instagram cuando Meta los entrega por webhook. Admite respuestas de texto dentro de la ventana de atención y señala cuando un mensaje contiene contenido multimedia.
 
+### Bot de Instagram para consultas
+
+Aplicar `npm run db:piloto-instagram` y regenerar Prisma Client. Configurar `INSTAGRAM_BOT_ESTUDIO_SLUG` con el identificador del estudio que participa y `FRONTEND_URL` con la URL pública. El estudio debe tener Instagram conectado. El bot responde únicamente a conversaciones entrantes de ese estudio. El cierre por plazo usa el programador de recordatorios o la actualización de la bandeja de consultas.
+
+- **HOLA** o **PRESUPUESTO** abre el recorrido. El bot comparte un formulario por conversación que vence a las 24 horas y admite un único envío.
+- Al recibir el formulario, la consulta queda vinculada al DM. El proceso de backend envía la confirmación y, al cerrar la recepción, comparte las propuestas vigentes si hay varias. El cliente responde **ELEGIR** seguido del código y el backend vuelve a comprobar el estado y la vigencia antes de asignar.
+- **HUMANO** y **TURNO** avisan al titular y pausan el bot en ese hilo. El equipo coordina la fecha y la seña. **BOT** reanuda la asistencia automática.
+- Las respuestas automáticas se envían dentro de las 24 horas desde el último mensaje del cliente. Al recibir otro DM se abre una ventana nueva para el seguimiento. Los estados de envío se ven en la bandeja. Durante el piloto las consultas web quedan a cargo del equipo.
+
 ## WhatsApp
 
 El titular conecta su número de WhatsApp Business desde **Configuración → Cuentas asociadas → Conectar con Meta**. Cada estudio tiene un número y una cuenta de WhatsApp Business (WABA) propios. InkManager comparte una sola app de Meta para autorizar las conexiones mediante Embedded Signup.

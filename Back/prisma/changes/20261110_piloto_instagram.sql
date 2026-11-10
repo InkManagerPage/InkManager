@@ -1,0 +1,16 @@
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+ALTER TABLE "Solicitud" ADD COLUMN IF NOT EXISTS "promocionesAceptadasAt" TIMESTAMPTZ(3);
+ALTER TABLE "Solicitud" ADD COLUMN IF NOT EXISTS "telefonoContacto" TEXT;
+CREATE TABLE IF NOT EXISTS "FlujoInstagram" (
+  "conversacionId" TEXT PRIMARY KEY REFERENCES "ConversacionCanal"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "token" TEXT NOT NULL UNIQUE,
+  "enlaceHasta" TIMESTAMPTZ(3) NOT NULL,
+  "solicitudId" TEXT UNIQUE REFERENCES "Solicitud"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+  "pausadoAt" TIMESTAMPTZ(3),
+  "recepcionAt" TIMESTAMPTZ(3),
+  "versionAvisada" INTEGER,
+  "revisadoAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE "FlujoInstagram" ENABLE ROW LEVEL SECURITY;
+COMMIT;

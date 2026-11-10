@@ -25,6 +25,7 @@ const initialValues: CotizacionValues = {
   nombre: '',
   email: '',
   telefono: '',
+  promociones: false,
   esColor: null,
   estilo: '',
   generoLienzo: '',

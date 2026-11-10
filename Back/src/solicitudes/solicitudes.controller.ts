@@ -31,6 +31,6 @@ export async function crear(req: Request, res: Response) {
 }
 
 export async function crearParaArtista(req: Request, res: Response) {
-  await crearSolicitudCliente(req.usuario!.id, req.params.id, req.body, archivos(req));
+  await crearSolicitudCliente(req.params.id, req.body, archivos(req));
   res.status(201).json({ success: true });
 }

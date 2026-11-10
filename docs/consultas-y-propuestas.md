@@ -26,9 +26,9 @@ La referencia funcional es el [formulario de Zen House Tattoo](https://www.zenho
 | Ejemplos visuales                     | `referencias`; la referencia admite hasta cuatro imágenes                            |
 | Nombre, email y WhatsApp              | Campos del contacto                                                                  |
 
-El titular puede abrir o copiar el enlace desde **Configuración → Formulario de consultas**. El enlace público `/cotizacion/:slug` identifica al estudio y abre el wizard sin pedir una cuenta. El envío incluye nombre, correo, teléfono opcional y una referencia visual opcional en JPG, PNG o WebP. El marcado sobre el modelo corporal queda pendiente. El formulario del catálogo dirigido a un artista mantiene el acceso con cuenta de cliente. Si el artista integra un estudio, la consulta llega al equipo y registra el nombre del artista de interés.
+El titular puede abrir o copiar el enlace desde **Configuración → Formulario de consultas**. Tanto ese enlace como el formulario del catálogo permiten solicitar presupuesto sin una cuenta. El envío incluye nombre completo, email, teléfono con código de país y una referencia visual opcional en JPG, PNG o WebP. La aceptación de promociones por email es independiente y opcional. Si el artista integra un estudio, la consulta llega al equipo y registra el nombre del artista de interés.
 
-El envío público guarda la consulta y su contacto dentro del estudio, registra el canal web y toma el plazo de propuestas vigente. Los envíos reutilizan la ficha por correo sin cambiar sus datos y los reintentos con la misma clave no duplican la consulta. La bandeja de mensajes permite vincular la consulta al hilo desde el panel.
+El envío público guarda la consulta y su contacto en el ámbito correspondiente. Los envíos reutilizan la ficha por correo sin cambiar sus datos y los reintentos con la misma clave no duplican la consulta. El teléfono enviado y la aceptación de promociones se conservan por consulta. Cuando el cliente completa el formulario recibido por Instagram, el envío se vincula al hilo original y conserva ese canal. Los demás envíos se registran como web.
 
 ## Permisos y estados
 
@@ -52,7 +52,7 @@ Las escrituras bloquean la solicitud y comprueban su versión para impedir edici
 | `GET /api/consultas`                | Contexto autorizado, equipo, contactos, turnos y solicitudes con propuestas visibles. |
 | `GET /api/consultas/publicas/:slug` | Nombre público del estudio para el wizard. |
 | `POST /api/consultas/publicas/:slug` | Recibir una consulta sin sesión. Admite una referencia multipart. |
-| `POST /api/consultas/publicas/artista/:id` | Recibir una consulta dirigida a un artista desde una cuenta de cliente. |
+| `POST /api/consultas/publicas/artista/:id` | Recibir una consulta dirigida a un artista sin sesión. |
 | `PUT /api/consultas/:id/cotizacion` | Crear o actualizar la propuesta del artista autenticado. Admite `imagen` multipart.   |
 | `PATCH /api/consultas/:id`          | Acciones `CIERRE`, `CERRAR`, `ASIGNAR` y `ARCHIVAR`, con versión obligatoria.         |
 

@@ -71,3 +71,11 @@ export function validarDatosContacto(entrada: unknown): DatosContacto {
     ciudad,
   };
 }
+
+export function validarContactoPresupuesto(entrada: unknown): DatosContacto {
+  const contacto = validarDatosContacto(entrada);
+  const telefono = contacto.telefono?.replace(/[\s()-]/g, "");
+  if (!telefono || !/^\+[1-9]\d{7,14}$/.test(telefono))
+    throw new HttpError(400, "Ingresá el teléfono con código de país, por ejemplo +54 9 11 1234 5678.");
+  return { ...contacto, telefono };
+}

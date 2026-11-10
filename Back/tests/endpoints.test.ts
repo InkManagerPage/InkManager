@@ -214,6 +214,7 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
     const form = new FormData();
     for (const [campo, valor] of Object.entries({
       claveEnvio, nombre: "Nombre de Prueba", email: "Persona@example.test",
+      telefono: "+54 9 11 1234 5678",
       tipoColor: "COLOR", generoCuerpo: "FEMENINO", zonaGeneral: "BRAZO",
       estilo: "Fine Line", subZona: "Antebrazo", tamano: "12 cm", descripcion: "Rama de olivo",
     })) form.set(campo, valor);

@@ -2,6 +2,7 @@ export interface CotizacionValues {
   nombre: string;
   email: string;
   telefono: string;
+  promociones: boolean;
   // Paso 1: Color
   esColor: boolean | null;
 

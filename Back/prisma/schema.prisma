@@ -324,6 +324,9 @@ model Contacto {
 }
 
 model Solicitud {
+  flujoInstagram         FlujoInstagram?
+  promocionesAceptadasAt DateTime?             @db.Timestamptz(3)
+  telefonoContacto       String?
   conversacionesWhatsApp ConversacionWhatsApp[]
   conversacionesCanal    ConversacionCanal[]
   id                     String                 @id @default(uuid())
@@ -578,6 +581,7 @@ model ConexionCanal {
 }
 
 model ConversacionCanal {
+  flujoInstagram  FlujoInstagram?
   id              String         @id @default(uuid())
   canal           CanalMensajes
   cuentaId        String
@@ -596,6 +600,19 @@ model ConversacionCanal {
   @@unique([canal, cuentaId, remitente])
   @@index([estudioId, ultimaActividad])
   @@index([artistaId, ultimaActividad])
+}
+
+model FlujoInstagram {
+  conversacionId String           @id
+  conversacion   ConversacionCanal @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  token          String           @unique
+  enlaceHasta    DateTime         @db.Timestamptz(3)
+  solicitudId    String?          @unique
+  solicitud      Solicitud?       @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+  pausadoAt      DateTime?        @db.Timestamptz(3)
+  recepcionAt    DateTime?        @db.Timestamptz(3)
+  versionAvisada Int?
+  revisadoAt     DateTime         @default(now()) @db.Timestamptz(3)
 }
 
 model MensajeCanal {

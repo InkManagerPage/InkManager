@@ -86,7 +86,7 @@ export async function guardarMensajeCanal(d: {
   texto: string;
   fecha: Date;
 } & ({ propio: true } | { propio: false; destinatario: string })) {
-  await prisma.$transaction(
+  return prisma.$transaction(
     async (tx) => {
       const ambito = { estudioId: d.estudioId, artistaId: d.artistaId };
       const clave = {
@@ -125,7 +125,7 @@ export async function guardarMensajeCanal(d: {
         ],
         skipDuplicates: true,
       });
-      if (!count) return;
+      if (!count) return hilo;
       await tx.conversacionCanal.updateMany({
         where: { id: hilo.id, ultimaActividad: { lt: d.fecha } },
         data: { ultimaActividad: d.fecha },
@@ -148,6 +148,7 @@ export async function guardarMensajeCanal(d: {
           "/mensajes?conversacion=" +
           hilo.id,
       });
+      return hilo;
     },
     { timeout: 20000 },
   );

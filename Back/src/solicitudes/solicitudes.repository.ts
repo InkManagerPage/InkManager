@@ -211,16 +211,13 @@ export function buscarArtistaParaSolicitud(id: string) {
   });
 }
 
-export function buscarClienteParaSolicitud(id: string) {
-  return prisma.usuario.findFirst({
-    where: { id, rol: "CLIENTE", suspendidoAt: null },
-    select: { nombre: true, email: true, telefono: true, ciudad: true },
-  });
-}
-
-export function buscarEnvioEstudio(id: string, estudioId: string, email: string) {
+export function buscarEnvioPublico(
+  destino: { id: string; estudioId: string | null; artistaDestinoId?: string }, email: string,
+  canal: "WEB" | "INSTAGRAM",
+) {
   return prisma.solicitud.findFirst({
-    where: { id, estudioId, clienteId: null, artistaDestinoId: null, contacto: { email } },
+    where: { ...destino, canal, clienteId: null,
+      artistaDestinoId: destino.artistaDestinoId ?? null, contacto: { email } },
     select: { id: true },
   });
 }

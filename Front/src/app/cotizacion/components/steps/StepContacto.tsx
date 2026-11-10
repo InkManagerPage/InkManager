@@ -33,17 +33,23 @@ export function StepContacto() {
       </div>
       <div className={styles.field}>
         <label htmlFor="telefono" className={styles.legend}>
-          Teléfono (opcional)
+          Teléfono con código de país
         </label>
         <Field
           id="telefono"
           name="telefono"
           type="tel"
           autoComplete="tel"
+          placeholder="+54 9 11 1234 5678"
+          required
           className={styles.input}
           maxLength={30}
         />
       </div>
+      <label className="d-flex gap-2 align-items-start">
+        <Field name="promociones" type="checkbox" className="form-check-input" />
+        Quiero recibir novedades y promociones por email (opcional).
+      </label>
     </>
   );
 }

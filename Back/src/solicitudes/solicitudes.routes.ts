@@ -36,8 +36,7 @@ solicitudesRouter.post(
 
 solicitudesRouter.post(
   "/publicas/artista/:id",
-  requerirSesion,
-  requerirRoles("CLIENTE"),
+  limitarEnvios,
   cargarImagenesSolicitud,
   crearParaArtista,
 );

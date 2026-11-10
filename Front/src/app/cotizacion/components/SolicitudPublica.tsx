@@ -6,7 +6,13 @@ import styles from '@/components/auth/auth.module.css';
 import { crearSolicitud } from '@/services/cotizacion.service';
 import type { CotizacionValues } from '@/types/cotizacion';
 
-export function SolicitudEstudio({ slug }: { slug: string }) {
+export function SolicitudPublica({
+  destino,
+  enlaceInstagram,
+}: {
+  destino: { estudio: string } | { artista: string };
+  enlaceInstagram?: string;
+}) {
   const claveEnvio = useRef<string>(null);
   const [enviada, setEnviada] = useState(false);
   const [error, setError] = useState('');
@@ -15,7 +21,7 @@ export function SolicitudEstudio({ slug }: { slug: string }) {
     setError('');
     try {
       claveEnvio.current ??= crypto.randomUUID();
-      await crearSolicitud(values, slug, claveEnvio.current);
+      await crearSolicitud(values, destino, claveEnvio.current, enlaceInstagram);
       setEnviada(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No pudimos enviar la consulta.');
@@ -25,7 +31,11 @@ export function SolicitudEstudio({ slug }: { slug: string }) {
   return enviada ? (
     <div className={styles.successPanel} role="status">
       <h2 className={styles.successTitle}>Consulta enviada</h2>
-      <p className={styles.successText}>El estudio ya tiene los datos de tu idea.</p>
+      <p className={styles.successText}>
+        {enlaceInstagram
+          ? 'Volvé al chat de Instagram para seguir con tu consulta.'
+          : 'El equipo ya tiene los datos de tu idea.'}
+      </p>
     </div>
   ) : (
     <CotizacionForm pedirContacto onSubmit={enviar} error={error} />
