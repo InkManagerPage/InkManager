@@ -4,10 +4,12 @@ import { obtenerUsuarioSesion } from "../auth/auth.service.js";
 import {
   cancelarSuscripcion,
   crearSuscripcion,
+  obtenerEstadoSuscripcion,
   obtenerSuscripcionActual,
   procesarWebhookMercadoPago,
   validarFirmaWebhook,
 } from "./pagos.service.js";
+import { obtenerPlanes } from "./planes.js";
 import { obtenerSecretoWebhookMercadoPago } from "../config/mercadopago.js";
 
 export async function iniciarPago(
@@ -20,6 +22,31 @@ export async function iniciarPago(
     if (!req.usuario) throw new HttpError(401, "Debés iniciar sesión.");
     const resultado = await crearSuscripcion(req.usuario, req.body);
     res.status(201).json(resultado);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarPlanes(_req: Request, res: Response): Promise<void> {
+  res.set("Cache-Control", "no-store");
+  res.status(200).json({ plans: obtenerPlanes() });
+}
+
+export async function consultarPago(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  res.set("Cache-Control", "no-store");
+  try {
+    if (!req.usuario) throw new HttpError(401, "Debés iniciar sesión.");
+    const id = req.params.id;
+    if (typeof id !== "string" || !/^[\da-f-]{36}$/i.test(id)) {
+      throw new HttpError(400, "El identificador de suscripción no es válido.");
+    }
+    res.status(200).json(
+      await obtenerEstadoSuscripcion(id, req.usuario.id),
+    );
   } catch (error) {
     next(error);
   }
@@ -43,6 +70,32 @@ export async function cancelarPago(
     const resultado = await cancelarSuscripcion(usuario?.id, entrada);
     res.status(200).json({
       message: "La suscripción fue cancelada.",
+      ...resultado,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function cancelarPagoInmediatamente(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  res.set("Cache-Control", "no-store");
+  try {
+    if (!req.usuario) throw new HttpError(401, "Debés iniciar sesión.");
+    if (req.body && Object.keys(req.body).length > 0) {
+      throw new HttpError(400, "La solicitud de cancelación no es válida.");
+    }
+    const resultado = await cancelarSuscripcion(
+      req.usuario.id,
+      undefined,
+      undefined,
+      true,
+    );
+    res.status(200).json({
+      message: "La suscripción fue cancelada y el acceso quedó desactivado.",
       ...resultado,
     });
   } catch (error) {
@@ -109,7 +162,9 @@ export async function recibirWebhookMercadoPago(
     if (
       dataId &&
       (tipo === "subscription_preapproval" ||
-        tipo === "subscription_authorized_payment")
+        tipo === "subscription_authorized_payment" ||
+        tipo === "payment" ||
+        tipo === "payment.updated")
     ) {
       await procesarWebhookMercadoPago(tipo, dataId);
     }

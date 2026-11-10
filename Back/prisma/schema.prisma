@@ -105,17 +105,19 @@ enum PlanSuscripcion {
   ESTUDIO
 }
 
-enum CicloSuscripcion {
-  MENSUAL
-  ANUAL
-}
-
 enum EstadoSuscripcion {
   PENDIENTE
   ACTIVA
   VENCIDA
   CANCELADA
+  PAUSADA
+  RECHAZADA
   ERROR
+}
+
+enum CicloSuscripcion {
+  MENSUAL
+  ANUAL
 }
 
 enum EstadoPagoSuscripcion {
@@ -220,7 +222,8 @@ model Usuario {
   tokensCuenta          TokenCuenta[]
   invitacionesCreadas   InvitacionEquipo[] @relation("AutorInvitacionEquipo")
   invitacionesAceptadas InvitacionEquipo[] @relation("ReceptorInvitacionEquipo")
-  suscripciones         Suscripcion[]
+  suscripciones          Suscripcion[]
+  planSuscripcionActivo  PlanSuscripcion? // Rastrear plan activo para rápido acceso
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -494,6 +497,7 @@ model Suscripcion {
   monto                      Decimal            @db.Decimal(12, 2)
   moneda                     String             @default("ARS")
   mercadoPagoId              String?            @unique
+  mpPaymentId                String?            @unique
   referenciaExterna          String             @unique
   proximoCobroAt             DateTime?
   periodoHasta               DateTime?

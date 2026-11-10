@@ -1,0 +1,185 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ApiError, apiFetch } from '@/lib/api-client';
+import { useAuth } from '@/store/AuthProvider';
+import styles from './subscription-result.module.css';
+
+type ResultStatus = 'checking' | 'pending' | 'active' | 'failed' | 'error';
+
+function isSubscriptionStatus(
+  value: unknown,
+): value is 'PENDIENTE' | 'ACTIVA' | 'PAUSADA' | 'CANCELADA' | 'RECHAZADA' | 'ERROR' | 'VENCIDA' {
+  return (
+    value === 'PENDIENTE' ||
+    value === 'ACTIVA' ||
+    value === 'PAUSADA' ||
+    value === 'CANCELADA' ||
+    value === 'RECHAZADA' ||
+    value === 'ERROR' ||
+    value === 'VENCIDA'
+  );
+}
+
+export default function SubscriptionResult({ subscriptionId }: { subscriptionId: string }) {
+  const router = useRouter();
+  const { revalidarSesion } = useAuth();
+  const [status, setStatus] = useState<ResultStatus>('checking');
+  const [message, setMessage] = useState('');
+  const [plan, setPlan] = useState<string | null>(null);
+  const validId = /^[\da-f-]{36}$/i.test(subscriptionId);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+
+    async function consultarEstado() {
+      try {
+        const response = await apiFetch(`pagos/suscripcion/${encodeURIComponent(subscriptionId)}`, {
+          signal: controller.signal,
+        });
+        const body: unknown = await response.json();
+        if (
+          typeof body !== 'object' ||
+          body === null ||
+          !('subscription' in body) ||
+          typeof body.subscription !== 'object' ||
+          body.subscription === null ||
+          !('estado' in body.subscription) ||
+          !isSubscriptionStatus(body.subscription.estado)
+        ) {
+          throw new Error('No pudimos consultar el estado de la suscripción.');
+        }
+
+        const state = body.subscription.estado;
+        const suscPlan =
+          typeof body.subscription.plan === 'string' ? body.subscription.plan : null;
+        setPlan(suscPlan);
+
+        if (state === 'ACTIVA') {
+          setStatus('active');
+          // Revalidar la sesión para que el usuario vea los nuevos permisos
+          try {
+            await revalidarSesion?.();
+          } catch {
+            console.error('No pudimos revalidar la sesión');
+          }
+          return;
+        }
+        if (state === 'RECHAZADA' || state === 'ERROR' || state === 'CANCELADA') {
+          setStatus('failed');
+          return;
+        }
+
+        setStatus('pending');
+        attempts += 1;
+        if (attempts < 12) timer = setTimeout(consultarEstado, 2500);
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        setStatus('error');
+        setMessage(
+          cause instanceof ApiError && cause.status === 401
+            ? 'Iniciá sesión con la cuenta que usaste para suscribirte y volvé a consultar el estado.'
+            : cause instanceof Error
+              ? cause.message
+              : 'No pudimos consultar la suscripción.',
+        );
+      }
+    }
+
+    if (validId) void consultarEstado();
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [subscriptionId, validId, revalidarSesion]);
+
+  const estadoVisible = validId ? status : 'error';
+  const mensajeVisible = validId ? message : 'El identificador de suscripción no es válido.';
+  const pendiente = estadoVisible === 'pending' || estadoVisible === 'checking';
+  const fallo = estadoVisible === 'failed' || estadoVisible === 'error';
+
+  const planLabel =
+    plan === 'INDIVIDUAL'
+      ? 'plan Individual'
+      : plan === 'ESTUDIO'
+        ? 'plan Estudio'
+        : 'tu plan';
+
+  return (
+    <main className={styles.page}>
+      <section
+        className={`${styles.card} ${estadoVisible === 'active' ? styles.success : ''} ${fallo ? styles.failure : ''}`}
+      >
+        <div className={styles.icon} aria-hidden="true">
+          {pendiente ? (
+            <svg viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="17" />
+              <path d="M24 14v11l7 4" />
+            </svg>
+          ) : estadoVisible === 'active' ? (
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="m14 24 7 7 14-15" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M16 16l16 16M32 16 16 32" />
+              <circle cx="24" cy="24" r="17" />
+            </svg>
+          )}
+        </div>
+        <p className={styles.eyebrow}>Mercado Pago</p>
+        <h1>
+          {estadoVisible === 'active'
+            ? '¡Tu suscripción está activa!'
+            : fallo
+              ? 'No pudimos confirmar el pago'
+              : 'Estamos verificando tu suscripción'}
+        </h1>
+        <p className={styles.description}>
+          {estadoVisible === 'active'
+            ? `¡Felicidades! Acabás de contratar ${planLabel}. Ya tenés acceso completo a todas las funcionalidades. Gracias por confiar en InkManager.`
+            : fallo
+              ? mensajeVisible ||
+                'La suscripción no se completó. Podés revisar tus datos e intentarlo nuevamente.'
+              : 'Mercado Pago está confirmando el estado. Esta página se actualizará automáticamente.'}
+        </p>
+        <div className={styles.actions}>
+          {estadoVisible === 'active' ? (
+            <>
+              <button
+                className={styles.primaryButton}
+                onClick={() => router.push('/estudios')}
+              >
+                Ir a mis planes <span aria-hidden="true">→</span>
+              </button>
+              <Link className={styles.secondaryButton} href="/">
+                Volver al inicio
+              </Link>
+            </>
+          ) : fallo ? (
+            <>
+              <Link className={styles.primaryButton} href="/estudios#planes">
+                Volver a los planes <span aria-hidden="true">→</span>
+              </Link>
+              <Link className={styles.secondaryButton} href="/">
+                Volver al inicio
+              </Link>
+            </>
+          ) : (
+            <Link className={styles.primaryButton} href="/">
+              Volver al inicio <span aria-hidden="true">→</span>
+            </Link>
+          )}
+        </div>
+        {pendiente && (
+          <p className={styles.note}>No cierres esta página mientras verificamos el estado.</p>
+        )}
+      </section>
+    </main>
+  );
+}

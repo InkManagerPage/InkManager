@@ -145,6 +145,35 @@
   border-color: #a5ba8d;
   background: #f7f9f2;
 }
+.cancelNowButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid #9c4a3f;
+  border-radius: 5px;
+  color: #8d3931;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+}
+.cancelNowButton:hover:not(:disabled) {
+  color: #fff;
+  background: #8d3931;
+}
+.cancelNowButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.cancelNowButton:focus-visible {
+  outline: 3px solid rgb(141 57 49 / 30%);
+  outline-offset: 3px;
+}
 @media (max-width: 850px) {
   .summary {
     grid-template-columns: 1fr;

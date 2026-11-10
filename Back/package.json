@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "start": "node dist/index.js",
     "db:generate": "prisma generate",
     "db:pagos": "prisma db execute --file prisma/changes/20261031_suscripciones.sql --schema prisma/schema.prisma",
+    "db:pagos:unificar": "prisma db execute --file prisma/changes/20261110_unificar_pagos.sql --schema prisma/schema.prisma",
     "db:security": "prisma db execute --file prisma/changes/20261020_rls.sql --schema prisma/schema.prisma",
     "db:reviews": "prisma db execute --file prisma/changes/20261020_artistas_resenas.sql --schema prisma/schema.prisma",
     "seed:reviews": "tsx prisma/seed-reviews.ts",
@@ -47,6 +48,7 @@
     "google-auth-library": "^11.3.1",
     "jsonwebtoken": "^9.0.3",
     "luxon": "3.7.2",
+    "mercadopago": "^3.6.1",
     "multer": "^2.5.0"
   },
   "overrides": {

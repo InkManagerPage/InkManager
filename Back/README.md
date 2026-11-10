@@ -14,14 +14,15 @@ npm run dev
 
 El servidor escucha en el puerto `4000`, configurable mediante `PORT`. El frontend local usa `http://127.0.0.1:3000`.
 
-| Comando               | Función                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `npm run dev`         | Ejecuta el servidor y recarga cambios de `src/` y `.env`.    |
-| `npm run build`       | Compila TypeScript en `dist/`.                               |
-| `npm start`           | Ejecuta la compilación de producción.                        |
-| `npm test`            | Ejecuta las pruebas automatizadas con proveedores simulados. |
-| `npm run db:generate` | Genera el cliente Prisma a partir del esquema.               |
-| `npm run db:pagos`    | Crea las tablas necesarias para las suscripciones.           |
+| Comando                     | Función                                                        |
+| --------------------------- | -------------------------------------------------------------- |
+| `npm run dev`               | Ejecuta el servidor y recarga cambios de `src/` y `.env`.      |
+| `npm run build`             | Compila TypeScript en `dist/`.                                 |
+| `npm start`                 | Ejecuta la compilación de producción.                          |
+| `npm test`                  | Ejecuta las pruebas automatizadas con proveedores simulados.   |
+| `npm run db:generate`       | Genera el cliente Prisma a partir del esquema.                 |
+| `npm run db:pagos`          | Crea las tablas base necesarias para las suscripciones.        |
+| `npm run db:pagos:unificar` | Integra el esquema de suscripciones con el checkout unificado. |
 
 ## Configuración
 
@@ -37,30 +38,36 @@ El servidor escucha en el puerto `4000`, configurable mediante `PORT`. El fronte
 | `MERCADOPAGO_ACCESS_TOKEN`                                             | Token privado de Mercado Pago; usar credenciales de prueba en desarrollo. |
 | `MERCADOPAGO_WEBHOOK_SECRET`                                           | Firma secreta para autenticar las notificaciones.                         |
 | `MERCADOPAGO_WEBHOOK_URL`                                              | URL HTTPS pública del endpoint de notificaciones.                         |
+| `MP_PLAN_INDIVIDUAL_MENSUAL_ARS`, `MP_PLAN_ESTUDIO_MENSUAL_ARS`        | Precios mensuales en ARS, calculados por el backend.                      |
+| `MP_PLAN_INDIVIDUAL_ANUAL_ARS`, `MP_PLAN_ESTUDIO_ANUAL_ARS`            | Precios anuales en ARS, calculados por el backend.                        |
 
 Las credenciales son privadas y los archivos `.env` están excluidos de Git. `prisma/schema.prisma` define el esquema de datos y `prisma/changes/` contiene los scripts SQL de la base.
 
 ## Suscripciones y pagos
 
-Los planes se cobran por Mercado Pago con checkout alojado, por lo que InkManager no recibe ni almacena números de tarjeta ni códigos de seguridad. El plan Individual cuesta ARS 12.000 por mes o ARS 120.000 por año; el plan Estudio cuesta ARS 35.000 por mes o ARS 350.000 por año. La renovación anual equivale a diez mensualidades cobradas cada doce meses.
+Los planes se cobran mediante Mercado Pago: la opción mensual usa una suscripción recurrente y la anual es un pago único por 12 meses. El checkout alojado o el formulario seguro de Mercado Pago tokeniza la tarjeta en el navegador; InkManager no recibe ni almacena el número, vencimiento ni código de seguridad. El plan Individual cuesta ARS 12.000 por mes o ARS 120.000 por año; el plan Estudio cuesta ARS 35.000 por mes o ARS 350.000 por año.
 
-Antes de iniciar el backend, aplicá el SQL a una base de pruebas y regenerá Prisma:
+En una base nueva, aplicá primero el esquema base y después la migración de unificación. En una base que ya tiene las tablas de suscripciones, aplicá solo la migración de unificación. Regenerá Prisma:
 
 ```sh
 npm run db:pagos
+npm run db:pagos:unificar
 npm run db:generate
 ```
 
-> `npm run db:pagos` crea tipos, índices y tablas en la base indicada por `DATABASE_URL`. Confirmá que esa variable apunte a staging/pruebas antes de ejecutarlo; no lo corras contra producción para validar el flujo.
+> Estos comandos modifican la base indicada por `DATABASE_URL`. Confirmá que apunte a staging/pruebas antes de ejecutarlos; no apliques migraciones para validar el flujo contra producción.
 
-Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` con credenciales de prueba de una aplicación de Mercado Pago. `MERCADOPAGO_WEBHOOK_URL` debe apuntar por HTTPS a `https://<dominio-publico>/api/webhooks/mercadopago`; para desarrollo local necesitás un túnel HTTPS. En Mercado Pago habilitá los eventos `subscription_preapproval` y `subscription_authorized_payment`. No uses credenciales de producción para las pruebas.
+Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` con credenciales de prueba de una aplicación de Mercado Pago. `MERCADOPAGO_WEBHOOK_URL` debe apuntar por HTTPS a `https://<dominio-publico>/api/webhooks/mercadopago`; para desarrollo local necesitás un túnel HTTPS. En Mercado Pago habilitá los eventos `subscription_preapproval`, `subscription_authorized_payment` y `payment` para sincronizar pagos anuales. No uses credenciales de producción para las pruebas.
 
-| Endpoint                               | Acceso                           | Función                                                                      |
-| -------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------- |
-| `POST /api/pagos/crear-suscripcion`    | Sesión ARTISTA o ESTUDIO_ADMIN   | Crea el acuerdo recurrente y devuelve la URL segura de checkout.             |
-| `GET /api/pagos/suscripcion`           | Sesión                           | Consulta el estado y ciclo de la última suscripción propia.                  |
-| `POST /api/pagos/cancelar-suscripcion` | Sesión propia o token del correo | Cancela renovaciones en Mercado Pago y conserva la fecha de período abonado. |
-| `POST /api/webhooks/mercadopago`       | Firma HMAC válida                | Actualiza suscripciones, pagos aprobados/rechazados y correos.               |
+| Endpoint                                              | Acceso                           | Función                                                                       |
+| ----------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| `GET /api/pagos/planes`                               | Público                          | Devuelve los planes y precios configurados.                                   |
+| `POST /api/pagos/crear-suscripcion`                   | Sesión ARTISTA o ESTUDIO_ADMIN   | Crea la suscripción mensual o el pago anual y devuelve checkout/token status. |
+| `GET /api/pagos/suscripcion`                          | Sesión                           | Consulta el estado y ciclo de la última suscripción propia.                   |
+| `POST /api/pagos/cancelar-suscripcion`                | Sesión propia o token del correo | Cancela renovaciones en Mercado Pago y conserva la fecha de período abonado.  |
+| `POST /api/pagos/cancelar-suscripcion-inmediatamente` | Sesión ARTISTA o ESTUDIO_ADMIN   | Cancela el acceso inmediatamente para permitir una nueva contratación.        |
+| `GET /api/pagos/suscripcion/:id`                      | Sesión propietaria               | Consulta el resultado individual del checkout.                                |
+| `POST /api/webhooks/mercadopago`                      | Firma HMAC válida                | Actualiza suscripciones, pagos aprobados/rechazados y correos.                |
 
 El correo de confirmación se envía al confirmarse un cobro y trae un enlace de cancelación de un solo uso, almacenado como hash y válido hasta el fin del período. Los correos de prueba con `MAIL_TRANSPORT=preview` se guardan en `Back/.mail-preview/`; para enviarlos por email real, configurá Resend. El backend revisa cada seis horas si hay renovaciones dentro de los próximos tres días y evita repetir avisos ya enviados.
 
@@ -69,7 +76,7 @@ El correo de confirmación se envía al confirmarse un cobro y trae un enlace de
 1. Usá una base de datos de staging/pruebas; aplicá la migración anterior.
 2. Completá las variables de Mercado Pago con credenciales de prueba y levantá el backend, el frontend y el túnel HTTPS.
 3. Creá una cuenta ARTISTA para probar Individual o ESTUDIO_ADMIN para Estudio. Desde `/estudios#planes`, elegí plan y ciclo.
-4. Completá el checkout con un usuario y medio de pago de prueba de Mercado Pago. El frontend vuelve a `/suscripcion/resultado`; el estado solo cambia a `ACTIVA` al llegar la confirmación firmada del pago.
+4. Completá el checkout con un usuario y medio de pago de prueba de Mercado Pago. El frontend consulta el resultado individual; el estado solo cambia a `ACTIVA` al llegar la confirmación firmada del pago.
 5. Revisá `GET /api/pagos/suscripcion` y `Back/.mail-preview/` para verificar estado, monto y correo en modo preview.
 6. Abrí el enlace de cancelación recibido y confirmá la acción. Verificá en Mercado Pago que la suscripción no renueve y en la respuesta/base que `periodoHasta` se conserva.
 7. Probá un medio de pago rechazado y verificá el estado `VENCIDA` y el email de alerta. Usá las herramientas de prueba de Webhooks de Mercado Pago para validar los eventos.

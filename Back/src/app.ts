@@ -53,6 +53,7 @@ app.use("/api/citas", citasRouter);
 app.use("/api/equipo", equipoRouter);
 app.use("/api/invitaciones-equipo", invitacionesEquipoRouter);
 app.use("/api/disponibilidad", disponibilidadRouter);
+
 app.use("/api/pagos", pagosRouter);
 app.use("/api/webhooks", webhooksMercadoPagoRouter);
 app.use("/api/admin", administracionRouter);

@@ -5,6 +5,7 @@ import ConoceMasButton from './ConocerMasButton';
 // Para cambiar los planes, editá los datos de esta lista.
 const plans = [
   {
+    id: 'INDIVIDUAL' as const,
     name: 'Individual',
     description: 'Maneja tu negocio de manera independiente y profesional.',
     features: [
@@ -39,8 +40,10 @@ const plans = [
     ],
     image: '/images/artist-hands.jpg',
     price: 12000,
+    annualPrice: 120000,
   },
   {
+    id: 'ESTUDIO' as const,
     name: 'Estudio',
     description: 'Maneja tu estudio con tu equipo y optimiza la gestión de tu negocio.',
     features: [
@@ -82,6 +85,7 @@ const plans = [
     ],
     image: '/images/studio-session.jpg',
     price: 35000,
+    annualPrice: 350000,
   },
 ];
 

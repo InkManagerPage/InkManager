@@ -3,9 +3,12 @@ import { rateLimit } from "express-rate-limit";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
 import {
+  cancelarPagoInmediatamente,
   cancelarPago,
+  consultarPago,
   consultarSuscripcion,
   iniciarPago,
+  listarPlanes,
 } from "./pagos.controller.js";
 
 const router = Router();
@@ -16,6 +19,7 @@ const limitarOperacionesPago = rateLimit({
   legacyHeaders: false,
 });
 
+router.get("/planes", listarPlanes);
 router.post(
   "/crear-suscripcion",
   requerirSesion,
@@ -23,7 +27,20 @@ router.post(
   limitarOperacionesPago,
   iniciarPago,
 );
+router.get(
+  "/suscripcion/:id",
+  requerirSesion,
+  requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  consultarPago,
+);
 router.post("/cancelar-suscripcion", limitarOperacionesPago, cancelarPago);
+router.post(
+  "/cancelar-suscripcion-inmediatamente",
+  requerirSesion,
+  requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  limitarOperacionesPago,
+  cancelarPagoInmediatamente,
+);
 router.get("/suscripcion", requerirSesion, consultarSuscripcion);
 
 export const pagosRouter = router;

@@ -1,15 +1,30 @@
+'use client';
 import Link from 'next/link';
-import type { Plan } from '@/types/plan';
 import styles from './landing.module.css';
+import type { Plan } from '@/types/plan';
 
-export default function CheckoutButton({ plan }: { plan: Plan }) {
-  const codigo = plan.name === 'Individual' ? 'INDIVIDUAL' : 'ESTUDIO';
+interface CheckoutButtonProps {
+  plan: Plan;
+}
+
+export default function CheckoutButton({ plan }: CheckoutButtonProps) {
   return (
-    <Link
-      href={`/suscripcion?plan=${codigo}`}
-      className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
-    >
-      Elegir plan {plan.name} <span aria-hidden="true">↗</span>
-    </Link>
+    <div className={styles.planCheckoutOptions}>
+      <Link
+        href={`/checkout?plan=${plan.id}&cycle=MENSUAL`}
+        className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
+        aria-label={`Suscribirte al plan ${plan.name} mensual por ${plan.price} pesos`}
+      >
+        Mensual · ${plan.price.toLocaleString('es-AR')} / mes <span aria-hidden="true">↗</span>
+      </Link>
+      <Link
+        href={`/checkout?plan=${plan.id}&cycle=ANUAL`}
+        className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
+        aria-label={`Suscribirte al plan ${plan.name} anual por ${plan.annualPrice} pesos`}
+      >
+        Anual · ${plan.annualPrice.toLocaleString('es-AR')} / año
+        <span aria-hidden="true">↗</span>
+      </Link>
+    </div>
   );
 }

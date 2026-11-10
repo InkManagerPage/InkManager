@@ -33,6 +33,20 @@ test("la solicitud de plan rechaza opciones que no están habilitadas", () => {
     (error: unknown) =>
       error instanceof Error && error.message.includes("plan"),
   );
+  assert.throws(
+    () => validarPlanYCiclo({ plan: "INDIVIDUAL", ciclo: "MENSUAL", monto: 1 }),
+    HttpError,
+  );
+  assert.throws(
+    () =>
+      validarPlanYCiclo({
+        plan: "INDIVIDUAL",
+        ciclo: "ANUAL",
+        card_token_id: "token-seguro-de-prueba",
+      }),
+    (error: unknown) =>
+      error instanceof HttpError && error.message.includes("DNI"),
+  );
   assert.throws(() => validarPlanYCiclo(null), HttpError);
 });
 
@@ -156,7 +170,7 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
         rol: "ARTISTA",
         estudioId: null,
       },
-      { plan: "INDIVIDUAL", ciclo: "MENSUAL", monto: 1 },
+      { plan: "INDIVIDUAL", ciclo: "MENSUAL" },
     );
     const autoRecurring = solicitud?.body.auto_recurring as
       Record<string, unknown> | undefined;
@@ -181,6 +195,81 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
     restores.reverse().forEach((restore) => restore());
     for (const name of nombres) {
       const value = originalEnv.get(name);
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("crea un checkout anual con pago único al precio configurado por el servidor", async () => {
+  const restores = [
+    reemplazar(prisma.suscripcion, "findFirst", async () => null),
+    reemplazar(prisma.suscripcion, "findMany", async () => []),
+    reemplazar(
+      prisma.suscripcion,
+      "create",
+      async ({ data }: { data: Record<string, unknown> }) => data,
+    ),
+    reemplazar(
+      prisma.suscripcion,
+      "update",
+      async ({
+        where,
+        data,
+      }: {
+        where: Record<string, string>;
+        data: Record<string, unknown>;
+      }) => ({ id: where.id, ...data }),
+    ),
+  ];
+  const originalFetch = globalThis.fetch;
+  const originalEnv = new Map(
+    [
+      "MERCADOPAGO_ACCESS_TOKEN",
+      "MERCADOPAGO_WEBHOOK_URL",
+      "MERCADOPAGO_WEBHOOK_SECRET",
+      "FRONTEND_URL",
+    ].map((name) => [name, process.env[name]]),
+  );
+  process.env.MERCADOPAGO_ACCESS_TOKEN = "test-access-token";
+  process.env.MERCADOPAGO_WEBHOOK_SECRET = "test-webhook-secret";
+  process.env.MERCADOPAGO_WEBHOOK_URL = "https://hooks.example.test/mercadopago";
+  process.env.FRONTEND_URL = "https://inkmanager.example.test";
+  let preferencia: Record<string, unknown> | undefined;
+
+  globalThis.fetch = async (_input, init) => {
+    preferencia = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(
+      JSON.stringify({
+        id: "preference-anual",
+        init_point: "https://www.mercadopago.com.ar/checkout/v1/redirect?pref=anual",
+        external_reference: preferencia.external_reference,
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const resultado = await crearSuscripcion(
+      {
+        id: "estudio-test",
+        email: "estudio@example.test",
+        nombre: "Estudio",
+        rol: "ESTUDIO_ADMIN",
+        estudioId: "estudio-test",
+      },
+      { plan: "ESTUDIO", ciclo: "ANUAL" },
+    );
+    const items = preferencia?.items as Array<Record<string, unknown>> | undefined;
+    assert.equal("checkoutUrl" in resultado, true);
+    assert.equal(items?.[0]?.unit_price, 350000);
+    assert.equal(items?.[0]?.quantity, 1);
+    assert.equal(preferencia?.notification_url, process.env.MERCADOPAGO_WEBHOOK_URL);
+    assert.equal(preferencia?.auto_return, "approved");
+  } finally {
+    globalThis.fetch = originalFetch;
+    restores.reverse().forEach((restore) => restore());
+    for (const [name, value] of originalEnv) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
@@ -362,7 +451,11 @@ test("crea una suscripción con token seguro sin enviar datos de tarjeta", async
       },
     );
 
-    assert.deepEqual(resultado, { paymentProcessing: true });
+    assert.equal("paymentProcessing" in resultado && resultado.paymentProcessing, true);
+    assert.equal("subscriptionId" in resultado, true);
+    if ("subscriptionId" in resultado) {
+      assert.match(resultado.subscriptionId, /^[\da-f-]{36}$/i);
+    }
     assert.equal(cuerpo?.card_token_id, "token-seguro-de-prueba");
     assert.equal(cuerpo?.status, "authorized");
     assert.equal("card_number" in (cuerpo ?? {}), false);
@@ -434,4 +527,49 @@ test("un pago en curso o sin respuesta impide volver a cobrar y cancelar antes d
   await assert.rejects(pagar(), conflicto);
   assert.equal(creaciones, 1);
   assert.equal(proveedor.mock.callCount(), 1);
+});
+
+test("la cancelación inmediata desactiva el plan anual sin reembolso", async (t) => {
+  let actualizacion: Record<string, unknown> | undefined;
+  t.after(
+    reemplazar(prisma.suscripcion, "findFirst", async () => ({
+      id: "suscripcion-anual",
+      ciclo: "ANUAL",
+      estado: "ACTIVA",
+      mercadoPagoId: null,
+      mpPaymentId: "pago-anual",
+      periodoHasta: new Date(Date.now() + 60_000),
+      correoCancelacionEnviadoAt: null,
+    })),
+  );
+  t.after(
+    reemplazar(
+      prisma.suscripcion,
+      "update",
+      async ({
+        data,
+      }: {
+        data: Record<string, unknown>;
+      }) => {
+        actualizacion = data;
+        return data;
+      },
+    ),
+  );
+  t.after(reemplazar(prisma.suscripcion, "findUnique", async () => null));
+
+  const resultado = await cancelarSuscripcion(
+    "usuario-test",
+    undefined,
+    undefined,
+    true,
+  );
+  assert.equal(resultado.estado, "CANCELADA");
+  assert.equal(actualizacion?.estado, "CANCELADA");
+  assert.equal(actualizacion?.proximoCobroAt, null);
+  const periodoHasta = actualizacion?.periodoHasta;
+  assert.ok(periodoHasta instanceof Date);
+  if (periodoHasta instanceof Date) {
+    assert.ok(Math.abs(Date.now() - periodoHasta.getTime()) < 1000);
+  }
 });

@@ -15,6 +15,7 @@ type Suscripcion = {
   moneda: string;
   proximoCobroAt: string | null;
   periodoHasta: string | null;
+  periodoAbonadoVigente: boolean;
 };
 const estado = {
   PENDIENTE: 'Pendiente',
@@ -34,17 +35,18 @@ export function SuscripcionReal({
     '/pagos/suscripcion',
   );
   const [confirmar, setConfirmar] = useState(false);
+  const [confirmarInmediata, setConfirmarInmediata] = useState(false);
   const s = datos?.suscripcion;
+  const puedeElegirPlan =
+    !s || (['CANCELADA', 'VENCIDA', 'ERROR'].includes(s.estado) && !s.periodoAbonadoVigente);
   return (
     <>
       <PageHeader titulo="Suscripción">
-        {puedeContratar &&
-          datos &&
-          (!s || ['CANCELADA', 'VENCIDA', 'ERROR'].includes(s.estado)) && (
-            <Link className={styles.button} href={'/suscripcion?plan=' + plan}>
-              Elegir plan
-            </Link>
-          )}
+        {puedeContratar && datos && puedeElegirPlan && (
+          <Link className={styles.button} href={`/checkout?plan=${plan}&cycle=MENSUAL`}>
+            Suscribirme ahora
+          </Link>
+        )}
       </PageHeader>
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -82,9 +84,17 @@ export function SuscripcionReal({
               <p>Período abonado hasta el {new Date(s.periodoHasta).toLocaleDateString('es-AR')}</p>
             )}
             {['ACTIVA', 'PENDIENTE'].includes(s.estado) && (
-              <button className={styles.secondaryButton} onClick={() => setConfirmar(true)}>
-                Cancelar renovación
-              </button>
+              <div className="d-flex flex-wrap gap-2">
+                <button className={styles.secondaryButton} onClick={() => setConfirmar(true)}>
+                  Cancelar renovación
+                </button>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={() => setConfirmarInmediata(true)}
+                >
+                  Cancelar suscripción ahora
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -105,6 +115,30 @@ export function SuscripcionReal({
             onSaved={() => setConfirmar(false)}
           >
             <PanelSubmitButton pendingText="Cancelando…">Confirmar cancelación</PanelSubmitButton>
+          </PanelForm>
+        </Modal.Body>
+      </Modal>
+      <Modal show={confirmarInmediata} onHide={() => setConfirmarInmediata(false)} centered>
+        <Modal.Header closeButton closeLabel="Cerrar">
+          <Modal.Title as="h2">Cancelar suscripción ahora</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Se cancelará el plan y se desactivará el acceso inmediatamente. Esta acción no reembolsa
+            pagos anteriores. Después podrás volver a suscribirte con esta cuenta.
+          </p>
+          <PanelForm
+            initialValues={{}}
+            validate={() => ({})}
+            onSave={async () => {
+              await mutarPanel('/pagos/cancelar-suscripcion-inmediatamente', 'POST', {});
+              await recargar();
+            }}
+            onSaved={() => setConfirmarInmediata(false)}
+          >
+            <PanelSubmitButton pendingText="Cancelando…">
+              Confirmar cancelación inmediata
+            </PanelSubmitButton>
           </PanelForm>
         </Modal.Body>
       </Modal>

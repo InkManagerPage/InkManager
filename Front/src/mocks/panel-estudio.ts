@@ -89,7 +89,7 @@ export function crearPanelEstudio(hoy = fechaLocal(new Date())): DatosPanelEstud
       plan: 'ESTUDIO',
       cobros: base.suscripcion.cobros.map((c) => ({
         ...c,
-        importe: 29000,
+        importe: 35000,
         concepto: 'Plan Estudio · mensual',
       })),
     },

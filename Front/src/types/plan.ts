@@ -1,7 +1,8 @@
 export interface Plan {
-    name: string;
-    description: string;
-    features: string[];
-    price: number;
+  id: 'INDIVIDUAL' | 'ESTUDIO';
+  name: string;
+  description: string;
+  features: string[];
+  price: number;
+  annualPrice: number;
 }
-

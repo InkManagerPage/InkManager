@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Checkout } from './_components/Checkout';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Elegí tu plan | InkManager',
@@ -12,5 +12,5 @@ export default async function SuscripcionPage({
 }) {
   const { plan } = await searchParams;
   const planInicial = plan === 'ESTUDIO' ? 'ESTUDIO' : 'INDIVIDUAL';
-  return <Checkout planInicial={planInicial} />;
+  redirect(`/checkout?plan=${planInicial}&cycle=MENSUAL`);
 }

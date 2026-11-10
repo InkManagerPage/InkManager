@@ -14,24 +14,48 @@ npm run dev
 `Front/.env.local` configura la API. El archivo `.env.example` contiene la variable necesaria:
 
 ```dotenv
-NEXT_PUBLIC_API_URL=http://127.0.0.1:4000/api
+API_URL=http://127.0.0.1:4000/api
+NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=
 ```
 
 El frontend está disponible en [http://127.0.0.1:3000](http://127.0.0.1:3000). El backend debe estar activo para usar el acceso, los correos y las reseñas.
 
+## Checkout y suscripciones
+
+`/checkout?plan=INDIVIDUAL&cycle=MENSUAL` y `cycle=ANUAL` permiten elegir suscripción
+mensual recurrente o pago único anual de 12 meses. Los precios en ARS son Individual
+$12.000/$120.000 y Estudio $35.000/$350.000 (mensual/anual). El checkout ofrece pago con
+tarjeta tokenizada en el navegador o Checkout Pro para elegir entre los medios habilitados
+por Mercado Pago. El backend nunca recibe PAN, vencimiento ni código de seguridad. Definí
+`NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` con la clave pública de prueba o producción
+correspondiente. El servidor calcula los importes definitivos desde las variables
+`MP_PLAN_*` de `Back/.env`.
+
+En Suscripción, el estado real de Mercado Pago incluye una opción temporal para cancelar
+inmediatamente el plan y desactivar el acceso, sin reembolso automático. Una vez cancelado
+se puede volver a elegir un plan. Se conserva el control existente de cancelación de renovación.
+
+Las rutas `/checkout/success`, `/checkout/pending` y `/checkout/failure` consultan el
+estado persistido de la suscripción antes de mostrar el resultado y esperan la
+confirmación del webhook cuando el proveedor todavía informa un estado pendiente.
+
 ## Páginas
 
-| Ruta                      | Función                                                                               |
-| ------------------------- | ------------------------------------------------------------------------------------- |
-| `/`                       | Home con entradas para clientes y profesionales.                                      |
-| `/estudios`               | Landing para artistas y estudios, con herramientas, reseñas y planes.                 |
-| `/clientes`               | Catálogo público con datos de ejemplo.                                                |
-| `/recuperar-contrasena`   | Solicitar un enlace de contraseña por email.                                          |
-| `/restablecer-contrasena` | Crear o cambiar la contraseña desde un enlace.                                        |
-| `/verificar-email`        | Confirmar la dirección de correo.                                                     |
-| `/suscripcion`            | Elegir plan, frecuencia mensual/anual y continuar al checkout seguro de Mercado Pago. |
-| `/suscripcion/resultado`  | Consultar la confirmación asíncrona del pago.                                         |
-| `/suscripcion/cancelar`   | Cancelar la renovación desde el enlace seguro recibido por correo.                    |
+| Ruta                      | Función                                                               |
+| ------------------------- | --------------------------------------------------------------------- |
+| `/`                       | Home con entradas para clientes y profesionales.                      |
+| `/estudios`               | Landing para artistas y estudios, con herramientas, reseñas y planes. |
+| `/checkout`               | Checkout mensual/anual con tokenización en Mercado Pago.              |
+| `/checkout/success`       | Confirmación de suscripción activa.                                   |
+| `/checkout/pending`       | Consulta del estado mientras llega el webhook.                        |
+| `/checkout/failure`       | Estado rechazado o cancelado.                                         |
+| `/clientes`               | Catálogo público con datos de ejemplo.                                |
+| `/recuperar-contrasena`   | Solicitar un enlace de contraseña por email.                          |
+| `/restablecer-contrasena` | Crear o cambiar la contraseña desde un enlace.                        |
+| `/verificar-email`        | Confirmar la dirección de correo.                                     |
+| `/suscripcion`            | Redirige al checkout unificado de plan y frecuencia.                  |
+| `/suscripcion/resultado`  | Consultar la confirmación asíncrona del pago.                         |
+| `/suscripcion/cancelar`   | Cancelar desde el enlace seguro recibido por correo.                  |
 
 Login y registro se abren en modales desde la cabecera. En clientes se registra el rol `CLIENTE`; en estudios se elige entre `ARTISTA` y `ESTUDIO_ADMIN`; en Home se elige primero el tipo de cuenta. Se puede acceder con contraseña o Google. El backend administra la sesión mediante una cookie HttpOnly y el frontend comparte sus datos con `AuthProvider`.
 
