@@ -1,3 +1,10 @@
+export interface MarcaZona {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
+
 export interface CotizacionValues {
   nombre: string;
   email: string;
@@ -19,9 +26,10 @@ export interface CotizacionValues {
   zonaEspecifica: string;
 
   // Paso 6: Ubicación del tatuaje
+  marcasZona: MarcaZona[];
+  tamanoProporcion: string;
 
   // Paso 7: Descripción y referencia
-  tamanoProporcion: string;
   descripcion: string;
   imagenReferencia: File | null;
 

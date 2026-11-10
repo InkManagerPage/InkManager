@@ -24,8 +24,10 @@ export function StepZonaGeneral({ values, setFieldValue }: StepProps) {
             aria-pressed={values.zonaCuerpo === zona}
             key={zona}
             onClick={() => {
+              if (values.zonaCuerpo === zona) return;
               setFieldValue('zonaCuerpo', zona);
-              setFieldValue('zonaEspecifica', ''); // Resetea la específica al cambiar la general
+              setFieldValue('zonaEspecifica', '');
+              setFieldValue('marcasZona', []);
             }}
             style={{
               border: values.zonaCuerpo === zona ? '2px solid #202320' : '1px solid #cccec7',

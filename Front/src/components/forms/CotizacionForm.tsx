@@ -31,6 +31,7 @@ const initialValues: CotizacionValues = {
   generoLienzo: '',
   zonaCuerpo: '',
   zonaEspecifica: '',
+  marcasZona: [],
   tamanoProporcion: '',
   descripcion: '',
   imagenReferencia: null,
@@ -64,7 +65,11 @@ const pasos = [
     validar: (v: CotizacionValues) => Boolean(v.zonaEspecifica),
     mensaje: 'Elegí la zona específica.',
   },
-  { Componente: StepUbicacionArea, validar: () => true, mensaje: '' },
+  {
+    Componente: StepUbicacionArea,
+    validar: (v: CotizacionValues) => v.marcasZona.length > 0,
+    mensaje: 'Marcá al menos un área en la foto para continuar.',
+  },
   {
     Componente: StepDescripcion,
     validar: (v: CotizacionValues) => Boolean(v.descripcion.trim()),

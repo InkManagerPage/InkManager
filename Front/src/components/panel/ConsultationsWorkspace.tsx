@@ -249,7 +249,7 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
   const { usuario } = useAuth();
   const [accion, setAccion] = useState<'CERRAR' | 'ARCHIVAR' | null>(null),
     [editando, setEditando] = useState(false),
-    [imagen, setImagen] = useState(''),
+    [imagen, setImagen] = useState<{ url: string; titulo: string } | null>(null),
     [guardando, setGuardando] = useState(false),
     [error, setError] = useState(''),
     [aviso, setAviso] = useState('');
@@ -337,13 +337,24 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
           {aviso}
         </p>
       )}
-      {c.referencias.length > 0 && (
+      {(c.imagenZonaMarcada || c.referencias.length > 0) && (
         <div className={ui.references}>
+          {c.imagenZonaMarcada && (
+            <button
+              className={ui.areaMarcada}
+              type="button"
+              aria-label="Ver ubicación marcada"
+              onClick={() => setImagen({ url: c.imagenZonaMarcada!, titulo: 'Ubicación marcada' })}
+            >
+              <Image src={c.imagenZonaMarcada} alt="" width={160} height={120} />
+              <span>Ubicación marcada</span>
+            </button>
+          )}
           {c.referencias.map((url, i) => (
             <button
               key={`${url}-${i}`}
               aria-label={`Ver referencia ${i + 1}`}
-              onClick={() => setImagen(url)}
+              onClick={() => setImagen({ url, titulo: `Referencia ${i + 1} del proyecto` })}
             >
               <Image src={url} alt={`Referencia ${i + 1} del proyecto`} width={160} height={120} />
             </button>
@@ -371,7 +382,10 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
           </p>
           <p>{p.detalle}</p>
           {p.boceto && (
-            <button className={styles.textButton} onClick={() => setImagen(p.boceto)}>
+            <button
+              className={styles.textButton}
+              onClick={() => setImagen({ url: p.boceto, titulo: 'Boceto' })}
+            >
               Ver boceto
             </button>
           )}
@@ -535,17 +549,17 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
           )}
         </Modal.Body>
       </Modal>
-      <Modal show={Boolean(imagen)} onHide={() => setImagen('')} size="lg" centered>
+      <Modal show={Boolean(imagen)} onHide={() => setImagen(null)} size="lg" centered>
         <Modal.Header closeButton closeLabel="Cerrar">
           <Modal.Title as="h2" className="fs-5">
-            Imagen del proyecto
+            {imagen?.titulo}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {imagen && (
             <Image
-              src={imagen}
-              alt={`Imagen de ${c.titulo}`}
+              src={imagen.url}
+              alt={imagen.titulo}
               width={900}
               height={900}
               className={ui.fullImage}

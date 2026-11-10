@@ -1,0 +1,78 @@
+.editor {
+  margin-bottom: 1.25rem;
+}
+
+.titulo {
+  font-size: 1.125rem;
+}
+
+.ayuda {
+  color: #62665f;
+  font-size: 0.875rem;
+}
+
+.foto {
+  position: relative;
+  margin-inline: auto;
+  border-radius: 0.5rem;
+}
+
+.foto img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+}
+
+.superficie {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: crosshair;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.superficie[aria-disabled='true'] {
+  cursor: default;
+}
+
+.superficie:focus-visible {
+  outline: 2px solid #30442a;
+  outline-offset: 3px;
+}
+
+.recorte,
+.cursor {
+  position: absolute;
+  pointer-events: none;
+}
+
+.recorte {
+  border: 2px solid;
+}
+
+.cursor {
+  display: none;
+  width: 13px;
+  height: 13px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px black;
+  transform: translate(-50%, -50%);
+}
+
+.superficie:focus-visible .cursor {
+  display: block;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin-top: 0.5rem;
+}

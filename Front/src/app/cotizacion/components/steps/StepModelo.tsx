@@ -21,7 +21,11 @@ export function StepModelo({ values, setFieldValue }: StepProps) {
             type="button"
             aria-pressed={values.generoLienzo === genero}
             key={genero}
-            onClick={() => setFieldValue('generoLienzo', genero)}
+            onClick={() => {
+              if (values.generoLienzo === genero) return;
+              setFieldValue('generoLienzo', genero);
+              setFieldValue('marcasZona', []);
+            }}
             style={{
               border: values.generoLienzo === genero ? '2px solid #202320' : '1px solid #cccec7',
               borderRadius: '12px',

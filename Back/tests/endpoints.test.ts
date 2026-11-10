@@ -182,6 +182,10 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
   const estudioId = randomUUID();
   const contactoId = randomUUID();
   let guardadas = 0;
+  simulate(t, cloudinary.uploader, "upload", async () => {
+    const archivo = ++uploads === 1 ? "zona-marcada" : "referencia";
+    return { secure_url: `https://example.com/${archivo}.png`, public_id: `qa/${archivo}` };
+  });
   simulate(t, prisma.estudio, "findFirst", async ({ where }: Args) =>
     where?.slug === "estudio-qa"
       ? { id: estudioId, nombre: "Estudio QA", propietarioId: "titular", plazoPropuestasHoras: 48 }
@@ -204,7 +208,8 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
     assert.equal(data?.canal, "WEB");
     assert.equal(data?.tamano, "12 cm");
     assert.ok(data?.cierrePropuestasAt instanceof Date);
-    assert.deepEqual(data?.referencias, ["https://example.com/test.png"]);
+    assert.equal(data?.imagenZonaMarcada, "https://example.com/zona-marcada.png");
+    assert.deepEqual(data?.referencias, ["https://example.com/referencia.png"]);
     guardadas++;
     return { id: claveEnvio };
   });
@@ -218,6 +223,7 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
       tipoColor: "COLOR", generoCuerpo: "FEMENINO", zonaGeneral: "BRAZO",
       estilo: "Fine Line", subZona: "Antebrazo", tamano: "12 cm", descripcion: "Rama de olivo",
     })) form.set(campo, valor);
+    form.set("imagenZonaMarcada", new Blob([png], { type: "image/png" }), "zona-marcada.png");
     form.set("referencias", new Blob([png], { type: "image/png" }), "referencia.png");
     return form;
   };
@@ -230,7 +236,7 @@ test("formulario de estudio: admite invitados, protege la ficha y evita duplicar
   assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
   assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
   assert.equal(guardadas, 1);
-  assert.equal(uploads, 1);
+  assert.equal(uploads, 2);
 });
 
 const post = (path: string, body: unknown, cookie?: string) =>
