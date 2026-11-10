@@ -503,38 +503,49 @@ export async function crearSuscripcion(
       const planConfig = obtenerPlanes().find((item) => item.id === plan);
       if (!planConfig) throw new HttpError(400, "El plan elegido no existe.");
       const expiraAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      
+      const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
+      const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
+      
       let respuesta: PreferenceResponse;
       try {
-        respuesta = await new Preference(clienteMercadoPago()).create({
-          body: {
-            external_reference: suscripcionId,
-            items: [
-              {
-                id: `inkmanager-${plan.toLowerCase()}-anual`,
-                title: `InkManager - Plan ${planConfig.nombre} anual`,
-                quantity: 1,
-                unit_price: planConfig.anual,
-                currency_id: planConfig.moneda,
-              },
-            ],
-            payer: { email: usuario.email },
-            payment_methods: { installments: 1 },
-            notification_url: notificationUrl,
-            back_urls: {
-              success: urlFrontend(
-                `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              pending: urlFrontend(
-                `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              failure: urlFrontend(
-                `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const preferenceBody: any = {
+          external_reference: suscripcionId,
+          items: [
+            {
+              id: `inkmanager-${plan.toLowerCase()}-anual`,
+              title: `InkManager - Plan ${planConfig.nombre} anual`,
+              quantity: 1,
+              unit_price: planConfig.anual,
+              currency_id: planConfig.moneda,
             },
-            auto_return: "approved",
-            expires: true,
-            expiration_date_to: expiraAt,
-          },
+          ],
+          payer: { email: usuario.email },
+          payment_methods: { installments: 1 },
+          notification_url: notificationUrl,
+          expires: true,
+          expiration_date_to: expiraAt,
+        };
+
+        // Solo agregar back_urls y auto_return si NO es localhost
+        if (!isLocalhost) {
+          preferenceBody.back_urls = {
+            success: urlFrontend(
+              `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+            pending: urlFrontend(
+              `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+            failure: urlFrontend(
+              `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+          };
+          preferenceBody.auto_return = "approved";
+        }
+
+        respuesta = await new Preference(clienteMercadoPago()).create({
+          body: preferenceBody,
           requestOptions: { idempotencyKey: suscripcionId },
         });
       } catch (error) {
@@ -574,38 +585,49 @@ export async function crearSuscripcion(
       const planConfig = obtenerPlanes().find((item) => item.id === plan);
       if (!planConfig) throw new HttpError(400, "El plan elegido no existe.");
       const expiraAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      
+      const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3001";
+      const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
+      
       let respuesta: PreferenceResponse;
       try {
-        respuesta = await new Preference(clienteMercadoPago()).create({
-          body: {
-            external_reference: suscripcionId,
-            items: [
-              {
-                id: `inkmanager-${plan.toLowerCase()}-mensual`,
-                title: `InkManager - Plan ${planConfig.nombre} mensual`,
-                quantity: 1,
-                unit_price: planConfig.mensual,
-                currency_id: planConfig.moneda,
-              },
-            ],
-            payer: { email: usuario.email },
-            payment_methods: { installments: 1 },
-            notification_url: notificationUrl,
-            back_urls: {
-              success: urlFrontend(
-                `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              pending: urlFrontend(
-                `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              failure: urlFrontend(
-                `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const preferenceBody: any = {
+          external_reference: suscripcionId,
+          items: [
+            {
+              id: `inkmanager-${plan.toLowerCase()}-mensual`,
+              title: `InkManager - Plan ${planConfig.nombre} mensual`,
+              quantity: 1,
+              unit_price: planConfig.mensual,
+              currency_id: planConfig.moneda,
             },
-            auto_return: "approved",
-            expires: true,
-            expiration_date_to: expiraAt,
-          },
+          ],
+          payer: { email: usuario.email },
+          payment_methods: { installments: 1 },
+          notification_url: notificationUrl,
+          expires: true,
+          expiration_date_to: expiraAt,
+        };
+
+        // Solo agregar back_urls y auto_return si NO es localhost
+        if (!isLocalhost) {
+          preferenceBody.back_urls = {
+            success: urlFrontend(
+              `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+            pending: urlFrontend(
+              `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+            failure: urlFrontend(
+              `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
+            ),
+          };
+          preferenceBody.auto_return = "approved";
+        }
+
+        respuesta = await new Preference(clienteMercadoPago()).create({
+          body: preferenceBody,
           requestOptions: { idempotencyKey: suscripcionId },
         });
       } catch (error) {
