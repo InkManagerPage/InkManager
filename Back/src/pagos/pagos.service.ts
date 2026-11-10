@@ -409,6 +409,219 @@ export async function crearSuscripcion(
   }
 
   try {
+    /**
+     * Crea un pago anual con tarjeta de crédito tokenizada
+     */
+    async function crearPagoAnualConTarjeta({
+      suscripcionId,
+      usuario,
+      plan,
+      cardTokenId,
+      paymentMethodId,
+      identificationNumber,
+      notificationUrl,
+    }: {
+      suscripcionId: string;
+      usuario: UsuarioSesion;
+      plan: PlanSuscripcion;
+      cardTokenId: string;
+      paymentMethodId: string;
+      identificationNumber: string;
+      notificationUrl: string;
+    }): Promise<{ paymentProcessing: true; subscriptionId: string }> {
+      const monto = obtenerPrecio(plan, "ANUAL");
+      let respuesta: PaymentResponse;
+      try {
+        respuesta = await new Payment(clienteMercadoPago()).create({
+          body: {
+            description: `InkManager - Plan ${nombresPlanes[plan]} anual`,
+            external_reference: suscripcionId,
+            transaction_amount: monto,
+            token: cardTokenId,
+            payment_method_id: paymentMethodId,
+            installments: 1,
+            payer: {
+              email: usuario.email,
+              identification: { type: "DNI", number: identificationNumber },
+            },
+            notification_url: notificationUrl,
+          },
+          requestOptions: { idempotencyKey: suscripcionId },
+        });
+      } catch (error) {
+        await prisma.suscripcion.updateMany({
+          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
+          data: { estado: EstadoSuscripcion.ERROR },
+        });
+        console.error(`Mercado Pago no confirmó el pago anual ${suscripcionId}:`, error);
+        throw new HttpError(502, "Mercado Pago no pudo iniciar el pago anual.");
+      }
+
+      const paymentId = parseId(respuesta.id);
+      if (
+        !paymentId ||
+        respuesta.external_reference !== suscripcionId ||
+        respuesta.currency_id !== "ARS" ||
+        Math.round(Number(respuesta.transaction_amount) * 100) !==
+          Math.round(monto * 100)
+      ) {
+        await prisma.suscripcion.updateMany({
+          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
+          data: { estado: EstadoSuscripcion.ERROR },
+        });
+        throw new HttpError(502, "El pago anual no coincide con el plan elegido.");
+      }
+
+      await prisma.suscripcion.update({
+        where: { id: suscripcionId },
+        data: { mpPaymentId: paymentId },
+      });
+      await procesarPagoAnual(paymentId);
+      return { paymentProcessing: true, subscriptionId: suscripcionId };
+    }
+
+    /**
+     * Crea un checkout anual con Preferences de Mercado Pago (Checkout Pro)
+     */
+    async function crearCheckoutAnual({
+      suscripcionId,
+      usuario,
+      plan,
+      notificationUrl,
+    }: {
+      suscripcionId: string;
+      usuario: UsuarioSesion;
+      plan: PlanSuscripcion;
+      notificationUrl: string;
+    }): Promise<{ checkoutUrl: string; subscriptionId: string }> {
+      const planConfig = obtenerPlanes().find((item) => item.id === plan);
+      if (!planConfig) throw new HttpError(400, "El plan elegido no existe.");
+      const expiraAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      let respuesta: PreferenceResponse;
+      try {
+        respuesta = await new Preference(clienteMercadoPago()).create({
+          body: {
+            external_reference: suscripcionId,
+            items: [
+              {
+                id: `inkmanager-${plan.toLowerCase()}-anual`,
+                title: `InkManager - Plan ${planConfig.nombre} anual`,
+                quantity: 1,
+                unit_price: planConfig.anual,
+                currency_id: planConfig.moneda,
+              },
+            ],
+            payer: { email: usuario.email },
+            payment_methods: { installments: 1 },
+            notification_url: notificationUrl,
+            back_urls: {
+              success: urlFrontend(
+                `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+              pending: urlFrontend(
+                `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+              failure: urlFrontend(
+                `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+            },
+            auto_return: "approved",
+            expires: true,
+            expiration_date_to: expiraAt,
+          },
+          requestOptions: { idempotencyKey: suscripcionId },
+        });
+      } catch (error) {
+        await prisma.suscripcion.updateMany({
+          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
+          data: { estado: EstadoSuscripcion.ERROR },
+        });
+        console.error(`Mercado Pago no creó la preferencia anual ${suscripcionId}:`, error);
+        throw new HttpError(502, "Mercado Pago no pudo iniciar el checkout anual.");
+      }
+
+      const checkoutUrl = urlCheckout(respuesta.init_point);
+      if (!respuesta.id || respuesta.external_reference !== suscripcionId) {
+        throw new HttpError(502, "Mercado Pago devolvió una preferencia inválida.");
+      }
+      await prisma.suscripcion.update({
+        where: { id: suscripcionId },
+        data: { mercadoPagoId: respuesta.id },
+      });
+      return { checkoutUrl, subscriptionId: suscripcionId };
+    }
+
+    /**
+     * Crea un checkout mensual con Preferences de Mercado Pago (Checkout Pro)
+     */
+    async function crearCheckoutMensual({
+      suscripcionId,
+      usuario,
+      plan,
+      notificationUrl,
+    }: {
+      suscripcionId: string;
+      usuario: UsuarioSesion;
+      plan: PlanSuscripcion;
+      notificationUrl: string;
+    }): Promise<{ checkoutUrl: string; subscriptionId: string }> {
+      const planConfig = obtenerPlanes().find((item) => item.id === plan);
+      if (!planConfig) throw new HttpError(400, "El plan elegido no existe.");
+      const expiraAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      let respuesta: PreferenceResponse;
+      try {
+        respuesta = await new Preference(clienteMercadoPago()).create({
+          body: {
+            external_reference: suscripcionId,
+            items: [
+              {
+                id: `inkmanager-${plan.toLowerCase()}-mensual`,
+                title: `InkManager - Plan ${planConfig.nombre} mensual`,
+                quantity: 1,
+                unit_price: planConfig.mensual,
+                currency_id: planConfig.moneda,
+              },
+            ],
+            payer: { email: usuario.email },
+            payment_methods: { installments: 1 },
+            notification_url: notificationUrl,
+            back_urls: {
+              success: urlFrontend(
+                `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+              pending: urlFrontend(
+                `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+              failure: urlFrontend(
+                `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
+              ),
+            },
+            auto_return: "approved",
+            expires: true,
+            expiration_date_to: expiraAt,
+          },
+          requestOptions: { idempotencyKey: suscripcionId },
+        });
+      } catch (error) {
+        await prisma.suscripcion.updateMany({
+          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
+          data: { estado: EstadoSuscripcion.ERROR },
+        });
+        console.error(`Mercado Pago no creó la preferencia mensual ${suscripcionId}:`, error);
+        throw new HttpError(502, "Mercado Pago no pudo iniciar el checkout mensual.");
+      }
+
+      const checkoutUrl = urlCheckout(respuesta.init_point);
+      if (!respuesta.id || respuesta.external_reference !== suscripcionId) {
+        throw new HttpError(502, "Mercado Pago devolvió una preferencia inválida.");
+      }
+      await prisma.suscripcion.update({
+        where: { id: suscripcionId },
+        data: { mercadoPagoId: respuesta.id },
+      });
+      return { checkoutUrl, subscriptionId: suscripcionId };
+    }
+
     if (ciclo === "ANUAL") {
       if (typeof cardTokenId === "string") {
         return await crearPagoAnualConTarjeta({
@@ -473,143 +686,12 @@ export async function crearSuscripcion(
       return { paymentProcessing: true, subscriptionId: suscripcion.id };
     }
 
-    async function crearPagoAnualConTarjeta({
-      suscripcionId,
-      usuario,
-      plan,
-      cardTokenId,
-      paymentMethodId,
-      identificationNumber,
-      notificationUrl,
-    }: {
-      suscripcionId: string;
-      usuario: UsuarioSesion;
-      plan: PlanSuscripcion;
-      cardTokenId: string;
-      paymentMethodId: string;
-      identificationNumber: string;
-      notificationUrl: string;
-    }): Promise<{ paymentProcessing: true; subscriptionId: string }> {
-      const monto = obtenerPrecio(plan, "ANUAL");
-      let respuesta: PaymentResponse;
-      try {
-        respuesta = await new Payment(clienteMercadoPago()).create({
-          body: {
-            description: `InkManager - Plan ${nombresPlanes[plan]} anual`,
-            external_reference: suscripcionId,
-            transaction_amount: monto,
-            token: cardTokenId,
-            payment_method_id: paymentMethodId,
-            installments: 1,
-            payer: {
-              email: usuario.email,
-              identification: { type: "DNI", number: identificationNumber },
-            },
-            notification_url: notificationUrl,
-          },
-          requestOptions: { idempotencyKey: suscripcionId },
-        });
-      } catch {
-        await prisma.suscripcion.updateMany({
-          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
-          data: { estado: EstadoSuscripcion.ERROR },
-        });
-        console.error(`Mercado Pago no confirmó el pago anual ${suscripcionId}.`);
-        throw new HttpError(502, "Mercado Pago no pudo iniciar el pago anual.");
-      }
-
-      const paymentId = parseId(respuesta.id);
-      if (
-        !paymentId ||
-        respuesta.external_reference !== suscripcionId ||
-        respuesta.currency_id !== "ARS" ||
-        Math.round(Number(respuesta.transaction_amount) * 100) !==
-          Math.round(monto * 100)
-      ) {
-        await prisma.suscripcion.updateMany({
-          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
-          data: { estado: EstadoSuscripcion.ERROR },
-        });
-        throw new HttpError(502, "El pago anual no coincide con el plan elegido.");
-      }
-
-      await prisma.suscripcion.update({
-        where: { id: suscripcionId },
-        data: { mpPaymentId: paymentId },
-      });
-      await procesarPagoAnual(paymentId);
-      return { paymentProcessing: true, subscriptionId: suscripcionId };
-    }
-
-    async function crearCheckoutAnual({
-      suscripcionId,
+    return await crearCheckoutMensual({
+      suscripcionId: suscripcion.id,
       usuario,
       plan,
       notificationUrl,
-    }: {
-      suscripcionId: string;
-      usuario: UsuarioSesion;
-      plan: PlanSuscripcion;
-      notificationUrl: string;
-    }): Promise<{ checkoutUrl: string; subscriptionId: string }> {
-      const planConfig = obtenerPlanes().find((item) => item.id === plan);
-      if (!planConfig) throw new HttpError(400, "El plan elegido no existe.");
-      const expiraAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      let respuesta: PreferenceResponse;
-      try {
-        respuesta = await new Preference(clienteMercadoPago()).create({
-          body: {
-            external_reference: suscripcionId,
-            items: [
-              {
-                id: `inkmanager-${plan.toLowerCase()}-anual`,
-                title: `InkManager - Plan ${planConfig.nombre} anual`,
-                quantity: 1,
-                unit_price: planConfig.anual,
-                currency_id: planConfig.moneda,
-              },
-            ],
-            payer: { email: usuario.email },
-            payment_methods: { installments: 1 },
-            notification_url: notificationUrl,
-            back_urls: {
-              success: urlFrontend(
-                `/checkout/success?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              pending: urlFrontend(
-                `/checkout/pending?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-              failure: urlFrontend(
-                `/checkout/failure?subscription_id=${encodeURIComponent(suscripcionId)}`,
-              ),
-            },
-            auto_return: "approved",
-            expires: true,
-            expiration_date_to: expiraAt,
-          },
-          requestOptions: { idempotencyKey: suscripcionId },
-        });
-      } catch {
-        await prisma.suscripcion.updateMany({
-          where: { id: suscripcionId, estado: EstadoSuscripcion.PENDIENTE },
-          data: { estado: EstadoSuscripcion.ERROR },
-        });
-        console.error(`Mercado Pago no creó la preferencia anual ${suscripcionId}.`);
-        throw new HttpError(502, "Mercado Pago no pudo iniciar el checkout anual.");
-      }
-
-      const checkoutUrl = urlCheckout(respuesta.init_point);
-      if (!respuesta.id || respuesta.external_reference !== suscripcionId) {
-        throw new HttpError(502, "Mercado Pago devolvió una preferencia inválida.");
-      }
-      await prisma.suscripcion.update({
-        where: { id: suscripcionId },
-        data: { mercadoPagoId: respuesta.id },
-      });
-      return { checkoutUrl, subscriptionId: suscripcionId };
-    }
-    const checkoutUrl = urlCheckout(respuesta.init_point);
-    return { checkoutUrl };
+    });
   } catch (error) {
     if (error instanceof ErrorMercadoPago && [400, 401, 403, 404, 422].includes(error.estadoProveedor)) {
       await prisma.suscripcion.updateMany({
