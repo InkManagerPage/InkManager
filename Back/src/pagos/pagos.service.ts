@@ -198,12 +198,12 @@ async function otorgarPermisosSuscripcion(
       data: {
         rol: rolNecesario,
         planSuscripcionActivo: plan,
-      },
+      } as any,
     });
   } else {
     await prisma.usuario.update({
       where: { id: usuarioId },
-      data: { planSuscripcionActivo: plan },
+      data: { planSuscripcionActivo: plan } as any,
     });
   }
 }
@@ -235,7 +235,7 @@ async function revocarPermisosSuscripcion(usuarioId: string): Promise<void> {
       data: {
         rol: "CLIENTE",
         planSuscripcionActivo: null,
-      },
+      } as any,
     });
   }
 }
@@ -1044,10 +1044,6 @@ async function procesarPagoAnual(dataId: string): Promise<void> {
       });
     }
   });
-}
-      data: { correoEnviadoAt: new Date() },
-    });
-  }
 }
 
 async function procesarActualizacionSuscripcion(dataId: string): Promise<void> {

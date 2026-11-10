@@ -23,9 +23,13 @@ function isSubscriptionStatus(
   );
 }
 
+function isPlanSuscripcion(value: unknown): value is 'INDIVIDUAL' | 'ESTUDIO' {
+  return value === 'INDIVIDUAL' || value === 'ESTUDIO';
+}
+
 export default function SubscriptionResult({ subscriptionId }: { subscriptionId: string }) {
   const router = useRouter();
-  const { revalidarSesion } = useAuth();
+  const { reintentar } = useAuth();
   const [status, setStatus] = useState<ResultStatus>('checking');
   const [message, setMessage] = useState('');
   const [plan, setPlan] = useState<string | null>(null);
@@ -48,28 +52,32 @@ export default function SubscriptionResult({ subscriptionId }: { subscriptionId:
           !('subscription' in body) ||
           typeof body.subscription !== 'object' ||
           body.subscription === null ||
-          !('estado' in body.subscription) ||
-          !isSubscriptionStatus(body.subscription.estado)
+          !('estado' in body.subscription)
         ) {
           throw new Error('No pudimos consultar el estado de la suscripción.');
         }
 
-        const state = body.subscription.estado;
-        const suscPlan =
-          typeof body.subscription.plan === 'string' ? body.subscription.plan : null;
-        setPlan(suscPlan);
+        const subscription = body.subscription as Record<string, unknown>;
+        const estado = subscription.estado;
+        
+        if (!isSubscriptionStatus(estado)) {
+          throw new Error('Estado de suscripción inválido.');
+        }
 
-        if (state === 'ACTIVA') {
+        const plan = isPlanSuscripcion(subscription.plan) ? subscription.plan : null;
+        setPlan(plan);
+
+        if (estado === 'ACTIVA') {
           setStatus('active');
           // Revalidar la sesión para que el usuario vea los nuevos permisos
           try {
-            await revalidarSesion?.();
+            reintentar();
           } catch {
             console.error('No pudimos revalidar la sesión');
           }
           return;
         }
-        if (state === 'RECHAZADA' || state === 'ERROR' || state === 'CANCELADA') {
+        if (estado === 'RECHAZADA' || estado === 'ERROR' || estado === 'CANCELADA') {
           setStatus('failed');
           return;
         }
@@ -96,7 +104,7 @@ export default function SubscriptionResult({ subscriptionId }: { subscriptionId:
       controller.abort();
       clearTimeout(timer);
     };
-  }, [subscriptionId, validId, revalidarSesion]);
+  }, [subscriptionId, validId, reintentar]);
 
   const estadoVisible = validId ? status : 'error';
   const mensajeVisible = validId ? message : 'El identificador de suscripción no es válido.';
