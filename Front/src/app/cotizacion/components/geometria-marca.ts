@@ -4,27 +4,40 @@ export type Punto = { x: number; y: number };
 export type Medidas = { ancho: number; alto: number };
 export type Edicion = 'mover' | 'rotar' | 'redimensionar';
 
+const ladoMinimo = 8;
+const ladoToque = 28;
+const toleranciaToque = 4;
+
 export function limitar(valor: number, minimo = 0, maximo = 1) {
   return Math.max(minimo, Math.min(maximo, valor));
 }
 
-export function marcaCentrada(punto: Punto): MarcaZona {
-  const lado = 0.18;
+export function marcaCentrada(punto: Punto, medidas: Medidas): MarcaZona {
+  const ancho = Math.min(1, ladoToque / medidas.ancho);
+  const alto = Math.min(1, ladoToque / medidas.alto);
   return {
-    x: limitar(punto.x - lado / 2, 0, 1 - lado),
-    y: limitar(punto.y - lado / 2, 0, 1 - lado),
-    ancho: lado,
-    alto: lado,
+    x: limitar(punto.x - ancho / 2, 0, 1 - ancho),
+    y: limitar(punto.y - alto / 2, 0, 1 - alto),
+    ancho,
+    alto,
     rotacion: 0,
   };
 }
 
-export function rectangulo(inicio: Punto, fin: Punto): MarcaZona {
+export function dibujarMarca(inicio: Punto, fin: Punto, medidas: Medidas): MarcaZona {
+  const dx = fin.x - inicio.x;
+  const dy = fin.y - inicio.y;
+  if (Math.hypot(dx * medidas.ancho, dy * medidas.alto) < toleranciaToque) {
+    return marcaCentrada(inicio, medidas);
+  }
+
+  const ancho = limitar(Math.abs(dx), ladoMinimo / medidas.ancho);
+  const alto = limitar(Math.abs(dy), ladoMinimo / medidas.alto);
   return {
-    x: Math.min(inicio.x, fin.x),
-    y: Math.min(inicio.y, fin.y),
-    ancho: Math.abs(inicio.x - fin.x),
-    alto: Math.abs(inicio.y - fin.y),
+    x: limitar(dx < 0 ? inicio.x - ancho : inicio.x, 0, 1 - ancho),
+    y: limitar(dy < 0 ? inicio.y - alto : inicio.y, 0, 1 - alto),
+    ancho,
+    alto,
     rotacion: 0,
   };
 }
@@ -81,8 +94,14 @@ export function editarMarca(
   const sin = Math.sin(radianes);
   const pixelesX = dx * medidas.ancho;
   const pixelesY = dy * medidas.alto;
-  const ancho = limitar(marca.ancho + (pixelesX * cos + pixelesY * sin) / medidas.ancho, 0.08);
-  const alto = limitar(marca.alto + (-pixelesX * sin + pixelesY * cos) / medidas.alto, 0.08);
+  const ancho = limitar(
+    marca.ancho + (pixelesX * cos + pixelesY * sin) / medidas.ancho,
+    ladoMinimo / medidas.ancho,
+  );
+  const alto = limitar(
+    marca.alto + (-pixelesX * sin + pixelesY * cos) / medidas.alto,
+    ladoMinimo / medidas.alto,
+  );
   const cambioX = ((ancho - marca.ancho) * medidas.ancho) / 2;
   const cambioY = ((alto - marca.alto) * medidas.alto) / 2;
   return ajustar(

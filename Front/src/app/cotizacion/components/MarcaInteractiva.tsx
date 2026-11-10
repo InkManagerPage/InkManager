@@ -6,11 +6,11 @@ import type { MarcaZona } from '@/types/cotizacion';
 import { fotoFormulario } from '@/lib/fotos-formulario';
 import { bordeMarca, maximoMarcas, rellenoMarca } from '@/lib/ubicacion-tatuaje';
 import {
+  dibujarMarca,
   editarMarca,
   girarMarca,
   limitar,
   marcaCentrada,
-  rectangulo,
   type Edicion,
   type Punto,
 } from './geometria-marca';
@@ -48,11 +48,15 @@ export function MarcaInteractiva({
   const [cursor, setCursor] = useState<Punto>({ x: 0.5, y: 0.5 });
   const limite = marcas.length >= maximoMarcas;
 
-  function puntoDe(evento: PointerEvent): Punto {
-    const caja = lienzo.current!.getBoundingClientRect();
+  function medirLienzo() {
+    const { left, top, width, height } = lienzo.current!.getBoundingClientRect();
+    return { izquierda: left, arriba: top, ancho: width, alto: height };
+  }
+
+  function puntoDe(evento: PointerEvent, medidas = medirLienzo()): Punto {
     return {
-      x: (evento.clientX - caja.left) / caja.width,
-      y: (evento.clientY - caja.top) / caja.height,
+      x: (evento.clientX - medidas.izquierda) / medidas.ancho,
+      y: (evento.clientY - medidas.arriba) / medidas.alto,
     };
   }
 
@@ -90,7 +94,7 @@ export function MarcaInteractiva({
     if (!paso) return;
     evento.preventDefault();
     const marca = marcas[indice]!;
-    actualizar(indice, editarMarca(marca, accion, { x: 0, y: 0 }, paso, foto));
+    actualizar(indice, editarMarca(marca, accion, { x: 0, y: 0 }, paso, medirLienzo()));
   }
 
   return (
@@ -107,31 +111,34 @@ export function MarcaInteractiva({
         onPointerMove={(evento) => {
           const activo = gesto.current;
           if (!activo || activo.id !== evento.pointerId) return;
-          const fin = puntoDe(evento);
+          const medidas = medirLienzo();
+          const fin = puntoDe(evento, medidas);
           if (activo.accion === 'dibujar') {
-            setVistaPrevia({ indice: -1, marca: rectangulo(activo.inicio, limitarPunto(fin)) });
+            setVistaPrevia({
+              indice: -1,
+              marca: dibujarMarca(activo.inicio, limitarPunto(fin), medidas),
+            });
           } else {
             setVistaPrevia({
               indice: activo.indice,
-              marca: editarMarca(activo.original, activo.accion, activo.inicio, fin, foto),
+              marca: editarMarca(activo.original, activo.accion, activo.inicio, fin, medidas),
             });
           }
         }}
         onPointerUp={(evento) => {
           const activo = gesto.current;
           if (!activo || activo.id !== evento.pointerId) return;
-          const fin = puntoDe(evento);
+          const medidas = medirLienzo();
+          const fin = puntoDe(evento, medidas);
           if (activo.accion === 'dibujar') {
-            const punto = limitarPunto(fin);
-            const marca = rectangulo(activo.inicio, punto);
-            agregar(marca.ancho >= 0.08 && marca.alto >= 0.08 ? marca : marcaCentrada(punto));
+            agregar(dibujarMarca(activo.inicio, limitarPunto(fin), medidas));
           } else {
             const toque = Math.hypot(fin.x - activo.inicio.x, fin.y - activo.inicio.y) < 0.01;
             actualizar(
               activo.indice,
               activo.accion === 'rotar' && toque
-                ? girarMarca(activo.original, 15, foto)
-                : editarMarca(activo.original, activo.accion, activo.inicio, fin, foto),
+                ? girarMarca(activo.original, 15, medidas)
+                : editarMarca(activo.original, activo.accion, activo.inicio, fin, medidas),
             );
           }
           cancelar(evento.pointerId);
@@ -155,7 +162,7 @@ export function MarcaInteractiva({
           aria-disabled={limite}
           onPointerDown={(evento) => iniciar(evento, 'dibujar')}
           onClick={(evento) => {
-            if (evento.detail === 0) agregar(marcaCentrada(cursor));
+            if (evento.detail === 0) agregar(marcaCentrada(cursor, medirLienzo()));
           }}
           onKeyDown={(evento) => {
             const paso = pasos[evento.key];

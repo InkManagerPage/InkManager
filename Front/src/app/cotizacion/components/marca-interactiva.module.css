@@ -59,6 +59,11 @@
   pointer-events: none;
 }
 
+.recorte {
+  --tamano-control: 32px;
+  --distancia-control: min(-4px, calc((100% - var(--tamano-control)) / 2));
+}
+
 .recorte:focus-within,
 .recorte:hover {
   z-index: 1;
@@ -73,8 +78,8 @@
   display: grid;
   z-index: 1;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--tamano-control);
+  height: var(--tamano-control);
   padding: 0;
   border: 1px solid #144050;
   border-radius: 50%;
@@ -86,22 +91,22 @@
 }
 
 .rotar {
-  left: -4px;
-  top: -4px;
+  left: var(--distancia-control);
+  top: var(--distancia-control);
   transform: translate(-50%, -50%);
   cursor: grab;
 }
 
 .eliminar {
-  right: -4px;
-  top: -4px;
+  right: var(--distancia-control);
+  top: var(--distancia-control);
   transform: translate(50%, -50%);
   cursor: pointer;
 }
 
 .redimensionar {
-  right: -4px;
-  bottom: -4px;
+  right: var(--distancia-control);
+  bottom: var(--distancia-control);
   transform: translate(50%, 50%);
   cursor: nwse-resize;
 }
@@ -128,8 +133,7 @@
 }
 
 @media (pointer: coarse) {
-  .control {
-    width: 36px;
-    height: 36px;
+  .recorte {
+    --tamano-control: 36px;
   }
 }
