@@ -176,6 +176,62 @@ const png = Buffer.from(
 );
 const request = (path: string, options: RequestInit = {}) =>
   fetch(baseUrl + path, { ...options, signal: AbortSignal.timeout(10000) });
+
+test("formulario de estudio: admite invitados, protege la ficha y evita duplicar reintentos", async (t) => {
+  const claveEnvio = randomUUID();
+  const estudioId = randomUUID();
+  const contactoId = randomUUID();
+  let guardadas = 0;
+  simulate(t, prisma.estudio, "findFirst", async ({ where }: Args) =>
+    where?.slug === "estudio-qa"
+      ? { id: estudioId, nombre: "Estudio QA", propietarioId: "titular", plazoPropuestasHoras: 48 }
+      : null,
+  );
+  simulate(t, prisma.solicitud, "findFirst", async () => guardadas ? { id: claveEnvio } : null);
+  simulate(t, prisma.contacto, "createMany", async ({ data, skipDuplicates }: Args & { skipDuplicates: boolean }) => {
+    assert.equal(skipDuplicates, true);
+    assert.equal(data?.estudioId, estudioId);
+    assert.equal(data?.email, "persona@example.test");
+    return { count: 0 };
+  });
+  simulate(t, prisma.contacto, "findFirstOrThrow", async () => ({ id: contactoId }));
+  simulate(t, prisma.avisoPanel, "createMany", async () => ({ count: 1 }));
+  simulate(t, prisma.solicitud, "create", async ({ data }: Args) => {
+    assert.equal(data?.id, claveEnvio);
+    assert.equal(data?.estudioId, estudioId);
+    assert.equal(data?.contactoId, contactoId);
+    assert.equal(data?.clienteId, undefined);
+    assert.equal(data?.canal, "WEB");
+    assert.equal(data?.tamano, "12 cm");
+    assert.ok(data?.cierrePropuestasAt instanceof Date);
+    assert.deepEqual(data?.referencias, ["https://example.com/test.png"]);
+    guardadas++;
+    return { id: claveEnvio };
+  });
+
+  const ruta = "/consultas/publicas/estudio-qa";
+  const consulta = () => {
+    const form = new FormData();
+    for (const [campo, valor] of Object.entries({
+      claveEnvio, nombre: "Nombre de Prueba", email: "Persona@example.test",
+      tipoColor: "COLOR", generoCuerpo: "FEMENINO", zonaGeneral: "BRAZO",
+      estilo: "Fine Line", subZona: "Antebrazo", tamano: "12 cm", descripcion: "Rama de olivo",
+    })) form.set(campo, valor);
+    form.set("referencias", new Blob([png], { type: "image/png" }), "referencia.png");
+    return form;
+  };
+  const publico = await request(ruta);
+  assert.deepEqual(await publico.json(), { nombre: "Estudio QA" });
+  assert.equal((await request("/consultas/publicas/desconocido")).status, 404);
+  const incompleta = consulta();
+  incompleta.delete("email");
+  assert.equal((await request(ruta, { method: "POST", body: incompleta })).status, 400);
+  assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
+  assert.equal((await request(ruta, { method: "POST", body: consulta() })).status, 201);
+  assert.equal(guardadas, 1);
+  assert.equal(uploads, 1);
+});
+
 const post = (path: string, body: unknown, cookie?: string) =>
   request(path, {
     method: "POST",

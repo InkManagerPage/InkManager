@@ -26,6 +26,7 @@ operacionRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
 
 const perfil = {
   nombre: true,
+  slug: true,
   biografia: true,
   emailContacto: true,
   telefono: true,
@@ -43,6 +44,7 @@ function presentarEstudio(
   const ubicacion = obtenerUbicacion(e.ciudadId);
   return {
     nombre: e.nombre,
+    slug: e.slug,
     biografia: e.biografia || "",
     email: e.emailContacto || email,
     telefono: e.telefono || "",

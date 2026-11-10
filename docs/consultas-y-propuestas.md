@@ -26,7 +26,9 @@ La referencia funcional es el [formulario de Zen House Tattoo](https://www.zenho
 | Ejemplos visuales                     | `referencias`; la referencia admite hasta cuatro imágenes                            |
 | Nombre, email y WhatsApp              | Campos del contacto                                                                  |
 
-El formulario de referencia permite hasta tres marcas sobre el modelo corporal. La captura de ese marcado y el formulario público de InkManager aún no están implementados. Los ejemplos actuales representan respuestas ingresadas mediante el seed. No implican aceptación de términos por personas reales. No se envían formularios a Zen House.
+El titular puede abrir o copiar el enlace desde **Configuración → Formulario de consultas**. El enlace público `/cotizacion/:slug` identifica al estudio y abre el wizard sin pedir una cuenta. El envío incluye nombre, correo, teléfono opcional y una referencia visual opcional en JPG, PNG o WebP. El marcado sobre el modelo corporal queda pendiente. El formulario del catálogo dirigido a un artista mantiene el acceso con cuenta de cliente. Si el artista integra un estudio, la consulta llega al equipo y registra el nombre del artista de interés.
+
+El envío público guarda la consulta y su contacto dentro del estudio, registra el canal web y toma el plazo de propuestas vigente. Los envíos reutilizan la ficha por correo sin cambiar sus datos y los reintentos con la misma clave no duplican la consulta. La bandeja de mensajes permite vincular la consulta al hilo desde el panel.
 
 ## Permisos y estados
 
@@ -37,7 +39,7 @@ El ámbito se resuelve desde la sesión y la membresía guardada en la BD. El fr
 - Un artista suspendido conserva acceso a las consultas que tiene asignadas y no puede presentar propuestas.
 - El independiente administra sus consultas y presenta su propia propuesta; no tiene acceso a otros negocios.
 
-Al cerrar: cero propuestas disponibles dejan la consulta por asignar, una asigna automáticamente su artista y varias esperan la elección del cliente. Las propuestas vencidas o de artistas que ya no son integrantes activos no participan. El enlace público para elegir todavía no existe; el titular puede resolver la asignación desde el panel.
+Al cerrar: cero propuestas disponibles dejan la consulta por asignar, una asigna automáticamente su artista y varias esperan la elección del cliente. Las propuestas vencidas o de artistas que ya no son integrantes activos no participan. El titular puede resolver la asignación desde el panel mientras se incorpora la elección desde el chat.
 
 El backend procesa vencimientos por lotes al consultar la bandeja, sin depender del reloj del navegador. No existe aún un worker que los ejecute sin solicitudes a la API. Cada lote procesa hasta 200 registros. La bandeja obtiene las 200 solicitudes más recientes y agrega las solicitudes vinculadas a los turnos para conservar su contexto histórico. La validez de propuestas se guarda como instante UTC y la interfaz muestra su fecha.
 
@@ -48,6 +50,9 @@ Las escrituras bloquean la solicitud y comprueban su versión para impedir edici
 | Método y ruta                       | Función                                                                               |
 | ----------------------------------- | ------------------------------------------------------------------------------------- |
 | `GET /api/consultas`                | Contexto autorizado, equipo, contactos, turnos y solicitudes con propuestas visibles. |
+| `GET /api/consultas/publicas/:slug` | Nombre público del estudio para el wizard. |
+| `POST /api/consultas/publicas/:slug` | Recibir una consulta sin sesión. Admite una referencia multipart. |
+| `POST /api/consultas/publicas/artista/:id` | Recibir una consulta dirigida a un artista desde una cuenta de cliente. |
 | `PUT /api/consultas/:id/cotizacion` | Crear o actualizar la propuesta del artista autenticado. Admite `imagen` multipart.   |
 | `PATCH /api/consultas/:id`          | Acciones `CIERRE`, `CERRAR`, `ASIGNAR` y `ARCHIVAR`, con versión obligatoria.         |
 

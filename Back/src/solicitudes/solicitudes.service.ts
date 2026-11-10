@@ -1,6 +1,10 @@
 import { ambitoDeCuenta } from "./solicitudes.ambito.js";
-import { EstadoSolicitud, type Prisma } from "@prisma/client";
+import { EstadoSolicitud, Prisma } from "@prisma/client";
+import { prisma } from "../config/prisma.js";
+import { validarDatosContacto, type DatosContacto } from "../contactos/contactos.validation.js";
 import { HttpError } from "../errors/http-error.js";
+import { subirImagen } from "../imagenes/imagenes.service.js";
+import { eliminarImagenSegura } from "../imagenes/imagenes.repository.js";
 import { registrarAviso } from "../operacion/avisos.repository.js";
 import { listarCitas } from "../citas/citas.repository.js";
 import { presentarCita } from "../citas/citas.entity.js";
@@ -18,6 +22,8 @@ import {
 import {
   objetoEntrada,
   validarIdConsulta,
+  validarSlugEstudio,
+  validarSolicitudPublica,
   validarVersion,
 } from "./solicitudes.validation.js";
 
@@ -244,4 +250,100 @@ export async function cambiarSolicitud(
     throw new HttpError(400, "La acción no es válida.");
   });
   return presentarSolicitud(resultado, ambito);
+}
+
+export async function obtenerEstudioPublico(slug: unknown) {
+  const estudio = await repo.buscarEstudioParaSolicitud(validarSlugEstudio(slug));
+  if (!estudio) throw new HttpError(404, "No encontramos el estudio solicitado.");
+  return estudio;
+}
+
+type ArchivosSolicitud = {
+  zona?: Express.Multer.File | undefined;
+  referencia?: Express.Multer.File | undefined;
+};
+
+async function guardarSolicitud(
+  datos: ReturnType<typeof validarSolicitudPublica>,
+  destino: { estudioId: string | null; artistaDestinoId?: string; clienteId?: string; id?: string },
+  contacto: DatosContacto,
+  plazo: number,
+  archivos: ArchivosSolicitud,
+  avisarA?: string | null,
+) {
+  let zona: Awaited<ReturnType<typeof subirImagen>> | undefined;
+  let referencia: Awaited<ReturnType<typeof subirImagen>> | undefined;
+
+  try {
+    if (archivos.zona) zona = await subirImagen(archivos.zona);
+    if (archivos.referencia) referencia = await subirImagen(archivos.referencia);
+    return await prisma.$transaction(async (tx) => {
+      const solicitud = await repo.guardarSolicitudPublica(tx, {
+        ...datos,
+        ...destino,
+        titulo: "Consulta de " + datos.estilo,
+        canal: "WEB",
+        cierrePropuestasAt: plazo > 0 ? new Date(Date.now() + plazo * 3600000) : null,
+        imagenZonaMarcada: zona?.url ?? null,
+        referencias: referencia ? [referencia.url] : [],
+      }, contacto);
+      if (avisarA) {
+        await registrarAviso(tx, {
+          usuarioId: avisarA,
+          clave: "consulta:" + solicitud.id,
+          titulo: "Nueva consulta de tatuaje",
+          detalle: "Consulta de " + datos.estilo,
+          destino: "/estudio/consultas?consulta=" + solicitud.id,
+        });
+      }
+      return solicitud;
+    }, { timeout: 20000 });
+  } catch (error) {
+    await Promise.all([zona, referencia].map(imagen =>
+      imagen ? eliminarImagenSegura(imagen.public_id) : undefined,
+    ));
+    throw error;
+  }
+}
+
+export async function crearSolicitudEstudio(
+  slug: unknown, entrada: unknown, archivos: ArchivosSolicitud,
+) {
+  const datos = validarSolicitudPublica(entrada);
+  const contacto = validarDatosContacto(entrada);
+  const id = validarIdConsulta(objetoEntrada(entrada).claveEnvio);
+  const estudio = await obtenerEstudioPublico(slug);
+  const anterior = () => repo.buscarEnvioEstudio(id, estudio.id, contacto.email);
+  if (await anterior()) return;
+  try {
+    await guardarSolicitud(datos, { id, estudioId: estudio.id }, contacto,
+      estudio.plazoPropuestasHoras, archivos, estudio.propietarioId);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      if (await anterior()) return;
+      throw new HttpError(409, "No pudimos reenviar esta consulta. Volvé a abrir el formulario.");
+    }
+    throw error;
+  }
+}
+
+export async function crearSolicitudCliente(
+  clienteId: string, artistaId: unknown, entrada: unknown, archivos: ArchivosSolicitud,
+) {
+  const datos = validarSolicitudPublica(entrada);
+  const artistaDestinoId = validarIdConsulta(artistaId);
+  const [artista, cliente] = await Promise.all([
+    repo.buscarArtistaParaSolicitud(artistaDestinoId),
+    repo.buscarClienteParaSolicitud(clienteId),
+  ]);
+  if (!artista) throw new HttpError(404, "El artista no está disponible para recibir consultas.");
+  if (!cliente) throw new HttpError(403, "Solo los clientes pueden enviar esta consulta.");
+  const destino = artista.estudioId
+    ? { clienteId, estudioId: artista.estudioId }
+    : { clienteId, estudioId: null, artistaDestinoId };
+  if (artista.estudioId && artista.nombreArtistico)
+    datos.notas = `Artista de interés: ${artista.nombreArtistico}\n${datos.notas}`.trim();
+  await guardarSolicitud(datos, destino,
+    { ...cliente, nombre: cliente.nombre || "Cliente" },
+    artista.estudio?.plazoPropuestasHoras ?? 0, archivos, artista.estudio?.propietarioId);
 }

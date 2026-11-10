@@ -6,6 +6,8 @@ import type {
 } from "./solicitudes.entity.js";
 import { detalleSolicitud } from "./solicitudes.entity.js";
 import { HttpError } from "../errors/http-error.js";
+import type { DatosContacto } from "../contactos/contactos.validation.js";
+import { obtenerOCrearContacto } from "../contactos/contactos.repository.js";
 
 export function buscarCuenta(id: string) {
   return prisma.usuario.findUnique({
@@ -181,4 +183,60 @@ export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas) {
     FROM actualizadas WHERE "artistaAsignadoId" IS NOT NULL
     ON CONFLICT ("usuarioId","clave") DO NOTHING
   `);
+}
+
+export function buscarEstudioParaSolicitud(slug: string) {
+  return prisma.estudio.findFirst({
+    where: { slug, propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } },
+    select: { id: true, nombre: true, propietarioId: true, plazoPropuestasHoras: true },
+  });
+}
+
+export function buscarArtistaParaSolicitud(id: string) {
+  return prisma.usuario.findFirst({
+    where: {
+      id,
+      rol: "ARTISTA",
+      suspendidoAt: null,
+      OR: [
+        { estudioId: null },
+        { estadoEnEstudio: "ACTIVO", estudio: { propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } } },
+      ],
+    },
+    select: {
+      estudioId: true,
+      nombreArtistico: true,
+      estudio: { select: { plazoPropuestasHoras: true, propietarioId: true } },
+    },
+  });
+}
+
+export function buscarClienteParaSolicitud(id: string) {
+  return prisma.usuario.findFirst({
+    where: { id, rol: "CLIENTE", suspendidoAt: null },
+    select: { nombre: true, email: true, telefono: true, ciudad: true },
+  });
+}
+
+export function buscarEnvioEstudio(id: string, estudioId: string, email: string) {
+  return prisma.solicitud.findFirst({
+    where: { id, estudioId, clienteId: null, artistaDestinoId: null, contacto: { email } },
+    select: { id: true },
+  });
+}
+
+export async function guardarSolicitudPublica(
+  tx: Prisma.TransactionClient,
+  datos: Prisma.SolicitudUncheckedCreateInput,
+  contacto: DatosContacto,
+) {
+  const ambito = datos.estudioId
+    ? { estudioId: datos.estudioId }
+    : { artistaId: datos.artistaDestinoId! };
+  const ficha = await obtenerOCrearContacto(tx, ambito, contacto);
+
+  return tx.solicitud.create({
+    data: { ...datos, contactoId: ficha.id },
+    select: { id: true },
+  });
 }

@@ -9,6 +9,7 @@ import type { RecordatoriosPanel } from '@/types/recordatorios';
 type Operacion = {
   estudio:
     | (PerfilEstudio & {
+        slug: string;
         ciudadId: number | null;
         provinciaId: number | null;
         pais: string | null;
