@@ -648,50 +648,9 @@ export async function crearSuscripcion(
       });
     }
 
-    const respuesta = await solicitarMercadoPago<SuscripcionMercadoPago>(
-      "/preapproval",
-      {
-        method: "POST",
-        idempotencyKey: suscripcion.id,
-        body: {
-          reason: `InkManager - Plan ${nombresPlanes[plan]} (${nombreCiclo(ciclo)})`,
-          external_reference: suscripcion.referenciaExterna,
-          payer_email: usuario.email,
-          auto_recurring: {
-            frequency: 1,
-            frequency_type: "months",
-            transaction_amount: monto,
-            currency_id: "ARS",
-          },
-          back_url: `${backUrl}?subscription_id=${encodeURIComponent(suscripcion.id)}`,
-          notification_url: notificationUrl,
-          status: typeof cardTokenId === "string" ? "authorized" : "pending",
-          ...(typeof cardTokenId === "string"
-            ? { card_token_id: cardTokenId }
-            : {}),
-        },
-      },
-    );
-    const mercadoPagoId = parseId(respuesta.id);
-    if (!mercadoPagoId) {
-      throw new HttpError(
-        502,
-        "Mercado Pago no devolvió una identificación de suscripción válida.",
-      );
-    }
-    await prisma.suscripcion.update({
-      where: { id: suscripcion.id },
-      data: {
-        mercadoPagoId,
-        proximoCobroAt: fechaValida(
-          (respuesta as SuscripcionMercadoPago).next_payment_date,
-        ),
-      },
-    });
-    if (typeof cardTokenId === "string") {
-      return { paymentProcessing: true, subscriptionId: suscripcion.id };
-    }
-
+    // Para MENSUAL: siempre usar Checkout Pro (Preferences)
+    // Nota: Mercado Pago no acepta card_token_id en Preapproval
+    // El usuario completa el pago en Mercado Pago y selecciona su tarjeta allí
     return await crearCheckoutMensual({
       suscripcionId: suscripcion.id,
       usuario,
