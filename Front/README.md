@@ -17,7 +17,7 @@ npm run dev
 NEXT_PUBLIC_API_URL=http://127.0.0.1:4000/api
 ```
 
-El frontend está disponible en [http://127.0.0.1:3001](http://127.0.0.1:3001). El backend debe estar activo para usar el acceso, los correos y las reseñas.
+El frontend está disponible en [http://127.0.0.1:3000](http://127.0.0.1:3000). El backend debe estar activo para usar el acceso, los correos y las reseñas.
 
 ## Páginas
 

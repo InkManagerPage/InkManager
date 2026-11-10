@@ -70,7 +70,7 @@ Ante cancelación o error, la Home recibe `google_error=cancelado`, `cuenta` o `
 | `GOOGLE_CLIENT_SECRET`  | Credencial privada del cliente OAuth.                        |
 | `GOOGLE_REDIRECT_URI`   | Callback autorizado en Google.                               |
 
-En desarrollo, el frontend usa `http://127.0.0.1:3001`, la API `http://127.0.0.1:4000/api` y el callback `http://127.0.0.1:3001/api/auth/google/callback`. El navegador pasa por el proxy del frontend tanto para iniciar Google como para regresar del proveedor; así las dos cookies pertenecen al mismo dominio de la página.
+En desarrollo, el frontend usa `http://127.0.0.1:3000`, la API `http://127.0.0.1:4000/api` y el callback `http://127.0.0.1:3000/api/auth/google/callback`. El navegador pasa por el proxy del frontend tanto para iniciar Google como para regresar del proveedor; así las dos cookies pertenecen al mismo dominio de la página.
 
 El frontend configura la dirección del backend mediante `API_URL` en `Front/.env.local`. Las credenciales privadas permanecen en el backend. [Despliegue](despliegue.md) documenta los valores de Vercel, Render y Google Cloud.
 

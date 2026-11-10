@@ -3,9 +3,9 @@ import styles from '../cotizacion.module.css';
 
 export function StepExtra({ values, setFieldValue }: PasoCotizacionProps) {
   return (
-    <div className={styles.textoOpciones}>
+    <div className={styles.respuestas}>
       {[true, false].map((valor) => (
-        <label key={String(valor)}>
+        <label key={String(valor)} className={styles.respuesta}>
           <input
             type="radio"
             name="tatuajes-previos"

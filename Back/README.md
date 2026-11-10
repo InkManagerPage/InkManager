@@ -12,7 +12,7 @@ npm run db:generate
 npm run dev
 ```
 
-El servidor escucha en el puerto `4000`, configurable mediante `PORT`. El frontend local usa `http://127.0.0.1:3001`.
+El servidor escucha en el puerto `4000`, configurable mediante `PORT`. El frontend local usa `http://127.0.0.1:3000`.
 
 | Comando               | Función                                                      |
 | --------------------- | ------------------------------------------------------------ |

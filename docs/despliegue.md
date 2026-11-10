@@ -32,10 +32,10 @@ En Google Auth Platform → Clientes → cliente de aplicación web, los URI de 
 
 ```text
 https://ink-manager-woad.vercel.app/api/auth/google/callback
-http://127.0.0.1:3001/api/auth/google/callback
+http://127.0.0.1:3000/api/auth/google/callback
 ```
 
-Para trabajar con `localhost`, agregar también `http://localhost:3001/api/auth/google/callback` y usar ese host en la configuración local. Google compara protocolo, dominio, puerto y ruta; una diferencia produce `redirect_uri_mismatch`. El origen JavaScript, si se configura, es solo el origen de la página y no reemplaza el URI de redirección.
+Para trabajar con `localhost`, agregar también `http://localhost:3000/api/auth/google/callback` y usar ese host en la configuración local. Google compara protocolo, dominio, puerto y ruta; una diferencia produce `redirect_uri_mismatch`. El origen JavaScript, si se configura, es solo el origen de la página y no reemplaza el URI de redirección.
 
 El callback pasa por Vercel y lo procesa Express, donde se validan state, nonce y PKCE. El backend crea la sesión propia y devuelve al frontend. No se transmiten tokens de sesión por query ni se guardan en localStorage.
 

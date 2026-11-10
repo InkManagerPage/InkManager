@@ -13,4 +13,4 @@ export const duracionSesionSegundos = 60 * 60;
 
 export const origenesPermitidos = process.env.FRONTEND_URL
   ? [new URL(process.env.FRONTEND_URL).origin]
-  : ["http://localhost:3001", "http://127.0.0.1:3001"];
+  : ["http://localhost:3000", "http://127.0.0.1:3000"];

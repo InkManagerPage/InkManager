@@ -100,7 +100,9 @@ export function MarcaInteractiva({
       <div
         ref={lienzo}
         className={styles.foto}
-        style={{ width: `min(100%, ${Math.round((480 * foto.ancho) / foto.alto)}px)` }}
+        style={{
+          width: `min(100%, calc(clamp(27rem, 70svh, 47.5rem) * ${foto.ancho / foto.alto}))`,
+        }}
         onPointerMove={(evento) => {
           const activo = gesto.current;
           if (!activo || activo.id !== evento.pointerId) return;

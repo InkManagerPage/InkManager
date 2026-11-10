@@ -98,7 +98,7 @@ export async function solicitarMercadoPago<T>(
 }
 
 export function urlFrontend(ruta: string): string {
-  const base = process.env.FRONTEND_URL ?? "http://127.0.0.1:3001";
+  const base = process.env.FRONTEND_URL ?? "http://127.0.0.1:3000";
   try {
     return new URL(ruta, base).toString();
   } catch {

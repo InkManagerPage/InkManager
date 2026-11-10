@@ -16,6 +16,9 @@ export function OpcionesConFoto({
   onSelect: (valor: string) => void;
   cuerpo?: boolean;
 }) {
+  const columnas = opciones.length <= 2 ? '48vw' : '32vw';
+  const anchoMovil = grupo === 'color' ? '94vw' : '46vw';
+
   return (
     <div
       className={styles.opciones}
@@ -32,7 +35,13 @@ export function OpcionesConFoto({
             onChange={() => onSelect(valor)}
           />
           <span className={styles.muestra} data-cuerpo={cuerpo || undefined}>
-            <Image src={foto} alt="" fill sizes="(max-width: 540px) 44vw, 280px" unoptimized />
+            <Image
+              src={foto}
+              alt=""
+              fill
+              sizes={`(max-width: 540px) ${anchoMovil}, ${columnas}`}
+              unoptimized
+            />
           </span>
           <span className={styles.etiqueta}>{etiqueta || valor}</span>
         </label>

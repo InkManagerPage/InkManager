@@ -730,7 +730,7 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
       });
       const url = new URL(
         "/suscripcion/cancelar",
-        process.env.FRONTEND_URL ?? "http://127.0.0.1:3001",
+        process.env.FRONTEND_URL ?? "http://127.0.0.1:3000",
       );
       url.searchParams.set("token", secreto);
       accion = { texto: "Cancelar suscripción", url: url.toString() };
