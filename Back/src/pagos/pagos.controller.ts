@@ -180,3 +180,32 @@ export async function recibirWebhookMercadoPago(
     next(error);
   }
 }
+
+export function obtenerPlanesDisponibles(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  res.set("Cache-Control", "public, max-age=3600");
+  try {
+    const planes = [
+      {
+        id: "INDIVIDUAL",
+        nombre: "Individual",
+        mensual: 12000,
+        anual: 120000,
+        moneda: "ARS" as const,
+      },
+      {
+        id: "ESTUDIO",
+        nombre: "Estudio",
+        mensual: 35000,
+        anual: 350000,
+        moneda: "ARS" as const,
+      },
+    ];
+    res.status(200).json({ plans: planes });
+  } catch (error) {
+    next(error);
+  }
+}
