@@ -117,6 +117,12 @@ function sumarUnAno(fecha: Date): Date {
   return fin;
 }
 
+function sumarUnMes(fecha: Date): Date {
+  const fin = new Date(fecha);
+  fin.setMonth(fin.getMonth() + 1);
+  return fin;
+}
+
 function nombreCiclo(ciclo: CicloSuscripcion): string {
   return ciclo === "ANUAL" ? "anual" : "mensual";
 }
@@ -1009,7 +1015,7 @@ async function procesarPagoAnual(dataId: string): Promise<void> {
 
     if (
       !suscripcion ||
-      suscripcion.ciclo !== CicloSuscripcion.ANUAL ||
+      (suscripcion.ciclo !== CicloSuscripcion.ANUAL && suscripcion.ciclo !== CicloSuscripcion.MENSUAL) ||
       (suscripcion.mpPaymentId && suscripcion.mpPaymentId !== paymentId) ||
       suscripcion.estado === EstadoSuscripcion.CANCELADA
     ) {
@@ -1017,13 +1023,14 @@ async function procesarPagoAnual(dataId: string): Promise<void> {
     }
 
     const monto = Number(pago.transaction_amount);
+    const precioEsperado = obtenerPrecio(suscripcion.plan, suscripcion.ciclo);
     if (
       pago.currency_id !== suscripcion.moneda ||
       !Number.isFinite(monto) ||
-      Math.round(monto * 100) !== Math.round(Number(suscripcion.monto) * 100)
+      Math.round(monto * 100) !== Math.round(precioEsperado * 100)
     ) {
       console.error(
-        "Mercado Pago notificó un pago anual con importe o moneda inválidos.",
+        `Mercado Pago notificó un pago con importe o moneda inválidos. Esperado: ${precioEsperado} ${suscripcion.moneda}, recibido: ${monto} ${pago.currency_id}`,
       );
       return;
     }
@@ -1072,16 +1079,24 @@ async function procesarPagoAnual(dataId: string): Promise<void> {
           ? EstadoSuscripcion.RECHAZADA
           : EstadoSuscripcion.PENDIENTE;
 
+    const periodoHasta =
+      estadoPago === EstadoPagoSuscripcion.APROBADO
+        ? suscripcion.ciclo === CicloSuscripcion.ANUAL
+          ? sumarUnAno(fechaAprobacion)
+          : sumarUnMes(fechaAprobacion)
+        : null;
+
     await tx.suscripcion.update({
       where: { id: suscripcion.id },
       data: {
         mpPaymentId: paymentId,
         estado: estadoSuscripcion,
-        periodoHasta:
-          estadoPago === EstadoPagoSuscripcion.APROBADO
-            ? sumarUnAno(fechaAprobacion)
+        periodoHasta,
+        proximoCobroAt:
+          estadoPago === EstadoPagoSuscripcion.APROBADO &&
+          suscripcion.ciclo === CicloSuscripcion.MENSUAL
+            ? sumarUnMes(fechaAprobacion)
             : null,
-        proximoCobroAt: null,
       },
     });
 
@@ -1107,16 +1122,22 @@ async function procesarPagoAnual(dataId: string): Promise<void> {
       !pagoGuardado.correoEnviadoAt
     ) {
       const aprobado = estadoPago === EstadoPagoSuscripcion.APROBADO;
+      const ciclo = suscripcion.ciclo === CicloSuscripcion.ANUAL ? "anual" : "mensual";
+      const periodoTexto = periodoHasta ? fechaLegible(periodoHasta) : "pronto";
+      const renovacion = suscripcion.ciclo === CicloSuscripcion.MENSUAL
+        ? "Se realizará un nuevo cobro automático cada mes."
+        : "No se realizará un nuevo cobro automático.";
+
       await enviarCorreo(
         correoCuenta({
           para: suscripcion.usuario.email,
           nombre: suscripcion.usuario.nombre,
           asunto: aprobado
-            ? "Tu pago anual de InkManager está confirmado"
-            : "No pudimos procesar tu pago anual de InkManager",
+            ? `Tu pago ${ciclo} de InkManager está confirmado`
+            : `No pudimos procesar tu pago ${ciclo} de InkManager`,
           mensaje: aprobado
-            ? `Confirmamos el pago anual del plan ${nombresPlanes[suscripcion.plan]} por ${formatoMoneda.format(monto)}. Tu acceso estará disponible hasta ${fechaLegible(sumarUnAno(fechaAprobacion))}. No se realizará un nuevo cobro automático.`
-            : `El pago anual del plan ${nombresPlanes[suscripcion.plan]} fue rechazado. Revisá el medio de pago e intentá nuevamente.`,
+            ? `Confirmamos el pago ${ciclo} del plan ${nombresPlanes[suscripcion.plan]} por ${formatoMoneda.format(monto)}. Tu acceso estará disponible hasta ${periodoTexto}. ${renovacion}`
+            : `El pago ${ciclo} del plan ${nombresPlanes[suscripcion.plan]} fue rechazado. Revisá el medio de pago e intentá nuevamente.`,
           clave: `pago-suscripcion:${paymentId}`,
         }),
       );
