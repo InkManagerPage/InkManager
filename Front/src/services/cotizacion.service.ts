@@ -1,6 +1,7 @@
 import type { CotizacionValues } from '@/types/cotizacion';
 import { apiFetch } from '@/lib/api-client';
 import { comprimirImagen } from '@/lib/comprimir-imagen';
+import { fotoFormulario } from '@/lib/fotos-formulario';
 import { exportarZonaMarcada, modeloCorporal } from '@/lib/ubicacion-tatuaje';
 
 const generos: Record<string, string> = { Mujer: 'FEMENINO', Hombre: 'MASCULINO' };
@@ -23,7 +24,7 @@ async function construirFormData(values: CotizacionValues) {
   data.set('notas', `Tatuajes previos: ${values.tieneTatuajesPrevios ? 'Sí' : 'No'}`);
   const modelo = modeloCorporal(values.generoLienzo, values.zonaCuerpo, values.zonaEspecifica);
   const [zonaMarcada, referencia] = await Promise.all([
-    exportarZonaMarcada(modelo.src, values.marcasZona),
+    exportarZonaMarcada(fotoFormulario(modelo.referencia, modelo.ancho), values.marcasZona),
     values.imagenReferencia ? comprimirImagen(values.imagenReferencia) : null,
   ]);
   data.set('imagenZonaMarcada', zonaMarcada);

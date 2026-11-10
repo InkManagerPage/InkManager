@@ -13,7 +13,7 @@ const vistas = {
 export function StepZonaGeneral({ values, setFieldValue }: PasoCotizacionProps) {
   const opciones = Object.entries(vistas).map(([valor, subzona]) => ({
     valor,
-    foto: modeloCorporal(values.generoLienzo, valor, subzona).src,
+    foto: modeloCorporal(values.generoLienzo, valor, subzona).referencia,
   }));
   return (
     <OpcionesConFoto

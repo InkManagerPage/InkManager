@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { MarcaZona } from '@/types/cotizacion';
+import { fotoFormulario } from '@/lib/fotos-formulario';
 import { bordeMarca, maximoMarcas, rellenoMarca } from '@/lib/ubicacion-tatuaje';
 import {
   editarMarca,
@@ -36,7 +37,7 @@ export function MarcaInteractiva({
   marcas,
   onChange,
 }: {
-  foto: { src: string; ancho: number; alto: number };
+  foto: { referencia: string; ancho: number; alto: number };
   zona: string;
   marcas: MarcaZona[];
   onChange: (marcas: MarcaZona[]) => void;
@@ -101,7 +102,7 @@ export function MarcaInteractiva({
         ref={lienzo}
         className={styles.foto}
         style={{
-          width: `min(100%, calc(clamp(27rem, 70svh, 47.5rem) * ${foto.ancho / foto.alto}))`,
+          width: `min(100%, calc(clamp(29rem, 62svh, 35rem) * ${foto.ancho / foto.alto}))`,
         }}
         onPointerMove={(evento) => {
           const activo = gesto.current;
@@ -139,10 +140,11 @@ export function MarcaInteractiva({
         onLostPointerCapture={(evento) => cancelar(evento.pointerId)}
       >
         <Image
-          src={foto.src}
+          src={fotoFormulario(foto.referencia, foto.ancho)}
           alt={`Foto de referencia de ${zona}`}
           width={foto.ancho}
           height={foto.alto}
+          crossOrigin="anonymous"
           unoptimized
         />
         <button

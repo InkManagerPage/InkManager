@@ -45,7 +45,7 @@ export function StepEstilo({ values, setFieldValue }: PasoCotizacionProps) {
     .filter((estilo) => Object.hasOwn(fotos, estilo))
     .map((estilo) => ({
       valor: estilo,
-      foto: `/images/cotizacion/estilos/${carpeta}/${fotos[estilo]}.jpg`,
+      foto: `cotizacion/estilos/${carpeta}/${fotos[estilo]}`,
     }));
   const otros = catalogo.filter((estilo) => !Object.hasOwn(fotos, estilo));
   const seleccionar = (estilo: string) => setFieldValue('estilo', estilo);

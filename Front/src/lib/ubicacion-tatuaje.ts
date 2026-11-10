@@ -65,7 +65,7 @@ export function modeloCorporal(genero: string, zona: string, subzona: string) {
   const medidas = archivo ? dimensiones[modelo][archivo] : undefined;
   if (!medidas) throw new Error('Volvé al paso anterior y elegí la zona del tatuaje.');
   return {
-    src: `/images/modelos-corporales/${modelo}/${archivo}-${modelo}.jpg`,
+    referencia: `modelos-corporales/${modelo}/${archivo}-${modelo}`,
     ancho: medidas[0],
     alto: medidas[1],
   };
@@ -73,6 +73,7 @@ export function modeloCorporal(genero: string, zona: string, subzona: string) {
 
 export async function exportarZonaMarcada(src: string, marcas: MarcaZona[]): Promise<File> {
   const imagen = new Image();
+  imagen.crossOrigin = 'anonymous';
   imagen.src = src;
   try {
     await imagen.decode();

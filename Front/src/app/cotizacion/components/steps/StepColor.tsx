@@ -2,8 +2,8 @@ import type { PasoCotizacionProps } from '@/types/cotizacion';
 import { OpcionesConFoto } from '../OpcionesConFoto';
 
 const opciones = [
-  { valor: 'color', etiqueta: 'A color', foto: '/images/cotizacion/color/color.jpeg' },
-  { valor: 'gris', etiqueta: 'Negro y gris', foto: '/images/cotizacion/color/blackGrey.jpeg' },
+  { valor: 'color', etiqueta: 'A color', foto: 'cotizacion/color/color' },
+  { valor: 'gris', etiqueta: 'Negro y gris', foto: 'cotizacion/color/blackGrey' },
 ];
 
 export function StepColor({ values, setFieldValue }: PasoCotizacionProps) {

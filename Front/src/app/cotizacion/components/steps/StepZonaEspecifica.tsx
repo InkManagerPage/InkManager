@@ -5,7 +5,7 @@ import { OpcionesConFoto } from '../OpcionesConFoto';
 export function StepZonaEspecifica({ values, setFieldValue }: PasoCotizacionProps) {
   const opciones = Object.keys(zonasCorporales[values.zonaCuerpo] ?? {}).map((valor) => ({
     valor,
-    foto: modeloCorporal(values.generoLienzo, values.zonaCuerpo, valor).src,
+    foto: modeloCorporal(values.generoLienzo, values.zonaCuerpo, valor).referencia,
   }));
   return (
     <OpcionesConFoto

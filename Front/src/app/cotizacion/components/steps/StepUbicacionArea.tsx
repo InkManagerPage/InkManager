@@ -6,7 +6,7 @@ export function StepUbicacionArea({ values, setFieldValue }: PasoCotizacionProps
   const foto = modeloCorporal(values.generoLienzo, values.zonaCuerpo, values.zonaEspecifica);
   return (
     <MarcaInteractiva
-      key={foto.src}
+      key={foto.referencia}
       foto={foto}
       zona={values.zonaEspecifica}
       marcas={values.marcasZona}
