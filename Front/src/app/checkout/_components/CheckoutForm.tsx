@@ -313,19 +313,33 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
         }),
       });
       const body: unknown = await response.json();
-      if (
-        typeof body !== 'object' ||
-        body === null ||
-        !('paymentProcessing' in body) ||
-        body.paymentProcessing !== true ||
-        !('subscriptionId' in body) ||
-        typeof body.subscriptionId !== 'string'
-      ) {
+      
+      // Validar respuesta según el tipo de ciclo
+      if (typeof body !== 'object' || body === null || !('subscriptionId' in body)) {
         throw new Error('No pudimos confirmar el estado de la suscripción.');
       }
-      router.replace(
-        `/checkout/pending?subscription_id=${encodeURIComponent(body.subscriptionId)}`,
-      );
+      
+      if (ciclo === 'MENSUAL') {
+        // Para MENSUAL: el backend siempre retorna Checkout Pro (checkoutUrl)
+        if (
+          !('checkoutUrl' in body) ||
+          !isMercadoPagoCheckoutUrl(body.checkoutUrl)
+        ) {
+          throw new Error('Mercado Pago no devolvió un enlace de pago válido.');
+        }
+        window.location.assign(body.checkoutUrl);
+      } else {
+        // Para ANUAL+TARJETA: retorna paymentProcessing
+        if (
+          !('paymentProcessing' in body) ||
+          body.paymentProcessing !== true
+        ) {
+          throw new Error('No pudimos procesar el pago.');
+        }
+        router.replace(
+          `/checkout/pending?subscription_id=${encodeURIComponent(body.subscriptionId as string)}`,
+        );
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No pudimos procesar el pago.');
     } finally {
