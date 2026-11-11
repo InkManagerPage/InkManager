@@ -97,7 +97,7 @@ El nombre personal admite solo letras y espacios entre 2 y 20 caracteres. `valid
 
 `AccountCard` presenta las páginas de cuenta. `RequestEmailForm` solicita enlaces, `ResetPasswordForm` permite definir la contraseña y `VerifyEmail` confirma el correo. Los enlaces llegan en el fragmento de la URL y se envían al backend al confirmar el formulario.
 
-Los estilos de cuenta están en `src/components/auth/auth.module.css`. El envío y la persistencia de tokens pertenecen al backend; el frontend no conoce las claves de Resend. El flujo se describe en [correos y recuperación](../../docs/correos-y-recuperacion.md).
+Los estilos de cuenta están en `src/components/auth/auth.module.css`. El envío y la persistencia de tokens de cuenta pertenecen al backend. El formulario público del pie de página usa una acción de servidor de Next.js y Resend, con `RESEND_API_KEY` y `MAIL_FROM` configurados en el entorno del frontend; la clave nunca se envía al navegador. El flujo de cuenta se describe en [correos y recuperación](../../docs/correos-y-recuperacion.md).
 
 ## Cliente HTTP y configuración
 
@@ -105,7 +105,7 @@ Los estilos de cuenta están en `src/components/auth/auth.module.css`. El envío
 
 El navegador consulta `/api` en el mismo dominio de la página. `next.config.ts` reenvía esas peticiones al backend, incluyendo las cookies y las respuestas de Google. Esto permite usar una cookie HttpOnly con `SameSite=Lax` aunque frontend y backend estén alojados en proveedores distintos.
 
-`Front/.env.local` configura `API_URL`, la URL absoluta del backend con `/api`. Las consultas desde el servidor también usan esa dirección. Se admite `NEXT_PUBLIC_API_URL` como alternativa para instalaciones anteriores, pero el navegador siempre usa `/api`. La configuración de producción está en [Despliegue](../../docs/despliegue.md).
+`Front/.env.local` configura `API_URL`, la URL absoluta del backend con `/api`, además de `RESEND_API_KEY` y `MAIL_FROM` para la acción de contacto. Las consultas desde el servidor también usan esa dirección. Se admite `NEXT_PUBLIC_API_URL` como alternativa para instalaciones anteriores, pero el navegador siempre usa `/api`. La configuración de producción está en [Despliegue](../../docs/despliegue.md).
 
 ## Panel del estudio
 
