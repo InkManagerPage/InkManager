@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { configuracionCorreo } from "../config/correos.js";
+import { enviarPorBrevo } from "./brevo.js";
 import type { Correo } from "./correos.entity.js";
 import { ErrorCorreo } from "./correos.errors.js";
 
@@ -19,6 +20,7 @@ export async function enviarCorreo(correo: Correo): Promise<void> {
     );
     return;
   }
+  if (config.transporte === "brevo") return enviarPorBrevo(correo, config);
   let respuesta: Response;
   try {
     respuesta = await fetch("https://api.resend.com/emails", {

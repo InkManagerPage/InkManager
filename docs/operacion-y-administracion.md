@@ -69,7 +69,7 @@ El webhook valida la firma y comprueba el número y su WABA antes de guardar un 
 
 El perfil y el plazo del estudio, los contactos, las reglas de recordatorios y las notificaciones se guardan en PostgreSQL. El correo del contacto identifica su ficha. Las excepciones se pueden editar por contacto o turno, con prioridad para la del turno.
 
-Para activar el programador, configurar `RECORDATORIOS_AUTOMATICOS=1` en el backend. Usar `MAIL_TRANSPORT=preview` para ensayar en local. Para entrega real, usar `MAIL_TRANSPORT=resend`, `RESEND_API_KEY` y un `MAIL_FROM` autorizado. Los grupos de correos se habilitan desde el panel de cada negocio. El mismo proceso revisa cierres de propuestas y avisos de renovación. El servidor debe permanecer en ejecución para procesar las tareas.
+Para activar el programador, configurar `RECORDATORIOS_AUTOMATICOS=1` en el backend. Usar `MAIL_TRANSPORT=preview` para ensayar en local. Para entrega real, configurar [Resend o Brevo](correos-y-recuperacion.md#transporte-y-configuración). Los grupos de correos se habilitan desde el panel de cada negocio. El mismo proceso revisa cierres de propuestas y avisos de renovación. El servidor debe permanecer en ejecución para procesar las tareas.
 
 La bandeja de avisos registra mensajes nuevos, propuestas, asignaciones y cambios de turno. Las notificaciones de cuenta, registro y recuperación siguen su propio flujo de correo.
 

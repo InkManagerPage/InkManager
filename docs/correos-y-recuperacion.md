@@ -14,13 +14,15 @@ El login no envía correos. Una cuenta de Google conserva ese método de acceso 
 
 ## Transporte y configuración
 
-El backend envía los correos mediante la [API de Resend](https://resend.com/docs/api-reference/emails/send-email). Cada envío utiliza una clave de idempotencia y un tiempo de espera máximo de ocho segundos.
+El backend envía los correos mediante la [API de Resend](https://resend.com/docs/api-reference/emails/send-email) o la [API de Brevo](https://developers.brevo.com/reference/send-transac-email). Cada envío utiliza una clave de idempotencia y un tiempo de espera máximo de ocho segundos.
 
 | Variable de `Back/.env` | Uso                                                                   |
 | ----------------------- | --------------------------------------------------------------------- |
-| `MAIL_TRANSPORT`        | `resend` envía por Internet; `preview` guarda una vista previa local. |
+| `MAIL_TRANSPORT`        | `resend` y `brevo` envían por Internet. `preview` guarda una vista previa local. |
 | `RESEND_API_KEY`        | Credencial privada del proveedor, requerida para `resend`.            |
-| `MAIL_FROM`             | Nombre y dirección del remitente.                                     |
+| `MAIL_FROM`             | Nombre y dirección del remitente para Resend.                          |
+| `BREVO_API_KEY`         | Credencial privada de la API, requerida para `brevo`.                  |
+| `BREVO_SENDER_EMAIL`    | Dirección verificada en Brevo. Se usa también para recibir respuestas. |
 | `FRONTEND_URL`          | Origen de las páginas incluidas en los enlaces.                       |
 
 Ejemplo de remitente con dominio verificado:
@@ -30,11 +32,21 @@ MAIL_TRANSPORT=resend
 MAIL_FROM="InkManager <cuentas@tu-dominio-verificado.com>"
 ```
 
-El remitente de prueba `InkManager <onboarding@resend.dev>` solo admite envíos a la dirección asociada a la cuenta de Resend. Los envíos a otras personas requieren un dominio propio verificado. Las credenciales quedan en el backend y los archivos `.env` están excluidos de Git.
+El remitente de prueba `InkManager <onboarding@resend.dev>` solo admite envíos a la dirección asociada a la cuenta de Resend. En Resend, los envíos a otras personas requieren un dominio verificado. Las credenciales quedan en el backend y los archivos `.env` están excluidos de Git.
+
+Para usar Brevo, verificá el [remitente](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email), habilitá los envíos transaccionales y generá una [clave de API](https://help.brevo.com/hc/en-us/articles/40159485019794-Create-and-manage-your-API-keys) con permiso de envío transaccional. En Render, cargá estas variables en el servicio del backend.
+
+```dotenv
+MAIL_TRANSPORT=brevo
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
+```
+
+`BREVO_SENDER_EMAIL` contiene solo la dirección verificada. Si se verifica un Gmail como remitente, Brevo puede mostrar una [dirección de su propio dominio](https://help.brevo.com/hc/en-us/articles/14925263522578-Comply-with-Gmail-Yahoo-and-Microsoft-s-requirements-for-email-senders) en los correos transaccionales. Las respuestas siguen llegando al correo configurado.
 
 La consola indica el transporte activo al iniciar el servidor. En desarrollo, nodemon observa `src/` y `.env`; los cambios reinician el proceso y recargan la configuración. Los errores de correo muestran mensajes propios sin imprimir claves, destinatarios ni respuestas privadas del proveedor.
 
-En desarrollo el transporte predeterminado es `preview`. Los archivos JSON de `Back/.mail-preview/` contienen texto, HTML y enlace del correo; son privados, están ignorados por Git y no se exponen por HTTP. No se reenvían automáticamente al seleccionar Resend. En producción preview está deshabilitado y la recuperación responde `503` si falta la configuración de correo.
+En desarrollo el transporte predeterminado es `preview`. Los archivos JSON de `Back/.mail-preview/` contienen texto, HTML y enlace del correo. Son privados, están ignorados por Git y no se exponen por HTTP. En producción preview está deshabilitado y la recuperación responde `503` si falta la configuración de correo.
 
 ## Enlaces y persistencia
 
