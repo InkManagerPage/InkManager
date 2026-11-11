@@ -231,6 +231,7 @@ export async function responderInvitacion(
         estadoEnEstudio: "ACTIVO",
         versionEquipo: { increment: 1 },
       },
+      select: { id: true },
     });
     await tx.invitacionEquipo.update({
       where: { id },

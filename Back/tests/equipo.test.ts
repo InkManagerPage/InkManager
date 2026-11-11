@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { test } from "node:test";
+import type { Prisma } from "@prisma/client";
 import {
   validarCambioEquipo,
   validarIngreso,
@@ -123,4 +125,71 @@ test("invitaciones: muestra vencimientos y espera un minuto antes de reenviar", 
   );
   assert.equal(vencida.estado, "VENCIDA");
   assert.equal(vencida.puedeReenviar, false);
+});
+
+test("aceptar una invitación actualiza la membresía sin pedir columnas del perfil completo", async (t) => {
+  process.env.JWT_SECRET ??= "solo-pruebas-equipo-inkmanager-32-bytes";
+  const { prisma } = await import("../src/config/prisma.js");
+  const { responderInvitacion } =
+    await import("../src/invitaciones-equipo/invitaciones-equipo.service.js");
+  const id = randomUUID();
+  const artista = { ...cuenta };
+  const pendiente = {
+    ...invitacion,
+    id,
+    expiraAt: new Date(Date.now() + 60_000),
+  };
+  const estudio = {
+    id: pendiente.estudioId,
+    nombre: "Taller",
+    zonaHoraria: "UTC",
+  };
+  let actualizaciones = 0;
+  const tx = {
+    $queryRaw: async () => [],
+    cita: { count: async () => 0 },
+    solicitud: { count: async () => 0 },
+    estudio: { findFirst: async () => estudio },
+    usuario: {
+      findUnique: async () => artista,
+      update: async ({ where, data, select }: Prisma.UsuarioUpdateArgs) => {
+        assert.deepEqual(where, { id: artista.id });
+        assert.deepEqual(select, { id: true });
+        assert.deepEqual(data, {
+          estudioId: estudio.id,
+          estadoEnEstudio: "ACTIVO",
+          versionEquipo: { increment: 1 },
+        });
+        artista.estudioId = estudio.id;
+        actualizaciones++;
+        return { id: artista.id };
+      },
+    },
+    invitacionEquipo: {
+      findFirst: async () => pendiente,
+      update: async ({ data }: Prisma.InvitacionEquipoUpdateArgs) =>
+        Object.assign(pendiente, data),
+    },
+  };
+  const transaccion = prisma.$transaction;
+  t.after(() => {
+    prisma.$transaction = transaccion;
+  });
+  Object.assign(prisma, {
+    $transaction: (operacion: (cliente: typeof tx) => Promise<unknown>) =>
+      operacion(tx),
+  });
+
+  const accion = { accion: "ACEPTAR", version: 0 };
+  assert.equal(
+    (await responderInvitacion(artista.id, id, accion)).message,
+    "Ya formás parte de Taller.",
+  );
+  assert.equal(pendiente.estado, "ACEPTADA");
+  assert.equal(pendiente.aceptadaPorId, artista.id);
+  assert.equal(
+    (await responderInvitacion(artista.id, id, accion)).message,
+    "Ya formás parte del estudio.",
+  );
+  assert.equal(actualizaciones, 1);
 });

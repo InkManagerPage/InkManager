@@ -44,6 +44,7 @@ export async function cambiarIntegrante(
           ? { estudioId: null, zonaHoraria: estudio.zonaHoraria }
           : {}),
       },
+      select: { id: true },
     });
     return {
       message:
