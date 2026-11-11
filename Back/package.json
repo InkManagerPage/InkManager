@@ -26,7 +26,8 @@
     "db:whatsapp": "prisma db execute --file prisma/changes/20261106_whatsapp_estudios.sql --schema prisma/schema.prisma",
     "db:mensajes": "prisma db execute --file prisma/changes/20261106_mensajes_canales.sql --schema prisma/schema.prisma",
     "db:instagram": "prisma db execute --file prisma/changes/20261109_instagram_login_unificado.sql --schema prisma/schema.prisma",
-    "db:piloto-instagram": "prisma db execute --file prisma/changes/20261110_piloto_instagram.sql --schema prisma/schema.prisma"
+    "db:piloto-instagram": "prisma db execute --file prisma/changes/20261110_piloto_instagram.sql --schema prisma/schema.prisma",
+    "db:asistente": "prisma db execute --file prisma/changes/20261111_configuracion_asistente.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

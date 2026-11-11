@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ConversacionCanal, EstadoMensajeCanal } from "@prisma/client";
+import { leerConfiguracionAsistente } from "../asistente/asistente.repository.js";
+import { generarRespuestaAsistente, pruebaAsistenteDisponible } from "../asistente/respuesta.js";
 import { origenesPermitidos } from "../config/auth.js";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
@@ -11,12 +13,17 @@ import { estudioPiloto } from "./instagram-flujo.repository.js";
 
 type Enviar = (hilo: ConversacionCanal, clave: string, texto: string) => Promise<EstadoMensajeCanal>;
 const dia = 24 * 60 * 60 * 1000;
-const ayuda = "Escribí PRESUPUESTO para ver tu consulta o HUMANO para hablar con el estudio.";
+const ayuda = () => pruebaAsistenteDisponible()
+  ? "Podés consultar por acá o pedir hablar con el estudio."
+  : "Escribí PRESUPUESTO para ver tu consulta o HUMANO para hablar con el estudio.";
+const pedirTurno = () => pruebaAsistenteDisponible()
+  ? "Podés pedir por acá que el estudio coordine una fecha."
+  : "Escribí TURNO para pedir que el estudio coordine una fecha.";
 
 export function interpretarMensajeBot(texto: string) {
   const mensaje = texto.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase()
     .replace(/^[¿¡]+|[!?.]+$/g, "").trim();
-  const opcion = /^elegir ([a-f0-9]{8})$/.exec(mensaje);
+  const opcion = /^(?:elegir )?([a-f0-9]{8})$/.exec(mensaje);
   if (opcion) return { tipo: "ELEGIR", codigo: opcion[1]! } as const;
   if (/^(humano|asesor|hablar con (el )?estudio|hablar con (una )?persona)$/.test(mensaje))
     return { tipo: "HUMANO" } as const;
@@ -37,24 +44,24 @@ function opcionesDe(solicitud: SolicitudCompleta) {
 
 function mostrarOpciones(solicitud: SolicitudCompleta) {
   const opciones = opcionesDe(solicitud);
-  if (!opciones.length) return "Las propuestas ya no están disponibles. Escribí HUMANO para que te ayude el estudio.";
+  if (!opciones.length) return "Las propuestas ya no están disponibles. " + ayuda();
   const formato = new Intl.NumberFormat("es-AR", {
     style: "currency", currency: solicitud.moneda || "ARS", currencyDisplay: "code",
   });
   const lista = opciones.slice(0, 8).map(c =>
     `${c.nombre} · ${formato.format(Number(c.monto))} · ${c.codigo.toUpperCase()}`).join("\n");
   return "Estas son las propuestas vigentes:\n" + lista +
-    "\nPara confirmar una, escribí ELEGIR seguido del código. Para hablar con el estudio, escribí HUMANO." +
+    "\nPara confirmar una propuesta, respondé con su código. " + ayuda() +
     (opciones.length > 8 ? "\nEl estudio puede mostrarte las demás opciones." : "");
 }
 
 function estadoSolicitud(solicitud: SolicitudCompleta) {
   if (solicitud.estado === "ELECCION_CLIENTE") return mostrarOpciones(solicitud);
   if (solicitud.estado === "ASIGNADA")
-    return "Tu consulta ya tiene artista asignado. Escribí TURNO para pedir que el estudio coordine una fecha.";
+    return "Tu consulta ya tiene artista asignado. " + pedirTurno();
   if (solicitud.estado === "POR_ASIGNAR")
-    return "El estudio está revisando quién puede tomar tu consulta. " + ayuda;
-  return "Ya recibimos tu consulta. El estudio está preparando las propuestas. " + ayuda;
+    return "El estudio está revisando quién puede tomar tu consulta. " + ayuda();
+  return "Ya recibimos tu consulta. El estudio está preparando las propuestas. " + ayuda();
 }
 
 async function iniciarFlujo(hilo: ConversacionCanal) {
@@ -88,12 +95,12 @@ async function elegirPropuesta(hilo: ConversacionCanal, codigo: string, titularI
     });
     const id = flujo?.solicitudId;
     if (!id || flujo.pausadoAt || flujo.conversacion.solicitudId !== id)
-      return "Para elegir una propuesta, necesitás una consulta activa en este chat. " + ayuda;
+      return "Para elegir una propuesta, necesitás una consulta activa en este chat. " + ayuda();
     await tx.$queryRaw`SELECT "id" FROM "Solicitud" WHERE "id" = ${id} FOR UPDATE`;
     const solicitud = await tx.solicitud.findFirst({
       where: { id, estudioId: hilo.estudioId, canal: "INSTAGRAM" }, include: detalleSolicitud,
     });
-    if (!solicitud) return "No encontramos la consulta de este chat. " + ayuda;
+    if (!solicitud) return "No encontramos la consulta de este chat. " + ayuda();
     if (solicitud.estado !== "ELECCION_CLIENTE") return estadoSolicitud(solicitud);
     const opciones = opcionesDe(solicitud).filter(c => c.codigo === codigo);
     if (opciones.length !== 1) return "Ese código ya no está disponible.\n" + mostrarOpciones(solicitud);
@@ -104,7 +111,7 @@ async function elegirPropuesta(hilo: ConversacionCanal, codigo: string, titularI
       select: { id: true },
     });
     if (!artista || (opcion.validaHasta && opcion.validaHasta < new Date()))
-      return "Esa propuesta ya no está disponible. Escribí ESTADO para consultar las opciones.";
+      return "Esa propuesta ya no está disponible.\n" + mostrarOpciones(solicitud);
     const actualizada = await tx.solicitud.update({
       where: { id }, data: { artistaAsignadoId: artista.id, estado: "ASIGNADA",
         asignadaPor: "CLIENTE", version: { increment: 1 } },
@@ -114,27 +121,56 @@ async function elegirPropuesta(hilo: ConversacionCanal, codigo: string, titularI
     const aviso = { clave: "eleccion:" + id, titulo: "El cliente eligió una propuesta", detalle: solicitud.titulo };
     await registrarAviso(tx, { ...aviso, usuarioId: titularId, destino: "/estudio/consultas?consulta=" + id });
     await registrarAviso(tx, { ...aviso, usuarioId: artista.id, destino: "/artista/consultas?consulta=" + id });
-    return `Quedó confirmada tu elección de ${opcion.nombre}. Escribí TURNO para pedir que el estudio coordine una fecha.`;
+    return `Quedó confirmada tu elección de ${opcion.nombre}. ${pedirTurno()}`;
   });
 }
 
 export async function procesarMensajeBot(
   id: string, titularId: string, proveedorId: string, texto: string, enviar: Enviar,
 ) {
-  const comando = interpretarMensajeBot(texto);
-  if (!comando) return;
+  const mensaje = texto.trim();
+  if (!mensaje) return;
+  const comando = interpretarMensajeBot(mensaje);
+  const conIa = pruebaAsistenteDisponible();
+  if (!conIa && !comando) return;
   const clave = `bot:respuesta:${id}:${proveedorId}`;
   if (await prisma.mensajeCanal.findUnique({ where: { claveEnvio: clave }, select: { id: true } })) return;
   const hilo = await prisma.conversacionCanal.findUnique({
     where: { id }, include: { estudio: { select: { slug: true } }, flujoInstagram: true },
   });
-  if (!hilo?.estudio || hilo.estudio.slug !== estudioPiloto() ||
+  if (!hilo?.estudioId || hilo.canal !== "INSTAGRAM" || !hilo.estudio || hilo.estudio.slug !== estudioPiloto() ||
     Date.now() - hilo.ultimaEntradaAt.getTime() >= ventanaRespuesta) return;
 
   let flujo = hilo.flujoInstagram;
-  if (comando.tipo === "HUMANO" || comando.tipo === "TURNO") {
+  if (flujo?.pausadoAt && comando?.tipo !== "REANUDAR") return;
+  let decision;
+  if (conIa && comando?.tipo !== "ELEGIR" && comando?.tipo !== "REANUDAR") {
+    try {
+      const configuracion = await leerConfiguracionAsistente({ estudioId: hilo.estudioId });
+      decision = await generarRespuestaAsistente(configuracion, mensaje.slice(0, 1000));
+    } catch {
+      console.error("No pudimos generar la respuesta automática de Instagram.");
+      return;
+    }
+    const sigueVigente = await prisma.conversacionCanal.findFirst({
+      where: {
+        id,
+        estudioId: hilo.estudioId,
+        ultimaEntradaAt: hilo.ultimaEntradaAt,
+        OR: [{ flujoInstagram: null }, { flujoInstagram: { pausadoAt: null } }],
+      },
+      select: { id: true },
+    });
+    if (!sigueVigente) return;
+  }
+  if (decision?.accion === "RESPONDER") {
+    await enviar(hilo, clave, decision.texto);
+    return;
+  }
+  const accion = decision?.accion ?? comando?.tipo;
+  if (accion === "DERIVAR" || accion === "HUMANO" || accion === "TURNO") {
     const ahora = new Date();
-    const pedirTurno = comando.tipo === "TURNO";
+    const quiereTurno = accion === "TURNO";
     await prisma.$transaction(async tx => {
       await tx.flujoInstagram.upsert({
         where: { conversacionId: id },
@@ -142,21 +178,20 @@ export async function procesarMensajeBot(
         update: { pausadoAt: ahora },
       });
       await registrarAviso(tx, { usuarioId: titularId, clave,
-        titulo: pedirTurno ? "Solicitud de turno por Instagram" : "Un cliente pide hablar con el estudio",
+        titulo: quiereTurno ? "Solicitud de turno por Instagram" : "Un cliente pide hablar con el estudio",
         detalle: hilo.nombre, destino: "/estudio/mensajes?conversacion=" + id });
     });
-    await enviar(hilo, clave, pedirTurno
+    await enviar(hilo, clave, quiereTurno
       ? "Le avisé al estudio para que coordine tu turno por acá."
       : "Le avisé al estudio. Una persona va a seguir la conversación por acá.");
     return;
   }
   if (flujo?.pausadoAt) {
-    if (comando.tipo !== "REANUDAR") return;
     flujo = await prisma.flujoInstagram.update({
       where: { conversacionId: id }, data: { pausadoAt: null },
     });
   }
-  if (comando.tipo === "ELEGIR") {
+  if (comando?.tipo === "ELEGIR") {
     await enviar(hilo, clave, await elegirPropuesta(hilo, comando.codigo, titularId));
     return;
   }
@@ -171,14 +206,21 @@ export async function procesarMensajeBot(
       return;
     }
   }
+  if (accion === "ESTADO") {
+    await enviar(hilo, clave, "No encontré una consulta activa asociada a este chat. Podés pedirme el formulario para iniciar una.");
+    return;
+  }
   const nuevo = await iniciarFlujo(hilo);
   if (!nuevo) {
-    await enviar(hilo, clave, "Ya hay una consulta vinculada a este chat. Escribí HUMANO para hablar con el estudio.");
+    await enviar(hilo, clave, "Ya hay una consulta vinculada a este chat. " + ayuda());
     return;
   }
   const url = new URL("/cotizacion/" + encodeURIComponent(hilo.estudio.slug), origenesPermitidos[0]);
   url.searchParams.set("ig", nuevo.token);
-  await enviar(hilo, clave, `¡Hola! Completá este formulario para pedir un presupuesto: ${url.href}\nDespués seguimos por acá. Si querés hablar con el estudio, escribí HUMANO.`);
+  const introduccion = decision?.accion === "FORMULARIO"
+    ? decision.texto
+    : "Completá este formulario para pedir un presupuesto.";
+  await enviar(hilo, clave, `${introduccion}\n${url.href}\nDespués seguimos por acá.`);
 }
 
 export function iniciarBotInstagram(enviar: Enviar) {
@@ -219,7 +261,7 @@ export async function notificarConsultas(enviar: Enviar) {
     try {
       if (!f.recepcionAt) {
         await enviar(f.conversacion, `bot:recibida:${s.id}`,
-          "Ya recibimos tu idea para el tatuaje. Te vamos a escribir por acá cuando haya novedades. " + ayuda);
+          "Ya recibimos tu idea para el tatuaje. Te vamos a escribir por acá cuando haya novedades. " + ayuda());
         await prisma.flujoInstagram.updateMany({ where, data: { recepcionAt: ahora } });
       }
       if ((s.estado === "ELECCION_CLIENTE" || s.estado === "ASIGNADA") && f.versionAvisada !== s.version) {

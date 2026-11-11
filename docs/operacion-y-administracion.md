@@ -30,11 +30,11 @@ Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servi
 
 ### Bot de Instagram para consultas
 
-Aplicar `npm run db:piloto-instagram` y regenerar Prisma Client. Configurar `INSTAGRAM_BOT_ESTUDIO_SLUG` con el identificador del estudio que participa y `FRONTEND_URL` con la URL pública. El estudio debe tener Instagram conectado. El bot responde únicamente a conversaciones entrantes de ese estudio. El cierre por plazo usa el programador de recordatorios o la actualización de la bandeja de consultas.
+Aplicar `npm run db:piloto-instagram` y `npm run db:asistente` y regenerar Prisma Client. Configurar `INSTAGRAM_BOT_ESTUDIO_SLUG` con el slug del estudio que participa, `FRONTEND_URL` con la URL pública y `GROQ_API_KEY` en el backend. El modelo predeterminado es `openai/gpt-oss-20b`. El estudio debe tener Instagram conectado con una autorización vigente. El bot responde únicamente a conversaciones entrantes de ese estudio. El cierre por plazo usa el programador de recordatorios o la actualización de la bandeja de consultas.
 
-- **HOLA** o **PRESUPUESTO** abre el recorrido. El bot comparte un formulario por conversación que vence a las 24 horas y admite un único envío.
-- Al recibir el formulario, la consulta queda vinculada al DM. El proceso de backend envía la confirmación y, al cerrar la recepción, comparte las propuestas vigentes si hay varias. El cliente responde **ELEGIR** seguido del código y el backend vuelve a comprobar el estado y la vigencia antes de asignar.
-- **HUMANO** y **TURNO** avisan al titular y pausan el bot en ese hilo. El equipo coordina la fecha y la seña. **BOT** reanuda la asistencia automática.
+- En **Configuración → Asistente**, el titular puede importar, editar y descargar su JSON y simular mensajes. Con Groq configurado, el bot interpreta las consultas en lenguaje natural y responde con los servicios, políticas y preguntas frecuentes del negocio. Al pedir presupuesto, comparte un formulario por conversación que vence a las 24 horas y admite un único envío. Sin clave de Groq, el estudio piloto conserva los comandos anteriores.
+- Al recibir el formulario, la consulta queda vinculada al DM. El backend confirma la recepción y comparte las propuestas vigentes si hay varias. El cliente responde con el código de la propuesta y el backend comprueba el estado y la vigencia antes de asignar.
+- Cuando el cliente pide un turno o hablar con una persona, el bot avisa al titular y se pausa en ese hilo. El equipo coordina la fecha y la seña. **BOT** reanuda la asistencia automática.
 - Las respuestas automáticas se envían dentro de las 24 horas desde el último mensaje del cliente. Al recibir otro DM se abre una ventana nueva para el seguimiento. Los estados de envío se ven en la bandeja. Durante el piloto las consultas web quedan a cargo del equipo.
 
 ## WhatsApp

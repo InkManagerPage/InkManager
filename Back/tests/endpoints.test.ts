@@ -23,6 +23,7 @@ const { limitarLogin } = await import("../src/middlewares/limitar-login.js");
 const { requerirRoles } = await import("../src/middlewares/roles.js");
 const { Rol } = await import("../src/types/roles.js");
 const { crearToken } = await import("../src/auth/auth.tokens.js");
+const { configuracionInicial } = await import("../src/asistente/configuracion.js");
 
 type Row = Record<string, unknown>;
 type Args = { where?: Row; data?: Row; select?: Record<string, boolean> };
@@ -288,6 +289,86 @@ after(async () => {
 test("health y reseñas públicas", async () => {
   assert.equal((await request("/health")).status, 200);
   assert.deepEqual(await (await request("/resenas")).json(), []);
+});
+
+test("la prueba del asistente usa el negocio de la sesión y devuelve su formulario público", async (t) => {
+  const ruta = "/asistente/prueba";
+  const estudio = { id: "estudio-qa", propietarioId: "titular-qa", slug: "estudio-qa" };
+  function cookiePara(id: string, rol: string, perteneceAlEstudio: boolean) {
+    const sesionId = randomUUID();
+    users.set(id, {
+      id,
+      rol,
+      email: id + "@example.test",
+      estudioId: perteneceAlEstudio ? estudio.id : null,
+      estudio: perteneceAlEstudio ? estudio : null,
+    });
+    sessions.set(sesionId, {
+      id: sesionId,
+      usuarioId: id,
+      revocadaAt: null,
+      expiraAt: new Date(Date.now() + 60000),
+    });
+    return "inkmanager_session=" + crearToken(id, sesionId);
+  }
+  const titular = cookiePara(estudio.propietarioId, "ESTUDIO_ADMIN", true);
+  const residente = cookiePara("integrante-qa", "ARTISTA", true);
+  const independiente = cookiePara("independiente-qa", "ARTISTA", false);
+  const sinPlan = cookiePara("sin-plan-qa", "ARTISTA", false);
+  const configuraciones = new Map([
+    [estudio.id, { ...configuracionInicial, tono: "Estudio" }],
+    ["independiente-qa", { ...configuracionInicial, tono: "Independiente" }],
+  ]);
+  simulate(t, prisma.configuracionAsistente, "findUnique", async ({ where }: Args) => {
+    return { datos: configuraciones.get(String(where?.estudioId ?? where?.artistaId)) };
+  });
+  simulate(t, prisma.suscripcion, "findFirst", async ({ where }: Args) =>
+    where?.usuarioId === "independiente-qa" ? { id: "plan" } : null,
+  );
+  simulate(t, prisma.estudio, "findUnique", async ({ where }: Args) =>
+    where?.id === estudio.id ? estudio : null,
+  );
+  simulate(t, prisma.usuario, "findFirst", async ({ where }: Args) =>
+    where?.id === "independiente-qa" ? { id: where.id, estudio: null } : null,
+  );
+
+  const claveAnterior = process.env.GROQ_API_KEY;
+  process.env.GROQ_API_KEY = "solo-pruebas";
+  t.after(() => {
+    if (claveAnterior === undefined) delete process.env.GROQ_API_KEY;
+    else process.env.GROQ_API_KEY = claveAnterior;
+  });
+  const fetchReal = globalThis.fetch;
+  const tonos: string[] = [];
+  simulate(t, globalThis, "fetch", async (url: string, options: RequestInit) => {
+    if (url !== "https://api.groq.com/openai/v1/chat/completions") return fetchReal(url, options);
+    const { messages } = JSON.parse(String(options.body));
+    tonos.push(JSON.parse(messages[1].content).configuracion.tono);
+    return Response.json({
+      choices: [{
+        finish_reason: "stop",
+        message: {
+          content: JSON.stringify({ accion: "FORMULARIO", texto: "Contame tu idea." }),
+        },
+      }],
+    });
+  });
+
+  const datos = { mensaje: "¿Cómo les consulto por una pieza nueva?", estudioId: "otro-estudio" };
+  assert.equal((await post(ruta, datos)).status, 401);
+  assert.equal((await post(ruta, datos, residente)).status, 403);
+  assert.equal((await post(ruta, datos, sinPlan)).status, 403);
+  assert.equal((await post(ruta, { mensaje: "  " }, titular)).status, 400);
+  for (const [cookie, enlaceFormulario] of [
+    [titular, "/cotizacion/estudio-qa"],
+    [independiente, "/cotizacion/artista/independiente-qa"],
+  ] as const) {
+    const respuesta = await post(ruta, datos, cookie);
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await respuesta.json(), { accion: "FORMULARIO", texto: "Contame tu idea.", enlaceFormulario });
+  }
+  assert.deepEqual(tonos, ["Estudio", "Independiente"]);
 });
 test("crear suscripción requiere sesión y un rol profesional", async () => {
   assert.equal(

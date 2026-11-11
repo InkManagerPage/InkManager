@@ -27,6 +27,7 @@ import { webhookWhatsApp } from "./whatsapp/whatsapp.routes.js";
 import { webhookInstagram } from "./instagram/instagram.routes.js";
 import { mensajesUnificadosRouter } from "./mensajes/mensajes.routes.js";
 import { operacionRouter } from "./operacion/operacion.routes.js";
+import { asistenteRouter } from "./asistente/asistente.routes.js";
 
 export const app = express();
 
@@ -59,6 +60,7 @@ app.use("/api/webhooks", webhooksMercadoPagoRouter);
 app.use("/api/admin", administracionRouter);
 app.use("/api/mensajes", mensajesUnificadosRouter);
 app.use("/api/operacion", operacionRouter);
+app.use("/api/asistente", asistenteRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "La ruta solicitada no existe." });

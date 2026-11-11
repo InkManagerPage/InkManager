@@ -15,6 +15,14 @@ export function ArtistSettings() {
     <>
       <PageHeader titulo="Configuración" />
       {datos?.enlace && !usuario?.estudioId && <CuentasAsociadas />}
+      {datos?.enlace && !usuario?.estudioId && (
+        <section className={styles.settingsSection}>
+          <h2>Asistente</h2>
+          <Link href="/artista/configuracion/asistente" className={styles.textButton}>
+            Configurar asistente
+          </Link>
+        </section>
+      )}
       {datos?.enlace && (
         <EnlaceFormulario enlace={datos.enlace} estudio={Boolean(usuario?.estudioId)} />
       )}
