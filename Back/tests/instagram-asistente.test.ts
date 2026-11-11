@@ -8,7 +8,7 @@ const { configuracionInicial } =
 const { procesarMensajeBot } =
   await import("../src/instagram/instagram-bot.service.js");
 
-test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", async (t) => {
+test("cada estudio usa su configuración, comparte su formulario y pausa al derivar", async (t) => {
   function reemplazar(objeto: object, metodo: string, valor: unknown) {
     const delegado = objeto as Record<string, unknown>;
     const anterior = delegado[metodo];
@@ -18,7 +18,6 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
     });
   }
   const variables = {
-    INSTAGRAM_BOT_ESTUDIO_SLUG: "estudio-qa",
     GROQ_API_KEY: "solo-pruebas",
   };
   for (const [clave, valor] of Object.entries(variables)) {
@@ -33,7 +32,7 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
   const hilo = {
     id: "hilo",
     estudioId: "estudio",
-    estudio: { slug: "estudio-qa" },
+    estudio: { slug: "estudio-qa", propietarioId: "titular" },
     canal: "INSTAGRAM",
     nombre: "Contacto de prueba",
     solicitudId: null,
@@ -41,6 +40,7 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
     ultimaEntradaAt: new Date(),
   };
   const configuracion = { ...configuracionInicial, tono: "Informal y breve" };
+  const otraConfiguracion = { ...configuracionInicial, tono: "Formal" };
   reemplazar(prisma.mensajeCanal, "findUnique", async () => null);
   reemplazar(prisma.conversacionCanal, "findUnique", async () => hilo);
   reemplazar(prisma.conversacionCanal, "findFirst", async () => hilo);
@@ -48,8 +48,8 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
     prisma.configuracionAsistente,
     "findUnique",
     async (params: { where: { estudioId: string } }) => {
-      assert.deepEqual(params.where, { estudioId: "estudio" });
-      return { datos: configuracion };
+      assert.deepEqual(params.where, { estudioId: hilo.estudioId });
+      return { datos: params.where.estudioId === "estudio" ? configuracion : otraConfiguracion };
     },
   );
   const avisos: string[] = [];
@@ -92,7 +92,7 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
       const { messages } = JSON.parse(String(opciones.body));
       assert.deepEqual(
         JSON.parse(messages[1].content).configuracion,
-        configuracion,
+        hilo.estudioId === "estudio" ? configuracion : otraConfiguracion,
       );
       return Response.json({
         choices: [
@@ -156,8 +156,15 @@ test("el estudio piloto usa Groq, comparte su formulario y pausa al derivar", as
     enviar,
   );
   assert.equal(salidas.length, 4);
+  assert.equal(modelo.mock.callCount(), 4);
+
   hilo.flujoInstagram = null;
-  hilo.estudio.slug = "otro-estudio";
+  hilo.estudioId = "estudio-2";
+  hilo.estudio = { slug: "otro-estudio", propietarioId: "otro-titular" };
+  accion = "FORMULARIO";
   await procesarMensajeBot("hilo", "titular", "m6", "¿Cuánto cuesta?", enviar);
   assert.equal(modelo.mock.callCount(), 4);
+  await procesarMensajeBot("hilo", "otro-titular", "m7", "¿Cuánto cuesta?", enviar);
+  assert.equal(modelo.mock.callCount(), 5);
+  assert.ok(salidas[4]?.includes("/cotizacion/otro-estudio?ig=" + token));
 });

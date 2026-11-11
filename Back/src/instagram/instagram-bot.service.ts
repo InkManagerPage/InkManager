@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ConversacionCanal, EstadoMensajeCanal } from "@prisma/client";
+import type { ConversacionCanal, EstadoMensajeCanal, Prisma } from "@prisma/client";
 import { leerConfiguracionAsistente } from "../asistente/asistente.repository.js";
 import { generarRespuestaAsistente, pruebaAsistenteDisponible } from "../asistente/respuesta.js";
 import { origenesPermitidos } from "../config/auth.js";
@@ -9,7 +9,7 @@ import { bloquearConversacionCanal, ventanaRespuesta } from "../mensajes/mensaje
 import { registrarAviso } from "../operacion/avisos.repository.js";
 import { detalleSolicitud, type SolicitudCompleta } from "../solicitudes/solicitudes.entity.js";
 import { cotizacionesVigentes } from "../solicitudes/solicitudes.service.js";
-import { estudioPiloto } from "./instagram-flujo.repository.js";
+import { configuracionInstagram } from "./instagram.proveedor.js";
 
 type Enviar = (hilo: ConversacionCanal, clave: string, texto: string) => Promise<EstadoMensajeCanal>;
 const dia = 24 * 60 * 60 * 1000;
@@ -136,9 +136,10 @@ export async function procesarMensajeBot(
   const clave = `bot:respuesta:${id}:${proveedorId}`;
   if (await prisma.mensajeCanal.findUnique({ where: { claveEnvio: clave }, select: { id: true } })) return;
   const hilo = await prisma.conversacionCanal.findUnique({
-    where: { id }, include: { estudio: { select: { slug: true } }, flujoInstagram: true },
+    where: { id },
+    include: { estudio: { select: { slug: true, propietarioId: true } }, flujoInstagram: true },
   });
-  if (!hilo?.estudioId || hilo.canal !== "INSTAGRAM" || !hilo.estudio || hilo.estudio.slug !== estudioPiloto() ||
+  if (!hilo?.estudioId || hilo.canal !== "INSTAGRAM" || hilo.estudio?.propietarioId !== titularId ||
     Date.now() - hilo.ultimaEntradaAt.getTime() >= ventanaRespuesta) return;
 
   let flujo = hilo.flujoInstagram;
@@ -156,6 +157,7 @@ export async function procesarMensajeBot(
       where: {
         id,
         estudioId: hilo.estudioId,
+        estudio: { propietarioId: titularId },
         ultimaEntradaAt: hilo.ultimaEntradaAt,
         OR: [{ flujoInstagram: null }, { flujoInstagram: { pausadoAt: null } }],
       },
@@ -224,7 +226,7 @@ export async function procesarMensajeBot(
 }
 
 export function iniciarBotInstagram(enviar: Enviar) {
-  if (!estudioPiloto()) return;
+  if (!configuracionInstagram()) return;
   let ejecutando = false;
   const revisar = async () => {
     if (ejecutando) return;
@@ -241,23 +243,40 @@ export function iniciarBotInstagram(enviar: Enviar) {
 }
 
 export async function notificarConsultas(enviar: Enviar) {
-  const slug = estudioPiloto();
-  if (!slug) return;
+  const ahora = new Date();
+  const conexionVigente = {
+    canal: "INSTAGRAM",
+    activa: true,
+    tokenCifrado: { not: null },
+    OR: [{ expiraAt: { gt: ahora } }, { expiraAt: null, loginUnificado: true }],
+  } satisfies Prisma.ConexionCanalWhereInput;
   const flujos = await prisma.flujoInstagram.findMany({
     where: { pausadoAt: null, solicitudId: { not: null },
-      conversacion: { canal: "INSTAGRAM", ultimaEntradaAt: { gt: new Date(Date.now() - ventanaRespuesta) },
-        estudio: { slug, propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } } },
+      conversacion: {
+        canal: "INSTAGRAM",
+        ultimaEntradaAt: { gt: new Date(ahora.getTime() - ventanaRespuesta) },
+        estudio: {
+          propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null },
+          conexionesCanal: { some: conexionVigente },
+        },
+      },
       OR: [{ recepcionAt: null }, { solicitud: { estado: { in: ["ELECCION_CLIENTE", "ASIGNADA"] } } }],
     },
-    include: { conversacion: true, solicitud: { include: detalleSolicitud } },
+    include: {
+      conversacion: {
+        include: { estudio: { select: { conexionesCanal: { where: conexionVigente, select: { cuentaId: true } } } } },
+      },
+      solicitud: { include: detalleSolicitud },
+    },
     orderBy: { revisadoAt: "asc" }, take: 20,
   });
   for (const f of flujos) {
     const s = f.solicitud;
-    if (!s || f.conversacion.solicitudId !== s.id || s.estudioId !== f.conversacion.estudioId) continue;
+    const hilo = f.conversacion;
+    if (!s || hilo.solicitudId !== s.id || s.estudioId !== hilo.estudioId) continue;
     const where = { conversacionId: f.conversacionId, solicitudId: s.id, pausadoAt: null };
-    const ahora = new Date();
     if (!(await prisma.flujoInstagram.updateMany({ where, data: { revisadoAt: ahora } })).count) continue;
+    if (!hilo.estudio?.conexionesCanal.some(c => c.cuentaId === hilo.cuentaId)) continue;
     try {
       if (!f.recepcionAt) {
         await enviar(f.conversacion, `bot:recibida:${s.id}`,
