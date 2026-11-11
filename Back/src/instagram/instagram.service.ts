@@ -140,7 +140,11 @@ export async function recibirInstagram(datos: Webhook) {
       const piloto = estudioPiloto();
       if (!propio && conversacion && piloto && c.estudio?.slug === piloto &&
         Date.now() - instante < ventanaRespuesta && typeof mensaje.text === "string") {
-        await procesarMensajeBot(conversacion.id, destinatario.id, mensaje.mid, mensaje.text, enviarEnHiloInstagram);
+        try {
+          await procesarMensajeBot(conversacion.id, destinatario.id, mensaje.mid, mensaje.text, enviarEnHiloInstagram);
+        } catch {
+          console.error("No pudimos procesar la respuesta automática de Instagram.");
+        }
       }
     }
   }

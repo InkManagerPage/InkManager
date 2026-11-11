@@ -129,6 +129,7 @@ enum EstadoPagoSuscripcion {
 // --- MODELOS DE DATOS ---
 
 model Usuario {
+  configuracionAsistente ConfiguracionAsistente?
   suspendidoAt           DateTime?              @db.Timestamptz(3)
   preferenciasCorreo     PreferenciasCorreo?
   avisos                 AvisoPanel[]
@@ -251,6 +252,7 @@ enum EstadoPublicacion {
 }
 
 model Estudio {
+  configuracionAsistente ConfiguracionAsistente?
   biografia              String?
   emailContacto          String?
   telefono               String?
@@ -279,6 +281,16 @@ model Estudio {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ConfiguracionAsistente {
+  id         String   @id @default(uuid())
+  estudioId  String?  @unique
+  estudio    Estudio? @relation(fields: [estudioId], references: [id], onDelete: Cascade)
+  artistaId  String?  @unique
+  artista    Usuario? @relation(fields: [artistaId], references: [id], onDelete: Cascade)
+  datos      Json
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model InvitacionEquipo {

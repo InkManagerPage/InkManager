@@ -177,6 +177,12 @@ export function StudioSettings() {
     <>
       <PageHeader titulo="Configuración" />
       <CuentasAsociadas estudio />
+      <section className={styles.settingsSection}>
+        <h2>Asistente</h2>
+        <Link href="/estudio/configuracion/asistente" className={styles.textButton}>
+          Configurar asistente
+        </Link>
+      </section>
       <EnlaceFormulario enlace={`/cotizacion/${encodeURIComponent(perfil.slug)}`} estudio />
       <section className={styles.settingsSection}>
         <div>

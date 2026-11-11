@@ -130,7 +130,7 @@ export async function guardarMensajeCanal(d: {
         ],
         skipDuplicates: true,
       });
-      if (!count) return hilo;
+      if (!count) return;
       await tx.conversacionCanal.updateMany({
         where: { id: hilo.id, ultimaActividad: { lt: d.fecha } },
         data: { ultimaActividad: d.fecha },
