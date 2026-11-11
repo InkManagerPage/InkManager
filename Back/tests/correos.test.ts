@@ -442,7 +442,7 @@ test("solicitudes inválidas, sin configuración o desde otro origen son rechaza
   assert.equal(response.status, 403);
 });
 
-test("producción impide usar previews y exige Resend configurado", () => {
+test("producción impide usar previews", () => {
   const anterior = process.env.NODE_ENV;
   process.env.NODE_ENV = "production";
   process.env.MAIL_TRANSPORT = "preview";
@@ -451,6 +451,84 @@ test("producción impide usar previews y exige Resend configurado", () => {
   } finally {
     process.env.NODE_ENV = anterior;
   }
+});
+
+test("Brevo entrega el enlace de verificación a un destinatario distinto del remitente", async (t) => {
+  process.env.MAIL_TRANSPORT = "brevo";
+  process.env.BREVO_API_KEY = "clave-brevo-de-prueba";
+  process.env.BREVO_SENDER_EMAIL = "inkmanager@example.com";
+  const cuenta = usuario();
+  const mensajes: Row[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (url: string, init?: RequestInit) => {
+      if (url !== "https://api.brevo.com/v3/smtp/email")
+        return fetchReal(url, init);
+      assert.equal(init?.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("api-key"),
+        "clave-brevo-de-prueba",
+      );
+      mensajes.push(JSON.parse(String(init.body)));
+      return Response.json(
+        { messageId: "<prueba@example.com>" },
+        { status: 201 },
+      );
+    },
+  );
+  await solicitarEnlace(cuenta.email, "VERIFICAR_EMAIL");
+  assert.equal(mensajes.length, 1);
+  const [correo] = mensajes;
+  assert.deepEqual(correo.sender, {
+    name: "InkManager",
+    email: "inkmanager@example.com",
+  });
+  assert.deepEqual(correo.replyTo, correo.sender);
+  assert.deepEqual(correo.to, [{ email: cuenta.email }]);
+  assert.match(correo.htmlContent, /Verificar mi email/);
+  const token = /#([a-f0-9]{64})/.exec(correo.textContent)?.[1];
+  assert.ok(token);
+  assert.equal((await post("/verify-email", { token })).status, 200);
+  assert.equal(cuenta.emailVerificado, true);
+});
+
+test("Brevo conserva la clave en reintentos y avisa cuando se agota la cuota", async (t) => {
+  process.env.MAIL_TRANSPORT = "brevo";
+  process.env.BREVO_API_KEY = "clave-brevo-de-prueba";
+  process.env.BREVO_SENDER_EMAIL = "inkmanager@example.com";
+  const correo = {
+    para: "ana@example.com",
+    asunto: "Prueba",
+    texto: "Hola",
+    html: "<p>Hola</p>",
+    clave: "equipo/invitacion/1",
+  };
+  const claves: string[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (_url: string, init?: RequestInit) => {
+      claves.push(JSON.parse(String(init?.body)).headers.IdempotencyKey);
+      if (claves.length === 1)
+        return Response.json({ messageId: "qa" }, { status: 201 });
+      if (claves.length === 2)
+        return Response.json({ code: "duplicate_parameter" }, { status: 400 });
+      return Response.json({ message: "contenido-interno" }, { status: 429 });
+    },
+  );
+  await enviarCorreo(correo);
+  await enviarCorreo(correo);
+  await assert.rejects(
+    enviarCorreo({ ...correo, clave: "equipo/invitacion/2" }),
+    /Brevo limitó los envíos/,
+  );
+  assert.match(
+    claves[0]!,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
+  assert.equal(claves[0], claves[1]);
+  assert.notEqual(claves[1], claves[2]);
 });
 
 test("plantilla escapa HTML del nombre y del enlace", () => {

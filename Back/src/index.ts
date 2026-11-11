@@ -19,7 +19,7 @@ app.listen(PORT, () => {
     console.log("Transporte de correo: " + configuracionCorreo().transporte);
   } catch {
     console.error(
-      "Correo sin configurar: revisá MAIL_TRANSPORT, RESEND_API_KEY y MAIL_FROM en Back/.env.",
+      "Correo sin configurar: revisá MAIL_TRANSPORT y las variables del proveedor en el backend.",
     );
   }
 });
