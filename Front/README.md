@@ -16,9 +16,13 @@ npm run dev
 ```dotenv
 API_URL=http://127.0.0.1:4000/api
 NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=
+RESEND_API_KEY=
+MAIL_FROM=
 ```
 
 El frontend está disponible en [http://127.0.0.1:3000](http://127.0.0.1:3000). El backend debe estar activo para usar el acceso, los correos y las reseñas.
+
+El formulario de contacto del pie de página envía mensajes a `inkmanagerpf2026@gmail.com` desde una acción de servidor de Next.js. Para habilitarlo, configura `RESEND_API_KEY` y `MAIL_FROM` también en `Front/.env.local` y en el entorno de despliegue del frontend, usando la clave y el remitente ya configurados en `Back/.env`. Next.js no carga automáticamente las variables del archivo del backend. No uses el prefijo `NEXT_PUBLIC_` para la clave; `MAIL_FROM` debe ser un remitente verificado en Resend.
 
 ## Checkout y suscripciones
 

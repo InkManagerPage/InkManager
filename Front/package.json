@@ -27,7 +27,8 @@
     "react": "19.3.1",
     "react-bootstrap": "2.10.10",
     "react-dom": "19.3.1",
-    "react-fast-marquee": "1.6.5"
+    "react-fast-marquee": "1.6.5",
+    "resend": "^6.38.0"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree": {
