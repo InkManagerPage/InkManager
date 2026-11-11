@@ -26,7 +26,6 @@ import {
   nombreRemitente,
 } from "./instagram.proveedor.js";
 import { procesarMensajeBot } from "./instagram-bot.service.js";
-import { estudioPiloto } from "./instagram-flujo.repository.js";
 import { puedeUsarMensajes } from "../mensajes/mensajes.service.js";
 import { planIndividualVigente } from "../pagos/acceso-plan.js";
 
@@ -51,19 +50,19 @@ export async function recibirInstagram(datos: Webhook) {
   const config = configuracionInstagram();
   if (!config || datos?.object !== "instagram" || !Array.isArray(datos.entry))
     return;
+  let conexionPendiente = false;
   for (const entrada of datos.entry) {
     const cuentaId = entrada?.id;
     if (!idInstagram(cuentaId) || !Array.isArray(entrada.messaging)) continue;
     const c = await prisma.conexionCanal.findUnique({
       where: { canal_cuentaId: { canal: canalInstagram, cuentaId } },
-      include: { estudio: { select: { propietarioId: true, slug: true } } },
+      include: { estudio: { select: { propietarioId: true } } },
     });
     if (!c) continue;
-    if (!c.activa && credencialVigenteInstagram(c))
-      throw new HttpError(
-        503,
-        "Instagram todavía está terminando la conexión.",
-      );
+    if (!c.activa && credencialVigenteInstagram(c)) {
+      conexionPendiente = true;
+      continue;
+    }
     if (!activaInstagram(c)) continue;
     const destinatario = await prisma.usuario.findFirst({
       where: {
@@ -137,8 +136,7 @@ export async function recibirInstagram(datos: Webhook) {
             ? mensaje.text.slice(0, 4096)
             : "Este mensaje contiene contenido multimedia.",
       });
-      const piloto = estudioPiloto();
-      if (!propio && conversacion && piloto && c.estudio?.slug === piloto &&
+      if (!propio && conversacion && c.estudioId &&
         Date.now() - instante < ventanaRespuesta && typeof mensaje.text === "string") {
         try {
           await procesarMensajeBot(conversacion.id, destinatario.id, mensaje.mid, mensaje.text, enviarEnHiloInstagram);
@@ -148,6 +146,8 @@ export async function recibirInstagram(datos: Webhook) {
       }
     }
   }
+  if (conexionPendiente)
+    throw new HttpError(503, "Instagram todavía está terminando una conexión.");
 }
 
 async function hiloPermitido(usuarioId: string, identificador: unknown) {

@@ -3,14 +3,11 @@ import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import { bloquearConversacionCanal } from "../mensajes/mensajes.repository.js";
 
-export const estudioPiloto = () => process.env.INSTAGRAM_BOT_ESTUDIO_SLUG?.trim();
-
 export async function buscarEnlaceInstagram(token: unknown, estudioId: string) {
   if (token === undefined) return null;
-  const slug = estudioPiloto();
-  const flujo = typeof token === "string" && token.length === 36 && slug
+  const flujo = typeof token === "string" && token.length === 36
     ? await prisma.flujoInstagram.findFirst({
-        where: { token, conversacion: { canal: "INSTAGRAM", estudioId, estudio: { slug } } },
+        where: { token, conversacion: { canal: "INSTAGRAM", estudioId } },
         select: { conversacionId: true, solicitudId: true, enlaceHasta: true, token: true },
       })
     : null;
