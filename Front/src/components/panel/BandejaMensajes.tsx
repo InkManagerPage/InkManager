@@ -119,6 +119,10 @@ export function BandejaMensajes({
         ).json()
       }
       enviarMensaje={enviarMensaje}
+      cambiarBot={async (id, activo) => {
+        await mutarPanel(ruta('INSTAGRAM', id) + '/bot', 'PUT', { activo });
+        await recargar();
+      }}
       guardarBorradorMensaje={(id, texto) => setBorradores((d) => ({ ...d, [id]: texto }))}
       vincularConsulta={async (id, canal, solicitudId) => {
         await mutarPanel(ruta(canal, id) + '/consulta', 'PUT', { solicitudId });

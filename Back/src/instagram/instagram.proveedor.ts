@@ -295,7 +295,7 @@ export async function suscribirInstagram(
   config: ConfigInstagram,
   { token, cuentaId, loginUnificado }: CredencialInstagram,
 ) {
-  const campos = { subscribed_fields: "messages" };
+  const campos = { subscribed_fields: "messages,messaging_postbacks" };
   const ruta = loginUnificado ? `${cuentaId}/subscribed_apps` : "me/subscribed_apps";
   const datos = await solicitar<{ success?: boolean | string }>(
     graph(config, loginUnificado, ruta, loginUnificado ? {} : campos),
@@ -329,11 +329,19 @@ export async function nombreRemitente(
     : "";
 }
 
+export type TarjetaInstagram = {
+  title: string;
+  subtitle?: string;
+  image_url?: string;
+  buttons?: { type: "postback"; title: string; payload: string }[];
+};
+
 export async function enviarInstagram(
   config: ConfigInstagram,
   { token, cuentaId, loginUnificado }: CredencialInstagram,
   destinatario: string,
   texto: string,
+  tarjetas?: TarjetaInstagram[],
 ) {
   const datos = await solicitar<{ message_id?: string }>(
     graph(config, loginUnificado, cuentaId + "/messages"),
@@ -342,7 +350,9 @@ export async function enviarInstagram(
       headers: { ...autorizacion(token), "Content-Type": "application/json" },
       body: JSON.stringify({
         recipient: { id: destinatario },
-        message: { text: texto },
+        message: tarjetas
+          ? { attachment: { type: "template", payload: { template_type: "generic", elements: tarjetas } } }
+          : { text: texto },
       }),
     },
   );

@@ -1,4 +1,4 @@
-import type { CitaPanel, ClientePanel, ConsultaPanel, ConversacionPanel } from './panel-artista';
+import type { CitaPanel, ClientePanel, ConsultaPanel, ConversacionPanel, PresupuestoPanel } from './panel-artista';
 import type { RecordatoriosPanel } from './recordatorios';
 import type { SuscripcionPanel } from './suscripcion';
 
@@ -10,13 +10,9 @@ export interface IntegranteEstudio {
   estilos: string;
   estado: EstadoIntegrante;
 }
-export interface PropuestaEstudio {
+export interface PropuestaEstudio extends PresupuestoPanel {
   id: string;
   artistaId: string;
-  importe: number;
-  sena: number;
-  detalle: string;
-  validez: string;
   boceto: string;
   fecha: string;
 }

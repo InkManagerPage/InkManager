@@ -24,6 +24,7 @@ import {
   recibirInstagram,
   responderInstagram,
   vincularInstagram,
+  cambiarBotInstagram,
 } from "./instagram.service.js";
 
 export const webhookInstagram = Router();
@@ -141,5 +142,9 @@ instagramRouter.patch("/:id/lectura", async (req, res) => {
 });
 instagramRouter.put("/:id/consulta", async (req, res) => {
   await vincularInstagram(req.usuario!.id, req.params.id, req.body);
+  res.sendStatus(204);
+});
+instagramRouter.put("/:id/bot", async (req, res) => {
+  await cambiarBotInstagram(req.usuario!.id, req.params.id, req.body);
   res.sendStatus(204);
 });

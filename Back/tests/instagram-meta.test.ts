@@ -66,7 +66,7 @@ test("Instagram autoriza solo una cuenta, suscribe mensajes y responde usando su
     assert.equal(init.method, "POST");
     if (ruta === "/v24.0/789/subscribed_apps") {
       assert.equal(url.hostname, "graph.facebook.com");
-      assert.equal(String(init.body), "subscribed_fields=messages");
+      assert.equal(new URLSearchParams(String(init.body)).get("subscribed_fields"), "messages,messaging_postbacks");
       return Response.json({ success: true });
     }
     assert.equal(ruta, "/v24.0/789/messages");

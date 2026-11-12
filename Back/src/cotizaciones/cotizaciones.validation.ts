@@ -53,11 +53,20 @@ export function validarCotizacion(
         ? Number(body.version)
         : body.version,
   });
+  const duracion = body.duracionMinutos;
+  const duracionMinutos = typeof duracion === "string" && /^\d+$/.test(duracion)
+    ? Number(duracion)
+    : duracion;
+  if (duracionMinutos !== undefined &&
+      (typeof duracionMinutos !== "number" || !Number.isInteger(duracionMinutos) ||
+        duracionMinutos < 30 || duracionMinutos > 480))
+    throw new HttpError(400, "La duración debe estar entre 30 minutos y 8 horas.");
   return {
     importe: total,
     sena,
     detalle: body.detalle.trim(),
     validez,
+    ...(typeof duracionMinutos === "number" && { duracionMinutos }),
     version,
   };
 }

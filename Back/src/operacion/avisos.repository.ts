@@ -9,6 +9,7 @@ export async function registrarAviso(
     titulo: string;
     detalle: string;
     destino: string;
+    urgente?: boolean;
   },
 ) {
   await tx.avisoPanel.createMany({ data: [datos], skipDuplicates: true });
@@ -20,13 +21,14 @@ export async function listarAvisos(usuarioId: string) {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 100,
   });
-  return filas.map(({ id, titulo, detalle, destino, createdAt, leidaAt }) => ({
+  return filas.map(({ id, titulo, detalle, destino, createdAt, leidaAt, urgente }) => ({
     id,
     titulo,
     detalle,
     destino,
     fecha: createdAt.toISOString(),
     leida: Boolean(leidaAt),
+    urgente,
   }));
 }
 

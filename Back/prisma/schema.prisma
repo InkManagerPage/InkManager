@@ -397,6 +397,7 @@ model Cotizacion {
   validaHasta    DateTime?
   bocetoUrl      String?
   bocetoPublicId String?
+  duracionMinutos Int?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   citas          Cita[]
@@ -611,6 +612,8 @@ model ConversacionCanal {
   solicitud       Solicitud?     @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
   ultimaEntradaAt DateTime       @db.Timestamptz(3)
   ultimaActividad DateTime       @db.Timestamptz(3)
+  botResponderAt  DateTime?      @db.Timestamptz(3)
+  botProcesandoHasta DateTime?   @db.Timestamptz(3)
   mensajes        MensajeCanal[]
 
   @@unique([canal, cuentaId, remitente])
@@ -642,6 +645,8 @@ model MensajeCanal {
   estado         EstadoMensajeCanal
   fecha          DateTime           @db.Timestamptz(3)
   leidoAt        DateTime?          @db.Timestamptz(3)
+  botPendiente   Boolean            @default(false)
+  accionBot      String?
 
   @@unique([conversacionId, proveedorId])
   @@index([conversacionId, fecha])
@@ -731,6 +736,7 @@ model AvisoPanel {
   destino   String
   createdAt DateTime  @default(now())
   leidaAt   DateTime? @db.Timestamptz(3)
+  urgente   Boolean   @default(false)
 
   @@unique([usuarioId, clave])
   @@index([usuarioId, createdAt])

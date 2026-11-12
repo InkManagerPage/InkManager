@@ -12,6 +12,7 @@ export function guardarCotizacion(
     montoSena: datos.sena,
     mensaje: datos.detalle,
     validaHasta: datos.validez,
+    ...(datos.duracionMinutos !== undefined && { duracionMinutos: datos.duracionMinutos }),
     ...(imagen
       ? { bocetoUrl: imagen.url, bocetoPublicId: imagen.public_id }
       : {}),

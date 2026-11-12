@@ -39,6 +39,9 @@ export async function guardarMiCotizacion(
       (s.cierrePropuestasAt && s.cierrePropuestasAt <= new Date())
     )
       throw new HttpError(409, "La recepción de propuestas está cerrada.");
+    if (s.canal === "INSTAGRAM" && datos.duracionMinutos === undefined &&
+        !s.cotizaciones.some(c => c.artistaId === usuarioId && c.duracionMinutos !== null))
+      throw new HttpError(400, "Indicá la duración estimada para ofrecer turnos por Instagram.");
     const activo = await tx.usuario.findFirst({
       where: {
         id: usuarioId,

@@ -52,6 +52,9 @@ export function erroresPresupuesto(datos: PresupuestoPanel) {
     errores.validez = 'Elegí una fecha de validez desde hoy.';
   if (datos.detalle.trim().length < 10 || datos.detalle.trim().length > 1200)
     errores.detalle = 'El detalle debe tener entre 10 y 1200 caracteres.';
+  if (datos.duracionMinutos !== undefined &&
+      (!Number.isInteger(datos.duracionMinutos) || datos.duracionMinutos < 30 || datos.duracionMinutos > 480))
+    errores.duracionMinutos = 'Ingresá una duración de 30 a 480 minutos.';
   return errores;
 }
 

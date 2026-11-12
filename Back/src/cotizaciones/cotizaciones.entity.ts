@@ -3,5 +3,6 @@ export interface DatosCotizacion {
   sena: number;
   detalle: string;
   validez: Date;
+  duracionMinutos?: number;
   version: number;
 }

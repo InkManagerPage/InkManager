@@ -20,6 +20,7 @@ export interface PresupuestoPanel {
   sena: number;
   validez: string;
   detalle: string;
+  duracionMinutos?: number;
 }
 export interface ConsultaPanel {
   id: string;
@@ -60,6 +61,7 @@ export interface MensajePanel {
 }
 export interface ConversacionPanel {
   puedeResponder?: boolean;
+  botActivo?: boolean;
   id: string;
   clienteId: string;
   asunto: string;
@@ -83,6 +85,7 @@ export interface NotificacionPanel {
   fecha: string;
   leida: boolean;
   destino: string;
+  urgente?: boolean;
 }
 export interface EstudioPanel {
   nombre: string;

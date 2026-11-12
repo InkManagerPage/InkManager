@@ -24,7 +24,7 @@ export function NotificacionesPanel({
   const pendientes = avisos.filter((item) => !item.leida).length;
   const visibles = avisos
     .filter((item) => !soloNuevas || !item.leida)
-    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+    .sort((a, b) => Number(Boolean(b.urgente && !b.leida)) - Number(Boolean(a.urgente && !a.leida)) || b.fecha.localeCompare(a.fecha));
   return (
     <>
       <PageHeader
@@ -77,6 +77,7 @@ export function NotificacionesPanel({
                 <div>
                   <h2>
                     {item.titulo}
+                    {item.urgente && <span className="badge text-bg-danger ms-2">Urgente</span>}
                     {!item.leida && <span className={styles.unreadMark} aria-label="Sin leer" />}
                   </h2>
                   <p>{item.detalle}</p>

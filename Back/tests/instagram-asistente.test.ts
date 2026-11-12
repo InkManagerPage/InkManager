@@ -44,6 +44,9 @@ test("cada estudio usa su configuración, comparte su formulario y pausa al deri
   reemplazar(prisma.mensajeCanal, "findUnique", async () => null);
   reemplazar(prisma.conversacionCanal, "findUnique", async () => hilo);
   reemplazar(prisma.conversacionCanal, "findFirst", async () => hilo);
+  reemplazar(prisma.usuario, "findMany", async () => [
+    { nombre: "Ana", nombreArtistico: null, estilosPrincipales: ["Fine Line"] },
+  ]);
   reemplazar(
     prisma.configuracionAsistente,
     "findUnique",
@@ -62,6 +65,7 @@ test("cada estudio usa su configuración, comparte su formulario y pausa al deri
         $queryRaw: async () => [],
         conversacionCanal: { findUniqueOrThrow: async () => hilo },
         flujoInstagram: {
+          findUnique: async () => hilo.flujoInstagram,
           upsert: async ({
             create,
             update,
@@ -90,6 +94,9 @@ test("cada estudio usa su configuración, comparte su formulario y pausa al deri
     "fetch",
     async (_url: string, opciones: RequestInit) => {
       const { messages } = JSON.parse(String(opciones.body));
+      assert.deepEqual(JSON.parse(messages[1].content).artistasActivos, [
+        { nombre: "Ana", estilos: ["Fine Line"] },
+      ]);
       assert.deepEqual(
         JSON.parse(messages[1].content).configuracion,
         hilo.estudioId === "estudio" ? configuracion : otraConfiguracion,
@@ -157,6 +164,9 @@ test("cada estudio usa su configuración, comparte su formulario y pausa al deri
   );
   assert.equal(salidas.length, 4);
   assert.equal(modelo.mock.callCount(), 4);
+  await procesarMensajeBot("hilo", "titular", "m-bot", "BOT", enviar);
+  assert.ok(hilo.flujoInstagram?.pausadoAt);
+  assert.equal(salidas.length, 4);
 
   hilo.flujoInstagram = null;
   hilo.estudioId = "estudio-2";

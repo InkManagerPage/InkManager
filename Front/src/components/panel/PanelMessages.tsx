@@ -25,6 +25,7 @@ export interface PanelMessagesProps {
     antes: string,
   ) => Promise<PaginaMensajes>;
   enviarMensaje: (id: string, canal: ConversacionPanel['canal'], texto: string) => Promise<void>;
+  cambiarBot: (id: string, activo: boolean) => Promise<void>;
   guardarBorradorMensaje: (id: string, texto: string) => void;
   vincularConsulta: (
     id: string,
@@ -69,6 +70,7 @@ export function PanelMessages(props: PanelMessagesProps) {
     leerConversacion,
     cargarHistorial,
     enviarMensaje,
+    cambiarBot,
     guardarBorradorMensaje,
     vincularConsulta,
     consultas,
@@ -348,6 +350,16 @@ export function PanelMessages(props: PanelMessagesProps) {
                   <span className={chat.channelLabel}>{seleccionada.telefono}</span>
                 )}
               </div>
+              {typeof seleccionada.botActivo === 'boolean' && (
+                <button
+                  className={`btn btn-sm ms-auto flex-shrink-0 ${seleccionada.botActivo ? 'btn-outline-secondary' : 'btn-outline-primary'}`}
+                  type="button"
+                  disabled={guardando}
+                  onClick={() => void ejecutar(() => cambiarBot(seleccionada.id, !seleccionada.botActivo))}
+                >
+                  {seleccionada.botActivo ? 'Pausar bot' : 'Activar bot'}
+                </button>
+              )}
             </header>
             {consultas && (
               <label className="p-2">

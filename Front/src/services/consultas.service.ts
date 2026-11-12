@@ -31,7 +31,9 @@ export async function guardarPropuesta(
   imagen: File | null,
 ): Promise<ConsultaGuardada> {
   const body = new FormData();
-  for (const [key, value] of Object.entries({ ...datos, version })) body.set(key, String(value));
+  for (const [key, value] of Object.entries({ ...datos, version })) {
+    if (value !== undefined) body.set(key, String(value));
+  }
   if (imagen) body.set('imagen', imagen);
   return (
     await apiFetch(`consultas/${id}/cotizacion`, {
