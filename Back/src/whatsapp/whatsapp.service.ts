@@ -10,6 +10,7 @@ import {
   validarIdConsulta,
 } from "../solicitudes/solicitudes.validation.js";
 import {
+  bloquearConversacionWhatsApp,
   filtroConversaciones,
   listarConversaciones,
   registrarEntrada,
@@ -302,27 +303,53 @@ export async function responderWhatsApp(
     estado = error instanceof HttpError ? "ERROR" : "INCIERTO";
     revocada = error instanceof HttpError && error.status === 401;
   }
-  await prisma.$transaction([
-    prisma.mensajeWhatsApp.updateMany({
-      where: { id: mensajeId, estado: "ENVIANDO" },
-      data: { estado, ...(proveedorId ? { proveedorId } : {}) },
-    }),
-    prisma.conversacionWhatsApp.updateMany({
-      where: { id: hilo.id, ultimaActividad: { lt: fecha } },
-      data: { ultimaActividad: fecha },
-    }),
-    ...(revocada && hilo.estudioId && config.tokenCifrado
-      ? [
-          prisma.conexionWhatsApp.updateMany({
-            where: {
-              estudioId: hilo.estudioId,
-              tokenCifrado: config.tokenCifrado,
-            },
-            data: { expiraAt: new Date() },
-          }),
-        ]
-      : []),
-  ]);
+
+  await prisma.$transaction(
+    async (tx) => {
+      await bloquearConversacionWhatsApp(tx, hilo.id);
+      if (proveedorId) {
+        await tx.mensajeWhatsApp.deleteMany({
+          where: {
+            conversacionId: hilo.id,
+            proveedorId,
+            propio: true,
+            claveEnvio: null,
+            id: { not: mensajeId },
+          },
+        });
+      }
+
+      await tx.mensajeWhatsApp.updateMany({
+        where: {
+          id: mensajeId,
+          estado: "ENVIANDO",
+        },
+        data: {
+          estado,
+          ...(proveedorId ? { proveedorId } : {}),
+        },
+      });
+
+      await tx.conversacionWhatsApp.updateMany({
+        where: {
+          id: hilo.id,
+          ultimaActividad: { lt: fecha },
+        },
+        data: { ultimaActividad: fecha },
+      });
+
+      if (revocada && hilo.estudioId && config.tokenCifrado) {
+        await tx.conexionWhatsApp.updateMany({
+          where: {
+            estudioId: hilo.estudioId,
+            tokenCifrado: config.tokenCifrado,
+          },
+          data: { expiraAt: new Date() },
+        });
+      }
+    },
+    { timeout: 20000 },
+  );
 }
 
 export async function marcarConversacion(
