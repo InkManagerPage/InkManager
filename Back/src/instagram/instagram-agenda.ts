@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { DateTime } from "luxon";
-import type { PreferenciaAgenda } from "../asistente/respuesta.js";
+import type { PreferenciaAgenda, TurnosAsistente } from "../asistente/respuesta.js";
 import { crearTurno } from "../citas/citas.service.js";
 import { prisma } from "../config/prisma.js";
 import { horarioPermitido, minutosHorario } from "../disponibilidad/disponibilidad.validation.js";
@@ -45,6 +45,47 @@ export function proximoTurno(solicitudId: string) {
     where: { solicitudId, estado: { in: ["PENDIENTE", "CONFIRMADA"] }, inicioAt: { gt: new Date() } },
     orderBy: { inicioAt: "asc" }, select: { inicioAt: true, estado: true },
   });
+}
+
+export async function turnosParaAsistente(s: SolicitudCompleta, zona: string): Promise<TurnosAsistente> {
+  const ahora = new Date();
+  const where = { solicitudId: s.id, solicitud: { estudioId: s.estudioId } };
+  const select = {
+    inicioAt: true, finAt: true, estado: true,
+    artista: { select: { nombre: true, nombreArtistico: true } },
+  } as const;
+  const [proximos, pasado] = await Promise.all([
+    prisma.cita.findMany({
+      where: { ...where, finAt: { gt: ahora }, estado: { in: ["PENDIENTE", "CONFIRMADA"] } },
+      orderBy: [{ inicioAt: "asc" }, { id: "asc" }], take: 3, select,
+    }),
+    prisma.cita.findFirst({
+      where: { ...where, finAt: { lte: ahora }, estado: { not: "CANCELADA" } },
+      orderBy: [{ inicioAt: "desc" }, { id: "desc" }], select,
+    }),
+  ]);
+  const presentar = (cita: (typeof proximos)[number]) => {
+    const inicio = DateTime.fromJSDate(cita.inicioAt, { zone: zona }).setLocale("es-AR");
+    const fin = DateTime.fromJSDate(cita.finAt, { zone: zona });
+    return {
+      fecha: inicio.toISODate()!,
+      dia: inicio.toFormat("cccc"),
+      horaInicio: inicio.toFormat(formatoHora),
+      fechaFin: fin.toISODate()!,
+      horaFin: fin.toFormat(formatoHora),
+      duracionMinutos: Math.round((cita.finAt.getTime() - cita.inicioAt.getTime()) / 60000),
+      artista: cita.artista.nombreArtistico || cita.artista.nombre || "Artista",
+      estado: cita.estado,
+    };
+  };
+  const propuesta = s.estado === "ASIGNADA" && s.artistaAsignadoId
+    ? s.cotizaciones.find(c => c.artistaId === s.artistaAsignadoId && (!c.validaHasta || c.validaHasta >= ahora))
+    : null;
+  return {
+    proximos: proximos.map(presentar),
+    ultimoPasado: pasado ? presentar(pasado) : null,
+    duracionEstimadaMinutos: propuesta ? propuesta.duracionMinutos : null,
+  };
 }
 
 export async function leerMenuAgenda(hiloId: string, s: SolicitudCompleta): Promise<MenuAgenda | null> {
