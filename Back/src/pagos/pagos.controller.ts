@@ -45,7 +45,7 @@ export async function consultarPago(
       throw new HttpError(400, "El identificador de suscripción no es válido.");
     }
     res.status(200).json(
-      await obtenerEstadoSuscripcion(id, req.usuario.id),
+      await obtenerEstadoSuscripcion(id, req.usuario.id, req.method === "POST"),
     );
   } catch (error) {
     next(error);

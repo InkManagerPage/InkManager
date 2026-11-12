@@ -33,6 +33,13 @@ router.get(
   requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
   consultarPago,
 );
+router.post(
+  "/suscripcion/:id/verificar",
+  requerirSesion,
+  requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: true, legacyHeaders: false }),
+  consultarPago,
+);
 router.post("/cancelar-suscripcion", limitarOperacionesPago, cancelarPago);
 router.post(
   "/cancelar-suscripcion-inmediatamente",

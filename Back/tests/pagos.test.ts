@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { HttpError } from "../src/errors/http-error.js";
 import { prisma } from "../src/config/prisma.js";
-import { cancelarSuscripcion, crearSuscripcion } from "../src/pagos/pagos.service.js";
+import { cancelarSuscripcion, crearSuscripcion, obtenerEstadoSuscripcion } from "../src/pagos/pagos.service.js";
 import { obtenerPrecio, validarPlanYCiclo } from "../src/pagos/planes.js";
 import { validarFirmaWebhook } from "../src/pagos/pagos.service.js";
 
@@ -192,7 +192,7 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
     assert.equal(solicitud?.body.payer_email, "artista@example.test");
     assert.equal(autoRecurring?.frequency, 1);
     assert.equal(autoRecurring?.frequency_type, "months");
-    assert.match(String(solicitud?.body.back_url), /\/checkout\/pending\?subscription_id=/);
+    assert.match(String(solicitud?.body.back_url), /\/checkout\/pending\/[\da-f-]{36}$/);
     assert.equal(solicitud?.headers.get("X-Idempotency-Key"), solicitud?.body.external_reference);
     assert.equal(
       solicitud?.headers.get("Authorization"),
@@ -595,6 +595,8 @@ test("cancela el mensual pendiente con el estado que acepta Mercado Pago", async
     return data;
   }));
   const proveedor = t.mock.method(globalThis, "fetch", async (input, init) => {
+    if (String(input) === "https://api.mercadopago.com/authorized_payments/search?preapproval_id=preapproval-test")
+      return Response.json({ results: [] });
     assert.equal(String(input), "https://api.mercadopago.com/preapproval/preapproval-test");
     assert.equal(init?.method, "PUT");
     assert.deepEqual(JSON.parse(String(init?.body)), { status: "cancelled" });
@@ -602,7 +604,68 @@ test("cancela el mensual pendiente con el estado que acepta Mercado Pago", async
   });
 
   assert.equal((await cancelarSuscripcion("usuario-test", undefined)).estado, "CANCELADA");
-  assert.equal(proveedor.mock.callCount(), 1);
+  assert.equal(proveedor.mock.callCount(), 2);
+});
+
+test("verifica el mensual aprobado sin webhook y solo para el titular de la suscripción", async (t) => {
+  const id = "suscripcion-test";
+  const mercadoPagoId = "preapproval-test";
+  const fila = {
+    id, mercadoPagoId, referenciaExterna: id, ciclo: "MENSUAL", bonificada: false,
+    plan: "ESTUDIO", estado: "PENDIENTE", monto: 100, moneda: "ARS",
+    periodoHasta: null, proximoCobroAt: null, usuario: { email: "qa@example.test", nombre: "QA" },
+  };
+  t.after(reemplazar(process.env, "MERCADOPAGO_ACCESS_TOKEN", "token-de-prueba"));
+  t.after(reemplazar(prisma.suscripcion, "findFirst", async ({ where }: { where: Record<string, unknown> }) =>
+    where.usuarioId === "titular" || where.OR ? fila : null,
+  ));
+  t.after(reemplazar(prisma, "$transaction", async (fn: (tx: unknown) => unknown) =>
+    fn({
+      $queryRaw: async () => [],
+      suscripcion: {
+        findUnique: async () => fila,
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          Object.assign(fila, data);
+          return { count: 1 };
+        },
+      },
+      pagoSuscripcion: {
+        findUnique: async () => null,
+        upsert: async ({ create }: { create: Record<string, unknown> }) => {
+          assert.equal(create.estado, "APROBADO");
+          assert.equal(create.monto, 100);
+          assert.equal(create.suscripcionId, id);
+          return { id: "pago-test", correoEnviadoAt: new Date() };
+        },
+      },
+    }),
+  ));
+  const factura = {
+    id: 123, preapproval_id: mercadoPagoId, external_reference: id,
+    transaction_amount: 100, currency_id: "ARS", payment: { status: "approved" },
+  };
+  const proveedor = t.mock.method(globalThis, "fetch", async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/authorized_payments/search") {
+      assert.equal(url.searchParams.get("preapproval_id"), mercadoPagoId);
+      return Response.json({ results: [{ ...factura, id: 999, preapproval_id: "ajena" }, factura] });
+    }
+    if (url.pathname === "/authorized_payments/123") return Response.json(factura);
+    assert.equal(url.pathname, "/preapproval/" + mercadoPagoId);
+    return Response.json({
+      id: mercadoPagoId, external_reference: id,
+      next_payment_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+    });
+  });
+
+  await assert.rejects(obtenerEstadoSuscripcion(id, "otro-usuario", true), { status: 404 });
+  assert.equal(proveedor.mock.callCount(), 0);
+  assert.equal((await obtenerEstadoSuscripcion(id, "titular")).subscription.estado, "PENDIENTE");
+  const verificada = (await obtenerEstadoSuscripcion(id, "titular", true)).subscription;
+  assert.equal(verificada.estado, "ACTIVA");
+  assert.equal("mercadoPagoId" in verificada, false);
+  assert.equal((await obtenerEstadoSuscripcion(id, "titular", true)).subscription.estado, "ACTIVA");
+  assert.equal(proveedor.mock.callCount(), 3);
 });
 
 test("cierra el checkout anual y confirma que no haya pagos antes de cancelar", async (t) => {

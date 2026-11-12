@@ -185,6 +185,21 @@ async function pagoUnicoEnCurso(referencia: string) {
   return id;
 }
 
+async function buscarFacturaMensual(preapprovalId: string, paymentId?: string) {
+  const filtro = new URLSearchParams({ preapproval_id: preapprovalId });
+  if (paymentId) filtro.set("payment_id", paymentId);
+  const resultado = await solicitarMercadoPago<{ results?: PagoAutorizadoMercadoPago[] }>(
+    "/authorized_payments/search?" + filtro,
+  );
+  if (!Array.isArray(resultado.results))
+    throw new HttpError(502, "Mercado Pago todavía no confirmó el estado de la suscripción.");
+  const aprobada = resultado.results.find(factura =>
+    factura?.preapproval_id === preapprovalId &&
+    (!paymentId || parseId(factura.payment?.id) === paymentId) &&
+    ["approved", "accredited"].includes(String(factura.payment?.status).toLowerCase()));
+  return parseId(aprobada?.id);
+}
+
 function rutaPreferencia(id: string): string {
   return "/checkout/preferences/" + encodeURIComponent(id);
 }
@@ -423,7 +438,7 @@ export async function crearSuscripcion(
           reason: motivo + " mensual",
           payer_email: correoComprador,
           external_reference: subscriptionId,
-          back_url: urlFrontend("/checkout/pending?subscription_id=" + referencia),
+          back_url: urlFrontend("/checkout/pending/" + referencia),
           status: cardTokenId ? "authorized" : "pending",
           ...(cardTokenId && { card_token_id: cardTokenId }),
           auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: monto, currency_id: "ARS" },
@@ -631,6 +646,13 @@ export async function cancelarSuscripcion(
       renovacion &&
       suscripcion.mercadoPagoId
     ) {
+      if (suscripcion.estado === EstadoSuscripcion.PENDIENTE) {
+        const factura = await buscarFacturaMensual(suscripcion.mercadoPagoId);
+        if (factura) {
+          await procesarPagoAutorizado(factura);
+          throw new HttpError(409, "Este intento ya tiene un pago. Actualizá Suscripción para revisar el estado y la renovación.");
+        }
+      }
       const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
         `/preapproval/${encodeURIComponent(suscripcion.mercadoPagoId)}`,
         { method: "PUT", body: { status: "cancelled" } },
@@ -708,6 +730,7 @@ export async function obtenerSuscripcionActual(usuarioId: string) {
     where: { usuarioId },
     orderBy: { createdAt: "desc" },
     select: {
+      id: true,
       plan: true,
       ciclo: true,
       bonificada: true,
@@ -723,6 +746,7 @@ export async function obtenerSuscripcionActual(usuarioId: string) {
   return {
     suscripcion: suscripcion
       ? {
+          id: suscripcion.id,
           plan: suscripcion.plan,
           ciclo: suscripcion.ciclo,
           estado: suscripcion.estado === "ACTIVA" && !tieneRenovacion(suscripcion) &&
@@ -746,8 +770,9 @@ export async function obtenerSuscripcionActual(usuarioId: string) {
 export async function obtenerEstadoSuscripcion(
   suscripcionId: string,
   usuarioId: string,
+  verificarPago = false,
 ) {
-  const suscripcion = await prisma.suscripcion.findFirst({
+  const consulta = () => prisma.suscripcion.findFirst({
     where: { id: suscripcionId, usuarioId },
     select: {
       id: true,
@@ -758,14 +783,26 @@ export async function obtenerEstadoSuscripcion(
       moneda: true,
       proximoCobroAt: true,
       periodoHasta: true,
+      mercadoPagoId: true,
+      bonificada: true,
     },
   });
+  let suscripcion = await consulta();
+  if (verificarPago && suscripcion?.estado === EstadoSuscripcion.PENDIENTE &&
+      suscripcion.mercadoPagoId && tieneRenovacion(suscripcion)) {
+    const factura = await buscarFacturaMensual(suscripcion.mercadoPagoId);
+    if (factura) {
+      await procesarPagoAutorizado(factura);
+      suscripcion = await consulta();
+    }
+  }
   if (!suscripcion) {
     throw new HttpError(404, "No encontramos esa suscripción.");
   }
+  const { mercadoPagoId: _mercadoPagoId, bonificada: _bonificada, ...estado } = suscripcion;
   return {
     subscription: {
-      ...suscripcion,
+      ...estado,
       importe: Number(suscripcion.monto),
     },
   };
@@ -851,10 +888,14 @@ async function procesarPagoUnico(dataId: string): Promise<void> {
     if (
       !suscripcion ||
       suscripcion.bonificada ||
-      (suscripcion.ciclo !== CicloSuscripcion.ANUAL && !esPreferenciaMercadoPago(suscripcion.mercadoPagoId)) ||
       (suscripcion.mpPaymentId && suscripcion.mpPaymentId !== paymentId) ||
       suscripcion.estado === EstadoSuscripcion.CANCELADA
     ) {
+      return;
+    }
+    if (tieneRenovacion(suscripcion)) {
+      if (suscripcion.mercadoPagoId && ["approved", "accredited"].includes(String(pago.status).toLowerCase()))
+        return { preapprovalId: suscripcion.mercadoPagoId };
       return;
     }
 
@@ -963,7 +1004,12 @@ async function procesarPagoUnico(dataId: string): Promise<void> {
       };
     }
   });
-  if (aviso) await notificarPago(aviso.pagoId, aviso.correo);
+  if (aviso && "preapprovalId" in aviso && aviso.preapprovalId) {
+    const factura = await buscarFacturaMensual(aviso.preapprovalId, paymentId);
+    if (factura) await procesarPagoAutorizado(factura);
+  } else if (aviso && "pagoId" in aviso && aviso.pagoId) {
+    await notificarPago(aviso.pagoId, aviso.correo);
+  }
 }
 
 async function procesarActualizacionSuscripcion(dataId: string): Promise<void> {

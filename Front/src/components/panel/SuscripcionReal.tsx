@@ -8,6 +8,7 @@ import { PanelForm, PanelSubmitButton } from './PanelForm';
 import styles from './workspace.module.css';
 
 type Suscripcion = {
+  id: string;
   plan: string;
   ciclo: string;
   estado: 'PENDIENTE' | 'ACTIVA' | 'VENCIDA' | 'CANCELADA' | 'PAUSADA' | 'RECHAZADA' | 'ERROR';
@@ -53,9 +54,16 @@ export function SuscripcionReal({
           </Link>
         )}
         {puedeContratar && s?.estado === 'PENDIENTE' && (
-          <Link className={styles.button} href={`/checkout?plan=${s.plan}&cycle=${s.ciclo}`}>
-            Continuar pago
-          </Link>
+          <>
+            {s.id && (
+              <Link className={styles.secondaryButton} href={`/checkout/pending/${s.id}`}>
+                Verificar pago
+              </Link>
+            )}
+            <Link className={styles.button} href={`/checkout?plan=${s.plan}&cycle=${s.ciclo}`}>
+              Continuar pago
+            </Link>
+          </>
         )}
       </PageHeader>
       {error && (
