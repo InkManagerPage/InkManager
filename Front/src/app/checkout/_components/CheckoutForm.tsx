@@ -6,17 +6,11 @@ import { useRouter } from 'next/navigation';
 import { LoginModal } from '@/app/(auth)/Login/Login';
 import { RegisterModal } from '@/app/(auth)/Register/Register';
 import { usePanelData } from '@/hooks/usePanelData';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, ApiError } from '@/lib/api-client';
 import { useAuth } from '@/store/AuthProvider';
+import type { PrecioPlan } from '@/types/plan';
 import styles from './checkout.module.css';
 
-type Plan = {
-  id: 'INDIVIDUAL' | 'ESTUDIO';
-  nombre: string;
-  mensual: number;
-  anual: number;
-  moneda: string;
-};
 const moneda = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 
 function checkoutMercadoPago(valor: unknown) {
@@ -40,13 +34,15 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
     cargando,
     error: errorPlanes,
     recargar,
-  } = usePanelData<{ plans: Plan[] }>('/pagos/planes');
+  } = usePanelData<{ plans: PrecioPlan[] }>('/pagos/planes');
   const [ciclo, setCiclo] = useState<'MENSUAL' | 'ANUAL'>(
     cycleId === 'ANUAL' ? 'ANUAL' : 'MENSUAL',
   );
   const [modal, setModal] = useState<'login' | 'register' | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [correo, setCorreo] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [conflicto, setConflicto] = useState(false);
   const plan = datos?.plans.find((item) => item.id === planId);
   const compatible =
     usuario &&
@@ -57,12 +53,20 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
   async function pagar() {
     if (!plan || !compatible || enviando) return;
     setError('');
+    setConflicto(false);
     setEnviando(true);
+    const comprador = correo?.trim().toLowerCase();
     try {
       const respuesta = await apiFetch('/pagos/crear-suscripcion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: plan.id, ciclo }),
+        body: JSON.stringify({
+          plan: plan.id,
+          ciclo,
+          ...(ciclo === 'MENSUAL' && comprador && comprador !== usuario.email
+            ? { payer_email: comprador }
+            : {}),
+        }),
       });
       const resultado = await respuesta.json();
       const url = checkoutMercadoPago(resultado.checkoutUrl);
@@ -79,6 +83,7 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
       throw new Error('Mercado Pago no devolvió un enlace válido.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No pudimos iniciar el pago.');
+      setConflicto(e instanceof ApiError && e.status === 409);
       setEnviando(false);
     }
   }
@@ -116,6 +121,7 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
                   onClick={() => {
                     setCiclo('MENSUAL');
                     setError('');
+                    setConflicto(false);
                   }}
                 >
                   <strong>Mensual</strong>
@@ -128,6 +134,7 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
                   onClick={() => {
                     setCiclo('ANUAL');
                     setError('');
+                    setConflicto(false);
                   }}
                 >
                   <strong>Anual</strong>
@@ -147,13 +154,33 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
                   </div>
                 </div>
               ) : compatible ? (
-                <button
-                  className={styles.submitButton}
-                  disabled={enviando}
-                  onClick={() => void pagar()}
+                <form
+                  className={styles.form}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void pagar();
+                  }}
                 >
-                  {enviando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago'}
-                </button>
+                  {ciclo === 'MENSUAL' && (
+                    <label className={styles.field}>
+                      Correo de tu cuenta de Mercado Pago
+                      <input
+                        type="email"
+                        name="payer_email"
+                        autoComplete="email"
+                        spellCheck={false}
+                        maxLength={254}
+                        required
+                        disabled={enviando}
+                        value={correo ?? usuario.email}
+                        onChange={(event) => setCorreo(event.target.value)}
+                      />
+                    </label>
+                  )}
+                  <button type="submit" className={styles.submitButton} disabled={enviando}>
+                    {enviando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago'}
+                  </button>
+                </form>
               ) : (
                 <p role="alert">
                   Este plan es para{' '}
@@ -163,6 +190,18 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
               {error && (
                 <p className={styles.formError} role="alert">
                   {error}
+                  {conflicto && (
+                    <>
+                      {' '}
+                      <Link
+                        href={
+                          plan.id === 'ESTUDIO' ? '/estudio/suscripcion' : '/artista/suscripcion'
+                        }
+                      >
+                        Ver mi suscripción
+                      </Link>
+                    </>
+                  )}
                 </p>
               )}
             </section>

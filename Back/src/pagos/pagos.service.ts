@@ -15,7 +15,6 @@ import {
 import {
   MercadoPagoConfig,
   Payment,
-  Preference,
 } from "mercadopago";
 import { DateTime } from "luxon";
 import type { PreferenceResponse } from "mercadopago/dist/clients/preference/commonTypes.js";
@@ -169,19 +168,57 @@ function urlCheckout(valor: unknown): string {
 }
 
 async function pagoUnicoEnCurso(referencia: string) {
-  const filtro = new URLSearchParams({ external_reference: referencia,
-    sort: "date_created", criteria: "desc", range: "date_created" });
+  const filtro = new URLSearchParams({ external_reference: referencia, limit: "50" });
   const resultado = await solicitarMercadoPago<{ results?: PagoUnicoMercadoPago[]; paging?: { total?: number } }>(
     "/v1/payments/search?" + filtro,
   );
-  if (!Array.isArray(resultado.results) || (resultado.paging?.total ?? 0) > resultado.results.length)
+  const total = resultado.paging?.total;
+  if (!Array.isArray(resultado.results) || typeof total !== "number" ||
+      !Number.isSafeInteger(total) || total < 0 || total !== resultado.results.length ||
+      resultado.results.some(p => p?.external_reference !== referencia))
     throw new HttpError(409, "Mercado Pago todavía no confirmó el estado del intento anterior.");
-  const pago = resultado.results.find(p => p.external_reference === referencia &&
+  const pago = resultado.results.find(p =>
     !["rejected", "cancelled", "canceled", "refunded", "charged_back"].includes(String(p.status)));
   if (!pago) return null;
   const id = parseId(pago.id);
   if (!id) throw new HttpError(409, "Mercado Pago todavía está verificando el pago.");
   return id;
+}
+
+function rutaPreferencia(id: string): string {
+  return "/checkout/preferences/" + encodeURIComponent(id);
+}
+
+async function cerrarPreferenciaPendiente(id: string, referencia: string) {
+  const ruta = rutaPreferencia(id);
+  const actual = await solicitarMercadoPago<PreferenceResponse>(ruta);
+  if (actual.id !== id || actual.external_reference !== referencia) {
+    throw new HttpError(502, "Mercado Pago no devolvió los datos del checkout pendiente.");
+  }
+
+  const ahora = Date.now();
+  const fin = fechaValida(actual.expiration_date_to);
+  if (!actual.expires || !fin || fin.getTime() > ahora) {
+    const vencimiento = new Date(ahora - 1000);
+    const inicio = fechaValida(actual.expiration_date_from);
+    const cerrada = await solicitarMercadoPago<PreferenceResponse>(ruta, {
+      method: "PUT",
+      body: {
+        expires: true,
+        expiration_date_from: inicio && inicio < vencimiento
+          ? inicio.toISOString()
+          : new Date(ahora - 60_000).toISOString(),
+        expiration_date_to: vencimiento.toISOString(),
+      },
+    });
+    const finConfirmado = fechaValida(cerrada.expiration_date_to);
+    if (
+      cerrada.id !== id || cerrada.external_reference !== referencia ||
+      !cerrada.expires || !finConfirmado || finConfirmado.getTime() > Date.now()
+    ) {
+      throw new HttpError(502, "Mercado Pago no confirmó el cierre del checkout.");
+    }
+  }
 }
 
 export async function crearSuscripcion(
@@ -240,6 +277,10 @@ export async function crearSuscripcion(
   }
 
   const ahora = new Date();
+  const monto = obtenerPrecio(plan, ciclo);
+  const correoComprador = typeof datosEntrada.payer_email === "string"
+    ? datosEntrada.payer_email.trim().toLowerCase()
+    : usuario.email;
   const existente = await prisma.suscripcion.findFirst({
     where: {
       usuarioId: usuario.id,
@@ -268,7 +309,7 @@ export async function crearSuscripcion(
       usuarioId: usuario.id,
       estado: EstadoSuscripcion.PENDIENTE,
     },
-    select: { id: true, mercadoPagoId: true, mpPaymentId: true, plan: true, ciclo: true },
+    select: { id: true, mercadoPagoId: true, mpPaymentId: true, plan: true, ciclo: true, monto: true },
   });
 
   obtenerAccessTokenMercadoPago();
@@ -283,8 +324,8 @@ export async function crearSuscripcion(
       );
     }
     if (intento.ciclo === CicloSuscripcion.ANUAL || esPreferenciaMercadoPago(intento.mercadoPagoId)) {
-      const preferencia = await new Preference(clienteMercadoPago()).get({ preferenceId: intento.mercadoPagoId });
-      if (preferencia.external_reference !== intento.id)
+      const preferencia = await solicitarMercadoPago<PreferenceResponse>(rutaPreferencia(intento.mercadoPagoId));
+      if (preferencia.id !== intento.mercadoPagoId || preferencia.external_reference !== intento.id)
         throw new HttpError(502, "Mercado Pago no confirmó la referencia del intento anterior.");
       const fin = fechaValida(preferencia.expiration_date_to);
       if (preferencia.expires && fin && fin <= ahora) {
@@ -300,6 +341,8 @@ export async function crearSuscripcion(
         continue;
       }
       if (intento.plan === plan && intento.ciclo === ciclo && !cardTokenId) {
+        if (Number(intento.monto) !== monto)
+          throw new HttpError(409, "El precio cambió. Cancelá el intento pendiente desde Suscripción para continuar.");
         return {
           checkoutUrl: urlCheckout(preferencia.init_point),
           subscriptionId: intento.id,
@@ -318,8 +361,11 @@ export async function crearSuscripcion(
       throw new HttpError(409, "Mercado Pago todavía está procesando la suscripción anterior.");
     }
     if (estadoRemoto === "pending") {
-      if (!cardTokenId && intento.plan === plan && intento.ciclo === ciclo && remota.init_point)
+      if (!cardTokenId && intento.plan === plan && intento.ciclo === ciclo && remota.init_point) {
+        if (Number(intento.monto) !== monto || correoComprador !== usuario.email)
+          throw new HttpError(409, "Cancelá el intento pendiente desde Suscripción para usar el precio actual o cambiar el correo.");
         return { checkoutUrl: urlCheckout(remota.init_point), subscriptionId: intento.id };
+      }
       throw new HttpError(409, "Revisá o cancelá el intento pendiente desde Suscripción antes de iniciar otro.");
     }
     if (estadoRemoto === "paused") {
@@ -339,7 +385,6 @@ export async function crearSuscripcion(
   }
 
   const id = randomUUID();
-  const monto = obtenerPrecio(plan, ciclo);
   let suscripcion: Awaited<ReturnType<typeof prisma.suscripcion.create>>;
   try {
     suscripcion = await prisma.suscripcion.create({
@@ -376,7 +421,7 @@ export async function crearSuscripcion(
         idempotencyKey: subscriptionId,
         body: {
           reason: motivo + " mensual",
-          payer_email: usuario.email,
+          payer_email: correoComprador,
           external_reference: subscriptionId,
           back_url: urlFrontend("/checkout/pending?subscription_id=" + referencia),
           status: cardTokenId ? "authorized" : "pending",
@@ -588,7 +633,7 @@ export async function cancelarSuscripcion(
     ) {
       const remota = await solicitarMercadoPago<SuscripcionMercadoPago>(
         `/preapproval/${encodeURIComponent(suscripcion.mercadoPagoId)}`,
-        { method: "PUT", body: { status: "canceled" } },
+        { method: "PUT", body: { status: "cancelled" } },
       );
       if (remota.status !== "cancelled" && remota.status !== "canceled")
         throw new HttpError(502, "Mercado Pago todavía no confirmó la cancelación.");
@@ -604,39 +649,35 @@ export async function cancelarSuscripcion(
         suscripcion.mercadoPagoId &&
         suscripcion.estado === EstadoSuscripcion.PENDIENTE
       ) {
-        const cliente = new Preference(clienteMercadoPago());
-        const actual = await cliente.get({
-          preferenceId: suscripcion.mercadoPagoId,
-        });
-        if (!actual.items?.length || actual.external_reference !== suscripcion.id) {
-          throw new HttpError(502, "Mercado Pago no devolvió los datos del checkout pendiente.");
-        }
-        if (await pagoUnicoEnCurso(suscripcion.id))
-          throw new HttpError(409, "Mercado Pago ya está procesando un pago de este checkout.");
-        const fin = fechaValida(actual.expiration_date_to);
-        if (!actual.expires || !fin || fin.getTime() > Date.now()) {
-          if (!fin || fin.getTime() > Date.now() + 60_000) {
-            const preference = await cliente.update({
-              id: suscripcion.mercadoPagoId,
-              updatePreferenceRequest: { items: actual.items, expires: true,
-                expiration_date_to: new Date(Date.now() + 60_000).toISOString() },
-            });
-            if (preference.id !== suscripcion.mercadoPagoId)
-              throw new HttpError(502, "Mercado Pago no confirmó el cierre del checkout.");
-          }
-          throw new HttpError(409, "Mercado Pago está cerrando el checkout. Volvé a intentar en un minuto.");
+        await cerrarPreferenciaPendiente(suscripcion.mercadoPagoId, suscripcion.id);
+        const pago = await pagoUnicoEnCurso(suscripcion.id);
+        if (pago) {
+          await procesarPagoUnico(pago);
+          throw new HttpError(409, "El checkout ya tiene un pago. Actualizá Suscripción para consultar su estado.");
         }
       }
     }
-    await prisma.suscripcion.update({
-      where: { id: suscripcion.id },
-      data: {
-        estado: EstadoSuscripcion.CANCELADA,
-        canceladaAt: new Date(),
-        proximoCobroAt: null,
-        ...(inmediata ? { periodoHasta: new Date() } : {}),
-      },
-    });
+    const datosCancelacion = {
+      estado: EstadoSuscripcion.CANCELADA,
+      canceladaAt: new Date(),
+      proximoCobroAt: null,
+      ...(inmediata ? { periodoHasta: new Date() } : {}),
+    };
+    if (!renovacion && suscripcion.estado === EstadoSuscripcion.PENDIENTE) {
+      const cierre = await prisma.suscripcion.updateMany({
+        where: { id: suscripcion.id, estado: "PENDIENTE", mpPaymentId: suscripcion.mpPaymentId },
+        data: datosCancelacion,
+      });
+      if (!cierre.count) {
+        const actual = await prisma.suscripcion.findUnique({
+          where: { id: suscripcion.id }, select: { estado: true },
+        });
+        if (actual?.estado !== "CANCELADA")
+          throw new HttpError(409, "El intento cambió de estado. Actualizá Suscripción antes de continuar.");
+      }
+    } else {
+      await prisma.suscripcion.update({ where: { id: suscripcion.id }, data: datosCancelacion });
+    }
   } else if (inmediata && suscripcion.periodoHasta && suscripcion.periodoHasta > new Date()) {
     await prisma.suscripcion.update({
       where: { id: suscripcion.id }, data: { periodoHasta: new Date(), proximoCobroAt: null },

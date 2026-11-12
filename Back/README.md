@@ -59,6 +59,8 @@ npm run db:generate
 
 Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` con credenciales de prueba de una aplicación de Mercado Pago. `MERCADOPAGO_WEBHOOK_URL` debe apuntar por HTTPS a `https://<dominio-publico>/api/webhooks/mercadopago`; para desarrollo local necesitás un túnel HTTPS. En Mercado Pago habilitá los eventos `subscription_preapproval`, `subscription_authorized_payment` y `payment` para sincronizar pagos anuales. No uses credenciales de producción para las pruebas.
 
+Con un vendedor de prueba podés configurar `MP_PLAN_INDIVIDUAL_MENSUAL_ARS=100` y `MP_PLAN_ESTUDIO_MENSUAL_ARS=100`, y `MP_PLAN_INDIVIDUAL_ANUAL_ARS=500` y `MP_PLAN_ESTUDIO_ANUAL_ARS=500`. Los nuevos intentos toman esos montos. Cancelá los intentos pendientes de un precio anterior antes de crear otros. En el mensual, usá el correo del comprador de prueba generado por Mercado Pago.
+
 | Endpoint                                              | Acceso                           | Función                                                                       |
 | ----------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
 | `GET /api/pagos/planes`                               | Público                          | Devuelve los planes y precios configurados.                                   |

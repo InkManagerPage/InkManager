@@ -72,6 +72,7 @@ export function validarPlanYCiclo(entrada: unknown): {
         ![
           "plan",
           "ciclo",
+          "payer_email",
           "card_token_id",
           "payment_method_id",
           "identification_number",
@@ -84,6 +85,16 @@ export function validarPlanYCiclo(entrada: unknown): {
       400,
       "Elegí un plan y un ciclo de facturación válidos.",
     );
+  }
+
+  if (
+    datos.payer_email !== undefined &&
+    (datos.ciclo !== "MENSUAL" ||
+      typeof datos.payer_email !== "string" ||
+      datos.payer_email.trim().length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datos.payer_email.trim()))
+  ) {
+    throw new HttpError(400, "Ingresá un correo válido de Mercado Pago para el plan mensual.");
   }
 
   if (
