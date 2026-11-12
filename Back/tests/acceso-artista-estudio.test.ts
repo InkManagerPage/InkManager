@@ -86,12 +86,12 @@ test("el enlace del integrante apunta al estudio y el independiente necesita pla
   assert.deepEqual(await obtenerEnlaceFormularioArtista(artista.id), { enlace: "/cotizacion/estudio-central" });
 });
 
-test("cancelar la renovación conserva el acceso durante el período abonado", () => {
+test("cancelar o pausar la renovación conserva el acceso durante el período abonado", () => {
   const ahora = new Date("2030-01-01T12:00:00Z");
   assert.deepEqual(periodoPlanVigente(ahora), {
     OR: [
       { estado: "ACTIVA", OR: [{ periodoHasta: null }, { periodoHasta: { gt: ahora } }] },
-      { estado: "CANCELADA", periodoHasta: { gt: ahora } },
+      { estado: { in: ["CANCELADA", "PAUSADA"] }, periodoHasta: { gt: ahora } },
     ],
   });
 });

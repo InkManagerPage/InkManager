@@ -29,7 +29,8 @@
     "db:piloto-instagram": "prisma db execute --file prisma/changes/20261110_piloto_instagram.sql --schema prisma/schema.prisma",
     "db:asistente": "prisma db execute --file prisma/changes/20261111_configuracion_asistente.sql --schema prisma/schema.prisma",
     "db:chatbot-turnos": "prisma db execute --file prisma/changes/20261112_chatbot_propuestas_turnos.sql --schema prisma/schema.prisma",
-    "db:instagram-agenda": "prisma db execute --file prisma/changes/20261112_instagram_agenda.sql --schema prisma/schema.prisma"
+    "db:instagram-agenda": "prisma db execute --file prisma/changes/20261112_instagram_agenda.sql --schema prisma/schema.prisma",
+    "db:planes-bonificados": "prisma db execute --file prisma/changes/20261112_planes_bonificados.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

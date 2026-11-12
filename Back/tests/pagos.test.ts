@@ -181,10 +181,10 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
     assert.equal(autoRecurring?.transaction_amount, 12000);
     assert.equal(solicitud?.body.status, "pending");
     assert.equal(solicitud?.body.payer_email, "artista@example.test");
-    assert.equal(
-      solicitud?.body.notification_url,
-      process.env.MERCADOPAGO_WEBHOOK_URL,
-    );
+    assert.equal(autoRecurring?.frequency, 1);
+    assert.equal(autoRecurring?.frequency_type, "months");
+    assert.match(String(solicitud?.body.back_url), /\/checkout\/pending\?subscription_id=/);
+    assert.equal(solicitud?.headers.get("X-Idempotency-Key"), solicitud?.body.external_reference);
     assert.equal(
       solicitud?.headers.get("Authorization"),
       "Bearer test-access-token",

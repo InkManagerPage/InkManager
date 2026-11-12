@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
+import { randomUUID } from "node:crypto";
+import { periodoPlanVigente, tieneRenovacion, vencerPlanesSinRenovacion } from "../pagos/acceso-plan.js";
 
 export async function resumenAdministrativo(desde: Date, hasta: Date) {
   const periodo = { gte: desde, lt: hasta };
@@ -68,6 +70,7 @@ export async function listarCuentas(q: string, pagina: number) {
       nombre: true,
       email: true,
       rol: true,
+      estudioId: true,
       suspendidoAt: true,
       createdAt: true,
     },
@@ -75,7 +78,8 @@ export async function listarCuentas(q: string, pagina: number) {
 }
 
 export async function listarSuscripciones(q: string, pagina: number) {
-  return prisma.suscripcion.findMany({
+  const ahora = new Date();
+  const filas = await prisma.suscripcion.findMany({
     where: q
       ? { usuario: { email: { contains: q, mode: "insensitive" } } }
       : {},
@@ -86,6 +90,8 @@ export async function listarSuscripciones(q: string, pagina: number) {
       id: true,
       plan: true,
       ciclo: true,
+      bonificada: true,
+      mercadoPagoId: true,
       estado: true,
       monto: true,
       moneda: true,
@@ -99,6 +105,12 @@ export async function listarSuscripciones(q: string, pagina: number) {
       },
     },
   });
+  return filas.map(({ mercadoPagoId, ...fila }) => ({
+    ...fila,
+    estado: fila.bonificada && fila.estado === "ACTIVA" && fila.periodoHasta && fila.periodoHasta <= ahora
+      ? "VENCIDA" : fila.estado,
+    renovacion: tieneRenovacion({ ...fila, mercadoPagoId }),
+  }));
 }
 
 export async function cambiarEstadoCuenta(
@@ -134,6 +146,66 @@ export async function cambiarEstadoCuenta(
         accion: suspendida ? "SUSPENDER_CUENTA" : "REACTIVAR_CUENTA",
         motivo,
       },
+    });
+  });
+}
+
+export async function otorgarPlanBonificado(autorId: string, cuentaId: string, hasta: Date | null, motivo: string) {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "Usuario" WHERE "id" = ${cuentaId} FOR UPDATE`;
+    const cuenta = await tx.usuario.findUnique({
+      where: { id: cuentaId },
+      select: { rol: true, estudioId: true, suspendidoAt: true, estudio: { select: { propietarioId: true } } },
+    });
+    if (!cuenta) throw new HttpError(404, "No encontramos la cuenta.");
+    const plan = cuenta.rol === "ARTISTA" && !cuenta.estudioId ? "INDIVIDUAL" :
+      cuenta.rol === "ESTUDIO_ADMIN" && cuenta.estudio?.propietarioId === cuentaId ? "ESTUDIO" : null;
+    if (!plan || cuenta.suspendidoAt)
+      throw new HttpError(409, "Elegí un artista independiente o titular de estudio con su cuenta habilitada.");
+    const ahora = new Date();
+    await vencerPlanesSinRenovacion(tx, cuentaId, ahora);
+    const existente = await tx.suscripcion.findFirst({
+      where: { usuarioId: cuentaId, OR: [
+        { estado: { in: ["PENDIENTE", "ACTIVA", "PAUSADA"] } }, periodoPlanVigente(ahora),
+      ] },
+      select: { id: true, plan: true, estado: true, bonificada: true },
+    });
+    if (existente && (!existente.bonificada || existente.estado !== "ACTIVA" || existente.plan !== plan))
+      throw new HttpError(409, "La cuenta ya tiene un plan vigente o un pago en curso.");
+    const id = randomUUID();
+    const otorgada = existente
+      ? await tx.suscripcion.update({ where: { id: existente.id }, data: { periodoHasta: hasta }, select: { id: true, plan: true } })
+      : await tx.suscripcion.create({
+          data: { id, referenciaExterna: id, usuarioId: cuentaId, plan, ciclo: "MENSUAL",
+            estado: "ACTIVA", monto: 0, bonificada: true, periodoHasta: hasta },
+          select: { id: true, plan: true },
+        });
+    await tx.accionAdministrativa.create({
+      data: { autorId, cuentaId, accion: existente ? "ACTUALIZAR_PLAN_BONIFICADO" : "OTORGAR_PLAN_BONIFICADO", motivo },
+    });
+    return otorgada;
+  }).catch(error => {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
+      throw new HttpError(409, "La cuenta ya tiene un plan o un pago en curso. Actualizá el listado.");
+    throw error;
+  });
+}
+
+export async function revocarPlanBonificado(autorId: string, suscripcionId: string, motivo: string) {
+  await prisma.$transaction(async tx => {
+    const ahora = new Date();
+    const bonificacion = await tx.suscripcion.findFirst({
+      where: { id: suscripcionId, bonificada: true, estado: "ACTIVA", ...periodoPlanVigente(ahora) },
+      select: { usuarioId: true },
+    });
+    if (!bonificacion) throw new HttpError(409, "El plan bonificado ya no está vigente.");
+    const { count } = await tx.suscripcion.updateMany({
+      where: { id: suscripcionId, bonificada: true, estado: "ACTIVA" },
+      data: { estado: "CANCELADA", canceladaAt: ahora, periodoHasta: ahora },
+    });
+    if (!count) throw new HttpError(409, "El plan bonificado ya no está vigente.");
+    await tx.accionAdministrativa.create({
+      data: { autorId, cuentaId: bonificacion.usuarioId, accion: "REVOCAR_PLAN_BONIFICADO", motivo },
     });
   });
 }

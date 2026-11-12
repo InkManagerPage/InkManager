@@ -509,6 +509,7 @@ model Suscripcion {
   ciclo                      CicloSuscripcion
   estado                     EstadoSuscripcion  @default(PENDIENTE)
   monto                      Decimal            @db.Decimal(12, 2)
+  bonificada                 Boolean            @default(false)
   moneda                     String             @default("ARS")
   mercadoPagoId              String?            @unique
   mpPaymentId                String?            @unique
