@@ -8,9 +8,18 @@ import type { SemanaDisponible } from "../disponibilidad/disponibilidad.entity.j
 import { HttpError } from "../errors/http-error.js";
 import { registrarAviso } from "../operacion/avisos.repository.js";
 import type { SolicitudCompleta } from "../solicitudes/solicitudes.entity.js";
-import type { TarjetaInstagram } from "./instagram.proveedor.js";
+import type { BotonInstagram, TarjetaInstagram } from "./instagram.proveedor.js";
 
-export type RespuestaBot = { texto: string; tarjetas?: TarjetaInstagram[]; aviso?: string };
+export type MenuAgenda = {
+  consultaId: string;
+  version: number;
+  expira: number;
+  dias?: string[];
+  fecha?: string;
+  preferencia?: PreferenciaAgenda;
+  confirmacion?: string;
+};
+export type RespuestaBot = { texto: string; tarjetas?: TarjetaInstagram[]; opciones?: BotonInstagram[]; agenda?: MenuAgenda };
 const formatoHora = "HH:mm";
 const rangoDias = 21;
 const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -23,30 +32,46 @@ function mostrarHora(fecha: DateTime) {
   return fecha.setLocale("es-AR").toFormat("ccc d/LL 'a las' HH:mm");
 }
 
-function turnoConfirmado(inicioAt: Date, zona: string): RespuestaBot {
-  return { texto: "Tu turno quedó confirmado para el " +
-    mostrarHora(DateTime.fromJSDate(inicioAt, { zone: zona })) +
-    ". La reserva está hecha sin pago de seña." };
+export function mensajeTurno(cita: { inicioAt: Date; estado: string }, zona: string, nueva = false) {
+  const horario = mostrarHora(DateTime.fromJSDate(cita.inicioAt, { zone: zona }));
+  const confirmado = cita.estado === "CONFIRMADA";
+  if (nueva) return confirmado ? `Tu turno quedó confirmado para el ${horario}.`
+    : `Tu turno quedó agendado para el ${horario} y está pendiente de confirmación.`;
+  return `Tu próximo turno es el ${horario} y está ${confirmado ? "confirmado" : "pendiente de confirmación"}.`;
+}
+
+export function proximoTurno(solicitudId: string) {
+  return prisma.cita.findFirst({
+    where: { solicitudId, estado: { in: ["PENDIENTE", "CONFIRMADA"] }, inicioAt: { gt: new Date() } },
+    orderBy: { inicioAt: "asc" }, select: { inicioAt: true, estado: true },
+  });
+}
+
+export async function leerMenuAgenda(hiloId: string, s: SolicitudCompleta): Promise<MenuAgenda | null> {
+  const mensaje = await prisma.mensajeCanal.findFirst({
+    where: { conversacionId: hiloId, propio: true, estado: "ENVIADO", accionBot: { startsWith: "agenda:" } },
+    orderBy: [{ fecha: "desc" }, { id: "desc" }], select: { accionBot: true },
+  });
+  if (!mensaje?.accionBot) return null;
+  const menu: MenuAgenda = JSON.parse(mensaje.accionBot.slice("agenda:".length));
+  return menu.consultaId === s.id && menu.version === s.version && menu.expira > Date.now() ? menu : null;
 }
 
 export async function agendarPorInstagram(
   titularId: string, s: SolicitudCompleta, zona: string,
-  opciones: { preferencia?: PreferenciaAgenda; paginaDesde?: number; confirmacion?: string; fechaEscrita?: string } = {},
+  opciones: { preferencia?: PreferenciaAgenda; paginaDesde?: number; confirmacion?: string; fechaEscrita?: string;
+    diaElegido?: string } = {},
 ): Promise<RespuestaBot> {
   if (!s.estudioId || !s.artistaAsignadoId || s.estado !== "ASIGNADA")
     return { texto: "Primero elegí una propuesta o esperá a que el estudio asigne un artista." };
 
   const [cita, artista] = await Promise.all([
-    prisma.cita.findFirst({ where: { solicitudId: s.id, estado: { not: "CANCELADA" } },
-      orderBy: { inicioAt: "desc" }, select: { inicioAt: true, estado: true } }),
+    proximoTurno(s.id),
     prisma.usuario.findFirst({ where: { id: s.artistaAsignadoId, estudioId: s.estudioId,
       rol: "ARTISTA", estadoEnEstudio: "ACTIVO", suspendidoAt: null },
       select: { nombre: true, nombreArtistico: true } }),
   ]);
-  if (cita) {
-    if (cita.estado === "CONFIRMADA") return turnoConfirmado(cita.inicioAt, zona);
-    return { texto: "Ya hay una sesión registrada para esta consulta. Si querés cambiarla o agregar otra, pedí hablar con el estudio." };
-  }
+  if (cita) return { texto: mensajeTurno(cita, zona) };
   const presupuesto = s.cotizaciones.find(c => c.artistaId === s.artistaAsignadoId);
   const duracion = presupuesto?.duracionMinutos;
   if (!artista || !presupuesto || !duracion || (presupuesto.validaHasta && presupuesto.validaHasta < new Date())) {
@@ -58,20 +83,19 @@ export async function agendarPorInstagram(
 
   const ahora = DateTime.now().setZone(zona);
   const finBusqueda = ahora.plus({ days: rangoDias }).endOf("day");
-  if (opciones.fechaEscrita) {
-    const escrita = DateTime.fromFormat(opciones.fechaEscrita, "yyyy-LL-dd HH:mm", { zone: zona });
-    if (escrita.toFormat("yyyy-LL-dd HH:mm") === opciones.fechaEscrita && escrita.getPossibleOffsets().length === 1)
-      opciones.confirmacion = `${s.id}:${s.version}:${escrita.toMillis()}:${ahora.plus({ minutes: 1 }).toMillis()}:${randomUUID()}`;
-    else
-      return { texto: "No pude leer esa fecha. Escribí «horarios» para volver a ver las opciones." };
-  }
+  const expira = ahora.plus({ minutes: 30 }).toMillis();
+  const menu = { consultaId: s.id, version: s.version, expira, preferencia: opciones.preferencia };
+  const horaEscrita = opciones.fechaEscrita
+    ? DateTime.fromFormat(opciones.fechaEscrita, "yyyy-LL-dd HH:mm", { zone: zona }) : null;
+  if (horaEscrita && (!horaEscrita.isValid || horaEscrita.toFormat("yyyy-LL-dd HH:mm") !== opciones.fechaEscrita))
+    return { texto: "No pude leer esa fecha. Escribí «horarios» para volver a ver las opciones." };
   let prefijo = "";
   if (opciones.confirmacion) {
     const [consultaId, version, timestamp, expira, clave] = opciones.confirmacion.split(":");
     const inicio = DateTime.fromMillis(Number(timestamp), { zone: zona });
     if (consultaId === s.id && Number(version) === s.version && clave && uuid.test(clave) &&
         Number.isSafeInteger(Number(expira)) && Number(expira) >= ahora.toMillis() &&
-        inicio.isValid && inicio > ahora && inicio <= finBusqueda) {
+      inicio.isValid && inicio > ahora && inicio <= finBusqueda && inicio.getPossibleOffsets().length === 1) {
       try {
         const titulo = s.titulo?.trim().slice(0, 100);
         const { cita: reservada } = await crearTurno(titularId, {
@@ -81,11 +105,16 @@ export async function agendarPorInstagram(
           importe: Number(presupuesto.monto), sena: Number(presupuesto.montoSena),
           estado: "CONFIRMADA", notas: "", sesionAdicional: false,
         }, "instagram");
-        return turnoConfirmado(DateTime.fromISO(reservada.fecha + "T" + reservada.hora, { zone: zona }).toJSDate(), zona);
+        return { texto: mensajeTurno({ estado: reservada.estado, inicioAt: inicio.toJSDate() }, zona, true) };
       } catch (error) {
         if (!(error instanceof HttpError) || ![400, 409].includes(error.status)) throw error;
       }
     }
+    const reservada = await proximoTurno(s.id);
+    if (reservada) return { texto: mensajeTurno(reservada, zona) };
+    const fechaAnterior = inicio.isValid ? inicio.toISODate() : null;
+    if (fechaAnterior && !opciones.diaElegido && inicio > ahora && inicio <= finBusqueda)
+      opciones.diaElegido = fechaAnterior;
     prefijo = "Ese horario ya no está disponible. ";
   }
 
@@ -111,14 +140,18 @@ export async function agendarPorInstagram(
   const semana = agenda.semana as unknown as SemanaDisponible;
   const bloqueados = [...agenda.bloqueos, ...ocupados];
   const preferencia = opciones.preferencia;
+  const fecha = opciones.diaElegido ?? horaEscrita?.toISODate() ?? preferencia?.fecha;
   const horarios: DateTime[] = [];
+  const dias: string[] = [];
   const primerDia = DateTime.fromMillis(desde, { zone: zona }).startOf("day");
-  for (let dia = primerDia; dia <= finBusqueda && horarios.length < 4; dia = dia.plus({ days: 1 })) {
-    if ((preferencia?.fecha && preferencia.fecha !== dia.toISODate()) ||
+  for (let dia = primerDia; dia <= finBusqueda; dia = dia.plus({ days: 1 })) {
+    const diaIso = dia.toISODate()!;
+    if ((fecha && fecha !== diaIso) ||
         (preferencia?.diaSemana && preferencia.diaSemana !== dia.weekday)) continue;
+    const cantidadInicial = horarios.length;
     const rangos = semana.find(item => item.dia === dia.weekday)?.rangos ?? [];
     for (const rango of rangos) {
-      for (let minuto = minutosHorario(rango.desde); minuto < minutosHorario(rango.hasta) && horarios.length < 4; minuto += 30) {
+      for (let minuto = minutosHorario(rango.desde); minuto < minutosHorario(rango.hasta); minuto += 30) {
         const inicio = dia.set({ hour: Math.floor(minuto / 60), minute: minuto % 60 });
         const fin = inicio.plus({ minutes: duracion });
         if (inicio.toMillis() <= desde || inicio.hour * 60 + inicio.minute !== minuto ||
@@ -130,23 +163,28 @@ export async function agendarPorInstagram(
         horarios.push(inicio);
       }
     }
+    if (horarios.length > cantidadInicial) dias.push(diaIso);
   }
   if (!horarios.length)
-    return { texto: prefijo + (preferencia ? "No encontré horarios con esa preferencia. Decime otro día o escribí «horarios» para ver todas las opciones." :
+    return { texto: prefijo + (fecha || preferencia ? "No encontré horarios con esa preferencia. Decime otro día o escribí «horarios» para ver todas las opciones." :
       "No encontré horarios libres en las próximas tres semanas. Podés pedir hablar con el estudio.") };
 
+  if (horaEscrita) {
+    const elegida = horarios.find(hora => hora.equals(horaEscrita));
+    if (elegida) {
+      return { texto: `Elegiste el ${mostrarHora(elegida)}. Respondé «confirmar» para reservar o «horarios» para cambiar.`,
+        agenda: { ...menu, fecha, confirmacion: `${s.id}:${s.version}:${elegida.toMillis()}:${expira}:${randomUUID()}` } };
+    }
+    prefijo = "Ese horario ya no está disponible. ";
+  }
   const nombre = artista.nombreArtistico || artista.nombre || "tu artista";
-  const expira = ahora.plus({ minutes: 30 }).toMillis();
-  const primeras = horarios.slice(0, 3);
-  const tarjetas: TarjetaInstagram[] = primeras.map(hora => ({
-    title: mostrarHora(hora),
-    subtitle: (nombre + " · " + duracion + " min").slice(0, 80),
-    buttons: [botonBot("Confirmar turno", `turno:${s.id}:${s.version}:${hora.toMillis()}:${expira}:${randomUUID()}`)],
-  }));
-  if (horarios.length > 3)
-    tarjetas.push({ title: "¿Buscás otro horario?", buttons: [botonBot("Ver más horarios",
-      "agenda:" + s.id + ":" + primeras[2]!.toMillis() + ":" + encodeURIComponent(JSON.stringify(preferencia ?? {})))] });
-  const texto = prefijo + "Horarios con " + nombre + ":\n" + primeras.map(mostrarHora).join("\n") +
-    "\nSi no ves los botones, escribí la fecha y hora así: " + primeras[0]!.toFormat("yyyy-LL-dd HH:mm") + ".";
-  return { texto, tarjetas, aviso: prefijo.trim() || undefined };
+  if (fecha) {
+    const horas = horarios.map(hora => hora.toFormat(formatoHora));
+    return { texto: `${prefijo}Horarios con ${nombre} para el ${horarios[0]!.setLocale("es-AR").toFormat("cccc d/LL")}:\n${horas.join(" · ")}\nRespondé con la hora que preferís, por ejemplo «${horas[0]}».`,
+      agenda: { ...menu, fecha } };
+  }
+  const lista = dias.map((valor, indice) =>
+    `D${indice + 1}. ${DateTime.fromISO(valor, { zone: zona }).setLocale("es-AR").toFormat("cccc d/LL")}`);
+  return { texto: `${prefijo}¿Qué día te queda bien con ${nombre}?\n${lista.join("\n")}\nRespondé con el código del día, por ejemplo «D1».`,
+    agenda: { ...menu, dias } };
 }

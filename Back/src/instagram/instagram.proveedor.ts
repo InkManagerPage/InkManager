@@ -79,6 +79,18 @@ export function idInstagram(valor: unknown): valor is string {
   return typeof valor === "string" && /^\d{1,30}$/.test(valor);
 }
 
+export function idMensajeInstagram(id: string) {
+  // Meta usa prefijos distintos para el envío y el eco del mismo DM.
+  const escapes: Record<string, string> = { ZA: "Z", ZB: "+", ZC: "/", ZD: "=" };
+  if (!/^[A-Za-z0-9+/=_-]+$/.test(id)) return id;
+  for (const valor of [id, id.replace(/Z[ABCD]/g, escape => escapes[escape]!)]) {
+    const decodificado = Buffer.from(valor, "base64").toString("utf8");
+    if (/^(?:new_)?ig_dm_item:\d+:IGMessageID(?::\d+){3}$/.test(decodificado))
+      return decodificado.replace(/^new_/, "");
+  }
+  return id;
+}
+
 export function urlInstagram(config: ConfigInstagram, state: string) {
   if (config.configId) {
     const url = new URL("https://www.facebook.com/dialog/oauth");
@@ -329,11 +341,13 @@ export async function nombreRemitente(
     : "";
 }
 
+export type BotonInstagram = { type: "postback"; title: string; payload: string };
+
 export type TarjetaInstagram = {
   title: string;
   subtitle?: string;
   image_url?: string;
-  buttons?: { type: "postback"; title: string; payload: string }[];
+  buttons?: BotonInstagram[];
 };
 
 export async function enviarInstagram(
@@ -342,6 +356,7 @@ export async function enviarInstagram(
   destinatario: string,
   texto: string,
   tarjetas?: TarjetaInstagram[],
+  opciones?: BotonInstagram[],
 ) {
   const datos = await solicitar<{ message_id?: string }>(
     graph(config, loginUnificado, cuentaId + "/messages"),
@@ -352,7 +367,8 @@ export async function enviarInstagram(
         recipient: { id: destinatario },
         message: tarjetas
           ? { attachment: { type: "template", payload: { template_type: "generic", elements: tarjetas } } }
-          : { text: texto },
+          : { text: texto, ...(opciones?.length && { quick_replies: opciones.map(({ title, payload }) =>
+              ({ content_type: "text", title, payload })) }) },
       }),
     },
   );

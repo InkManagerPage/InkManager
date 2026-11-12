@@ -34,6 +34,7 @@ export async function listarCanales(
       ultimaEntradaAt: true,
       flujoInstagram: { select: { pausadoAt: true } },
       mensajes: {
+        where: { ecoInstagram: false },
         select: camposMensaje,
         orderBy: ordenMensajes,
         take: cantidadMensajes + 1,
@@ -69,7 +70,7 @@ export async function historialInstagram(a: AmbitoConsultas, conversacionId: str
     select: { id: true, fecha: true },
   });
   const filas = await prisma.mensajeCanal.findMany({
-    where: { ...ambito, ...anterioresA(cursor) },
+    where: { ...ambito, ecoInstagram: false, ...anterioresA(cursor) },
     select: camposMensaje,
     orderBy: ordenMensajes,
     take: tamanoPaginaMensajes + 1,

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { DateTime } from "luxon";
 import type { ConversacionCanal, EstadoMensajeCanal, Prisma } from "@prisma/client";
 import { leerConfiguracionAsistente } from "../asistente/asistente.repository.js";
 import { generarRespuestaAsistente, pruebaAsistenteDisponible } from "../asistente/respuesta.js";
@@ -10,10 +11,13 @@ import { registrarAviso } from "../operacion/avisos.repository.js";
 import { detalleSolicitud, type SolicitudCompleta } from "../solicitudes/solicitudes.entity.js";
 import { cotizacionesVigentes } from "../solicitudes/solicitudes.service.js";
 import { cerrarVencidasDelAmbito } from "../solicitudes/solicitudes.repository.js";
-import { configuracionInstagram, type TarjetaInstagram } from "./instagram.proveedor.js";
-import { agendarPorInstagram, botonBot, type RespuestaBot } from "./instagram-agenda.js";
+import { configuracionInstagram, type BotonInstagram, type TarjetaInstagram } from "./instagram.proveedor.js";
+import { agendarPorInstagram, botonBot, leerMenuAgenda, mensajeTurno, proximoTurno, type RespuestaBot } from "./instagram-agenda.js";
+import { notificarTurnosInstagram } from "./instagram-turnos.repository.js";
 
-export type EnviarBot = (hilo: ConversacionCanal, clave: string, texto: string, tarjetas?: TarjetaInstagram[]) => Promise<EstadoMensajeCanal>;
+export type EnviarBot = (hilo: ConversacionCanal, clave: string, texto: string,
+  formato?: { tarjetas?: TarjetaInstagram[]; opciones?: BotonInstagram[]; agenda?: string },
+) => Promise<EstadoMensajeCanal>;
 const dia = 24 * 60 * 60 * 1000;
 const ayuda = () => pruebaAsistenteDisponible()
   ? "Podés consultar por acá o pedir hablar con el estudio."
@@ -23,13 +27,32 @@ const pedirTurno = () => "Escribí «horarios» para agendar tu turno.";
 export function interpretarMensajeBot(texto: string) {
   const mensaje = texto.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase()
     .replace(/^[¿¡]+|[!?.]+$/g, "").trim();
-  const opcion = /^(?:(?:la|opcion|elegir) )?([0-9]{1,3}|[a-f0-9]{8})$/.exec(mensaje);
+  const opcion = /^(?:(?:la|el|opcion|propuesta|elegir(?: propuesta)?)\s+)?([0-9]{1,3}|[a-f0-9]{8})(?:\s*[,.-]\s*[^\d].*)?$/.exec(mensaje);
   if (opcion || /^elegir\b/.test(mensaje)) return { tipo: "ELEGIR", codigo: opcion?.[1] ?? "" } as const;
+  const detalle = /^(?:ver )?detalle(?: de (?:la )?propuesta)? (\d{1,3})$/.exec(mensaje);
+  if (detalle) return { tipo: "DETALLE", numero: Number(detalle[1]) } as const;
+  if (/^(confirmar(?: turno)?|confirmo(?: el turno)?)$/.test(mensaje)) return { tipo: "CONFIRMAR" } as const;
+  const dia = /^(?:d|dia\s+)(\d{1,2})$/.exec(mensaje);
+  if (dia) return { tipo: "DIA", indice: Number(dia[1]) - 1 } as const;
+  const semana = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+  const diaSemana = /^(?:(?:el|para el) )?(lunes|martes|miercoles|jueves|viernes|sabado|domingo)$/.exec(mensaje);
+  if (diaSemana) return { tipo: "DIA_SEMANA", dia: semana.indexOf(diaSemana[1]!) + 1 } as const;
+  const fechaLocal = /^(?:(?:el|para el|lunes|martes|miercoles|jueves|viernes|sabado|domingo) )?(\d{1,2})\/(\d{1,2})(?: a las (\d{1,2})(?::([0-5]\d))?)?$/.exec(mensaje);
+  if (fechaLocal)
+    return { tipo: "DIA_FECHA", dia: Number(fechaLocal[1]), mes: Number(fechaLocal[2]),
+      hora: fechaLocal[3] ? fechaLocal[3].padStart(2, "0") + ":" + (fechaLocal[4] ?? "00") : undefined } as const;
+  const hora = /^(?:(?:a )?las (\d{1,2})(?::([0-5]\d))?|(\d{1,2}):([0-5]\d))$/.exec(mensaje);
+  const horas = hora?.[1] ?? hora?.[3];
+  if (hora && horas && Number(horas) < 24)
+    return { tipo: "HORA", hora: horas.padStart(2, "0") + ":" + (hora[2] ?? hora[4] ?? "00") } as const;
+  if (/\b(?:mi (?:turno|cita|sesion)|tengo (?:turno|cita|sesion)|es (?:el|la) (?:turno|cita|sesion))\b/.test(mensaje) &&
+      /\b(?:cuando|hora|horario|dia|fecha|confirmad[oa])\b/.test(mensaje))
+    return { tipo: "ESTADO_TURNO" } as const;
   const horario = /^(?:turno )?(\d{4}-\d{2}-\d{2} \d{2}:\d{2})$/.exec(mensaje);
   if (horario) return { tipo: "FECHA", fecha: horario[1]! } as const;
   if (/^(humano|asesor|hablar con (el )?estudio|hablar con (una )?persona)$/.test(mensaje))
     return { tipo: "HUMANO" } as const;
-  if (/^(turno|horarios|pedir turno|agendar|quiero (un )?turno)$/.test(mensaje))
+  if (/^(turno|horarios|ver horarios|ver mas horarios|pedir turno|agendar|quiero (un )?turno)$/.test(mensaje))
     return { tipo: "TURNO" } as const;
   if (/^(hola|buen dia|buenos dias|buenas(?: tardes| noches)?)(?:$|[\s,!.?])/.test(mensaje) ||
     /^(presupuesto|cotizacion|estado|formulario|quiero (?:pedir )?(?:un )?presupuesto)$/.test(mensaje))
@@ -60,17 +83,19 @@ function mostrarOpciones(s: SolicitudCompleta, pagina = 0): RespuestaBot {
     subtitle: `Seña ${moneda(s, Number(c.montoSena))} · ${c.mensaje || ""}`.slice(0, 80),
     ...(c.bocetoUrl?.startsWith("https://") && { image_url: c.bocetoUrl }),
     buttons: [
-      botonBot("Ver detalle", `detalle:${s.version}:${c.id}`),
+      botonBot(`Detalle ${c.numero}`, `detalle:${s.version}:${c.id}`),
       asignada ? botonBot("Ver horarios", "agenda:" + s.id) :
-        botonBot("Elegir propuesta", `propuesta:${s.version}:${c.id}`),
+        botonBot(`Elegir propuesta ${c.numero}`, `propuesta:${s.version}:${c.id}`),
     ],
   }));
   if (pagina + 8 < opciones.length)
     tarjetas.push({ title: "Más propuestas", buttons: [botonBot("Ver más", `propuestas:${s.id}:${pagina + 8}`)] });
   const lista = primeras.map(c =>
     `${c.numero}. ${c.nombre} · ${moneda(s, Number(c.monto))}`).join("\n");
-  return { tarjetas, texto: (asignada ? "La propuesta de tu artista:\n" : "Estas son las propuestas vigentes:\n") +
-    lista + (asignada ? "\n" + pedirTurno() : "\nPodés elegir por número. Por ejemplo, «la " + primeras[0]!.numero + "».") };
+  const botones = asignada ? undefined : primeras.map(c => botonBot(`Elegir ${c.numero}`, `propuesta:${s.version}:${c.id}`));
+  return { tarjetas, opciones: botones, texto: (asignada ? "La propuesta de tu artista:\n" : "Estas son las propuestas vigentes:\n") +
+    lista + (asignada ? "\n" + pedirTurno() :
+      "\nPara elegir, respondé con el número. Para leer la descripción, escribí «detalle " + primeras[0]!.numero + "».") };
 }
 
 function estadoSolicitud(solicitud: SolicitudCompleta): RespuestaBot {
@@ -82,9 +107,10 @@ function estadoSolicitud(solicitud: SolicitudCompleta): RespuestaBot {
 }
 
 async function enviarRespuesta(enviar: EnviarBot, hilo: ConversacionCanal, clave: string, respuesta: RespuestaBot) {
-  if (respuesta.aviso && respuesta.tarjetas)
-    await enviar(hilo, clave + ":aviso", respuesta.aviso);
-  return enviar(hilo, clave, respuesta.texto, respuesta.tarjetas);
+  if (respuesta.tarjetas)
+    await enviar(hilo, clave + ":tarjetas", "Tarjetas de las propuestas.", { tarjetas: respuesta.tarjetas });
+  return enviar(hilo, clave, respuesta.texto, { opciones: respuesta.opciones,
+    agenda: respuesta.agenda ? "agenda:" + JSON.stringify(respuesta.agenda) : undefined });
 }
 
 async function iniciarFlujo(hilo: ConversacionCanal) {
@@ -129,7 +155,7 @@ async function elegirPropuesta(hilo: ConversacionCanal, titularId: string,
     if (solicitud.estado !== "ELECCION_CLIENTE") return estadoSolicitud(solicitud);
     const vigentes = mostrarOpciones(solicitud);
     const avisoError = "No pude elegir esa propuesta. Revisá las opciones vigentes.";
-    const noDisponible = { ...vigentes, aviso: avisoError, texto: avisoError + "\n" + vigentes.texto };
+    const noDisponible = { ...vigentes, texto: avisoError + "\n" + vigentes.texto };
     const opciones = opcionesDe(solicitud).filter(c => elegir.propuestaId
       ? elegir.version === solicitud.version && c.id === elegir.propuestaId
       : c.codigo === elegir.codigo || String(c.numero) === elegir.codigo);
@@ -180,9 +206,9 @@ export async function procesarMensajeBot(
     if (vigente && !(await vigente())) return;
     return enviarRespuesta(enviar, hilo, clave, respuesta);
   };
-  const consulta = () => flujo?.solicitudId && flujo.solicitudId === hilo.solicitudId
+  const consulta = () => hilo.solicitudId
     ? prisma.solicitud.findFirst({
-        where: { id: flujo.solicitudId, estudioId: hilo.estudioId, canal: "INSTAGRAM",
+        where: { id: hilo.solicitudId, estudioId: hilo.estudioId,
           estado: { notIn: ["ARCHIVADA", "CANCELADO"] } },
         include: detalleSolicitud,
       })
@@ -196,7 +222,34 @@ export async function procesarMensajeBot(
     const resultado = await elegirPropuesta(hilo, titularId, datos);
     if (!resultado.elegida) return responder(resultado);
     const horarios = await agendarPorInstagram(titularId, resultado.elegida, zona);
-    return responder({ ...horarios, aviso: resultado.texto, texto: resultado.texto + "\n" + horarios.texto });
+    return responder({ ...horarios, texto: resultado.texto + "\n" + horarios.texto });
+  };
+  const estadoTurno = async () => {
+    const s = await consulta();
+    const cita = s ? await proximoTurno(s.id) : null;
+    return { texto: cita ? mensajeTurno(cita, zona) :
+      "Todavía no veo un turno próximo en este chat. Escribí «horarios» para ver las opciones o pedí hablar con el estudio." };
+  };
+  const mostrarDetalle = async (s: SolicitudCompleta, numero?: number, id?: string, version?: number) => {
+    const propuesta = opcionesDe(s).find(c =>
+      (numero !== undefined ? c.numero === numero : c.id === id && version === s.version) &&
+      (s.estado === "ELECCION_CLIENTE" || (s.estado === "ASIGNADA" && c.artistaId === s.artistaAsignadoId)));
+    if (!propuesta) {
+      const estado = estadoSolicitud(s);
+      await responder({ ...estado, texto: "Esa propuesta cambió o venció. " + estado.texto });
+      return;
+    }
+    const detalle = `${propuesta.nombre} · ${moneda(s, Number(propuesta.monto))}\n` +
+      `Seña informada ${moneda(s, Number(propuesta.montoSena))}\n` +
+      (propuesta.duracionMinutos ? `Duración estimada: ${propuesta.duracionMinutos} min\n` : "") +
+      (propuesta.mensaje || "Sin detalle adicional.") +
+      (propuesta.bocetoUrl?.startsWith("https://") ? "\nBoceto: " + propuesta.bocetoUrl : "");
+    if (detalle.length > 900) {
+      await enviar(hilo, clave + ":detalle", detalle.slice(0, 900));
+      await responder({ texto: detalle.slice(900) });
+    } else {
+      await responder({ texto: detalle });
+    }
   };
   if (accionBot) {
     const [, tipo, ...valores] = accionBot.split(":");
@@ -210,25 +263,7 @@ export async function procesarMensajeBot(
       return;
     }
     if (tipo === "detalle") {
-      const propuesta = Number(valores[0]) === s.version &&
-        opcionesDe(s).find(c => c.id === valores[1] &&
-          (s.estado === "ELECCION_CLIENTE" || c.artistaId === s.artistaAsignadoId));
-      if (!propuesta) {
-        const estado = estadoSolicitud(s);
-        const aviso = "Esa propuesta cambió o venció.";
-        await responder({ ...estado, aviso, texto: aviso + " " + estado.texto });
-        return;
-      }
-      const detalle = `${propuesta.nombre} · ${moneda(s, Number(propuesta.monto))}\n` +
-        `Seña informada ${moneda(s, Number(propuesta.montoSena))}\n` +
-        (propuesta.duracionMinutos ? `Duración estimada: ${propuesta.duracionMinutos} min\n` : "") +
-        (propuesta.mensaje || "Sin detalle adicional.");
-      if (detalle.length > 900) {
-        await enviar(hilo, clave + ":detalle", detalle.slice(0, 900));
-        await responder({ texto: detalle.slice(900) });
-      } else {
-        await responder({ texto: detalle });
-      }
+      await mostrarDetalle(s, undefined, valores[1], Number(valores[0]));
       return;
     }
     if (tipo === "propuestas" && valores[0] === s.id) {
@@ -259,6 +294,50 @@ export async function procesarMensajeBot(
     await elegir({ codigo: comando.codigo });
     return;
   }
+  if (comando?.tipo === "ESTADO_TURNO") {
+    await responder(await estadoTurno());
+    return;
+  }
+  if (comando?.tipo === "DETALLE") {
+    const s = await consulta();
+    if (s) await mostrarDetalle(s, comando.numero);
+    else await responder({ texto: "No veo una consulta activa vinculada a este chat." });
+    return;
+  }
+  if (comando?.tipo === "DIA_SEMANA") {
+    const s = await consulta();
+    const menu = s ? await leerMenuAgenda(hilo.id, s) : null;
+    const fecha = menu?.dias?.find(dia => DateTime.fromISO(dia, { zone: zona }).weekday === comando.dia);
+    await responder(await agenda(fecha ? { diaElegido: fecha, preferencia: menu?.preferencia } :
+      { preferencia: { diaSemana: comando.dia } }));
+    return;
+  }
+  if (comando?.tipo === "DIA" || comando?.tipo === "DIA_FECHA" || comando?.tipo === "HORA" || comando?.tipo === "CONFIRMAR") {
+    const s = await consulta();
+    const menu = s ? await leerMenuAgenda(hilo.id, s) : null;
+    let fecha = comando.tipo === "DIA" ? menu?.dias?.[comando.indice] : undefined;
+    if (comando.tipo === "DIA_FECHA" && menu) {
+      const dias = menu.dias ?? (menu.fecha ? [menu.fecha] : []);
+      fecha = dias.find(valor => {
+        const dia = DateTime.fromISO(valor, { zone: zona });
+        return dia.day === comando.dia && dia.month === comando.mes;
+      });
+      if (fecha && comando.hora) {
+        await responder(await agenda({ fechaEscrita: fecha + " " + comando.hora, preferencia: menu.preferencia }));
+        return;
+      }
+    }
+    if (fecha) await responder(await agenda({ diaElegido: fecha, preferencia: menu?.preferencia }));
+    else if (comando.tipo === "CONFIRMAR" && menu?.confirmacion)
+      await responder(await agenda({ confirmacion: menu.confirmacion, preferencia: menu.preferencia }));
+    else if (comando.tipo === "HORA" && menu?.fecha)
+      await responder(await agenda({ fechaEscrita: menu.fecha + " " + comando.hora, preferencia: menu.preferencia }));
+    else if (comando.tipo === "CONFIRMAR" && s && await proximoTurno(s.id))
+      await responder(await estadoTurno());
+    else
+      await responder({ texto: "Esa opción ya no está disponible. Escribí «horarios» para elegir día y hora." });
+    return;
+  }
   if (comando?.tipo === "FECHA" || comando?.tipo === "TURNO") {
     await responder(await agenda(comando.tipo === "FECHA" ? { fechaEscrita: comando.fecha } : undefined));
     return;
@@ -268,7 +347,7 @@ export async function procesarMensajeBot(
     if (s?.estado === "ELECCION_CLIENTE") {
       const aviso = "Si querías elegir una propuesta, tocá el botón o escribí su número.";
       const vigentes = mostrarOpciones(s);
-      await responder({ ...vigentes, aviso, texto: aviso + "\n" + vigentes.texto });
+      await responder({ ...vigentes, texto: aviso + "\n" + vigentes.texto });
       return;
     }
     if (!conIa) return;
@@ -317,6 +396,10 @@ export async function procesarMensajeBot(
     return;
   }
   const accion = decision?.accion ?? comando?.tipo;
+  if (accion === "ESTADO_TURNO") {
+    await responder(await estadoTurno());
+    return;
+  }
   if (accion === "TURNO") {
     await responder(await agenda({ preferencia: decision?.agenda }));
     return;
@@ -375,6 +458,7 @@ export function iniciarBotInstagram(enviar: EnviarBot) {
     try {
       await cerrarVencidasDelAmbito(undefined, true);
       await notificarConsultas(enviar);
+      await notificarTurnosInstagram(enviar);
     } catch {
       console.error("No pudimos revisar las respuestas del bot de Instagram.");
     } finally {
