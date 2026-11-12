@@ -14,6 +14,7 @@ const plex = localFont({
   ],
   variable: '--font-plex',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
