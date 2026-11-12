@@ -202,6 +202,7 @@ type Cuenta = {
   nombre: string | null;
   email: string;
   rol: string;
+  estudioId: string | null;
   suspendidoAt: string | null;
   createdAt: string;
 };
@@ -209,6 +210,9 @@ type Suscripcion = {
   id: string;
   plan: string;
   ciclo: string;
+  bonificada: boolean;
+  renovacion: boolean;
+  periodoHasta: string | null;
   estado: string;
   monto: string;
   moneda: string;
@@ -221,6 +225,7 @@ type Accion = {
   titulo: string;
   email: string;
   suspendida?: boolean;
+  bonificar?: boolean;
 };
 
 function Tabla({ encabezados, children }: { encabezados: string[]; children: ReactNode }) {
@@ -299,6 +304,27 @@ function Listado({ tipo }: { tipo: 'cuentas' | 'suscripciones' }) {
                   <td>{roles[f.rol]}</td>
                   <td>{f.suspendidoAt ? 'Suspendida' : 'Habilitada'}</td>
                   <td>
+                    {!f.suspendidoAt &&
+                      ((f.rol === 'ARTISTA' && !f.estudioId) ||
+                        (f.rol === 'ESTUDIO_ADMIN' && f.estudioId)) && (
+                        <button
+                          className={styles.textButton + ' me-3'}
+                          onClick={() =>
+                            setAccion({
+                              ruta: '/admin/cuentas/' + f.id + '/plan-bonificado',
+                              metodo: 'POST',
+                              titulo:
+                                f.rol === 'ESTUDIO_ADMIN'
+                                  ? 'Bonificar plan Estudio'
+                                  : 'Bonificar plan Individual',
+                              email: f.email,
+                              bonificar: true,
+                            })
+                          }
+                        >
+                          Bonificar plan
+                        </button>
+                      )}
                     {f.rol !== 'SUPERADMIN' && (
                       <button
                         className={styles.textButton}
@@ -321,26 +347,52 @@ function Listado({ tipo }: { tipo: 'cuentas' | 'suscripciones' }) {
                 <tr key={f.id}>
                   <td>{f.usuario.email}</td>
                   <td>
-                    {f.plan} · {f.ciclo}
+                    {f.plan} · {f.bonificada ? 'Bonificado' : f.ciclo}
+                    {f.bonificada && (
+                      <>
+                        <br />
+                        {f.periodoHasta ? 'Hasta el ' + fecha(f.periodoHasta) : 'Sin vencimiento'}
+                      </>
+                    )}
                   </td>
                   <td>{f.estado}</td>
                   <td>{f.pagos[0]?.estado || 'Sin cobros'}</td>
                   <td>
-                    {['ACTIVA', 'PENDIENTE'].includes(f.estado) && (
+                    {f.bonificada && f.estado === 'ACTIVA' && (
                       <button
                         className={styles.textButton}
                         onClick={() =>
                           setAccion({
-                            ruta: '/admin/suscripciones/' + f.id + '/cancelar',
+                            ruta: '/admin/suscripciones/' + f.id + '/revocar-bonificacion',
                             metodo: 'POST',
-                            titulo: 'Cancelar renovación',
+                            titulo: 'Revocar plan bonificado',
                             email: f.usuario.email,
                           })
                         }
                       >
-                        Cancelar renovación
+                        Revocar acceso
                       </button>
                     )}
+                    {!f.bonificada &&
+                      (f.estado === 'PENDIENTE' ||
+                        (f.renovacion && ['ACTIVA', 'PAUSADA'].includes(f.estado))) && (
+                        <button
+                          className={styles.textButton}
+                          onClick={() =>
+                            setAccion({
+                              ruta: '/admin/suscripciones/' + f.id + '/cancelar',
+                              metodo: 'POST',
+                              titulo:
+                                f.estado === 'PENDIENTE'
+                                  ? 'Cancelar intento'
+                                  : 'Cancelar renovación',
+                              email: f.usuario.email,
+                            })
+                          }
+                        >
+                          {f.estado === 'PENDIENTE' ? 'Cancelar intento' : 'Cancelar renovación'}
+                        </button>
+                      )}
                   </td>
                 </tr>
               ),
@@ -374,16 +426,23 @@ function Listado({ tipo }: { tipo: 'cuentas' | 'suscripciones' }) {
           <Modal.Body>
             <p>{accion.email}</p>
             <PanelForm
-              initialValues={{ motivo: '' }}
-              validate={({ motivo }) =>
-                motivo.trim().length < 5
-                  ? { motivo: 'Indicá un motivo de al menos 5 caracteres.' }
-                  : {}
-              }
-              onSave={async ({ motivo }) => {
+              key={accion.ruta}
+              initialValues={{ motivo: '', dias: 30 as number | '' }}
+              validate={({ motivo, dias }) => ({
+                ...(motivo.trim().length < 5 && {
+                  motivo: 'Indicá un motivo de al menos 5 caracteres.',
+                }),
+                ...(accion.bonificar &&
+                  dias !== '' &&
+                  (!Number.isInteger(dias) || dias < 1 || dias > 730) && {
+                    dias: 'Indicá entre 1 y 730 días.',
+                  }),
+              })}
+              onSave={async ({ motivo, dias }) => {
                 await mutarPanel(accion.ruta, accion.metodo, {
                   motivo,
                   suspendida: accion.suspendida,
+                  ...(accion.bonificar && { dias: dias === '' ? null : dias }),
                 });
                 await estado.recargar();
               }}
@@ -392,6 +451,17 @@ function Listado({ tipo }: { tipo: 'cuentas' | 'suscripciones' }) {
                 setAccion(null);
               }}
             >
+              {accion.bonificar && (
+                <PanelField
+                  name="dias"
+                  type="number"
+                  label="Días de vigencia"
+                  min={1}
+                  max={730}
+                  step={1}
+                  hint="Dejá el campo vacío para otorgar acceso sin vencimiento."
+                />
+              )}
               <PanelField name="motivo" label="Motivo" required maxLength={240} />
               <PanelSubmitButton>Confirmar</PanelSubmitButton>
             </PanelForm>

@@ -24,7 +24,11 @@ GOOGLE_REDIRECT_URI=https://ink-manager-woad.vercel.app/api/auth/google/callback
 
 ## Cobros con Mercado Pago
 
-Verificar primero el checkout, la confirmación de pago por webhook y la cancelación con las credenciales de prueba de Mercado Pago. En Render, habilitar nuevas contrataciones con `MERCADOPAGO_COBROS_ACTIVOS=1` después de completar esa prueba y de configurar el access token, la URL pública del webhook y su secreto. La consulta y la cancelación de suscripciones existentes siguen disponibles con la configuración del proveedor.
+Antes de desplegar, aplicar `npm run db:planes-bonificados` y regenerar Prisma Client. En la aplicación de Mercado Pago, registrar la URL pública de Render con la ruta `/api/webhooks/mercadopago` y activar los eventos de pagos y suscripciones (`payment`, `subscription_preapproval` y `subscription_authorized_payment`). Configurar esa URL, el secreto de firma y el access token en Render.
+
+El plan mensual usa una suscripción de Mercado Pago con renovación automática. El anual usa Checkout Pro y un único pago por doce meses. Verificar ambos con credenciales de prueba, incluida la confirmación por webhook y la cancelación, antes de habilitar las contrataciones con `MERCADOPAGO_COBROS_ACTIVOS=1`.
+
+Desde **Administración → Cuentas**, el superadmin puede bonificar el plan de un artista independiente o titular de estudio, con vencimiento o sin él. Puede revocarlo desde **Suscripciones**. El historial registra el motivo y quién hizo el cambio.
 
 ## Cliente de Google
 
