@@ -12,7 +12,7 @@ import { detalleSolicitud, type SolicitudCompleta } from "../solicitudes/solicit
 import { cotizacionesVigentes } from "../solicitudes/solicitudes.service.js";
 import { cerrarVencidasDelAmbito } from "../solicitudes/solicitudes.repository.js";
 import { configuracionInstagram, type BotonInstagram, type TarjetaInstagram } from "./instagram.proveedor.js";
-import { agendarPorInstagram, botonBot, leerMenuAgenda, mensajeTurno, proximoTurno, type RespuestaBot } from "./instagram-agenda.js";
+import { agendarPorInstagram, botonBot, leerMenuAgenda, mensajeTurno, proximoTurno, turnosParaAsistente, type RespuestaBot } from "./instagram-agenda.js";
 import { notificarTurnosInstagram } from "./instagram-turnos.repository.js";
 
 export type EnviarBot = (hilo: ConversacionCanal, clave: string, texto: string,
@@ -206,9 +206,11 @@ export async function procesarMensajeBot(
     if (vigente && !(await vigente())) return;
     return enviarRespuesta(enviar, hilo, clave, respuesta);
   };
-  const consulta = () => hilo.solicitudId
+  let consultaCargada: Promise<SolicitudCompleta | null> | undefined;
+  const consulta = () => consultaCargada ??= hilo.solicitudId
     ? prisma.solicitud.findFirst({
         where: { id: hilo.solicitudId, estudioId: hilo.estudioId,
+          conversacionesCanal: { some: { id: hilo.id } },
           estado: { notIn: ["ARCHIVADA", "CANCELADO"] } },
         include: detalleSolicitud,
       })
@@ -294,10 +296,6 @@ export async function procesarMensajeBot(
     await elegir({ codigo: comando.codigo });
     return;
   }
-  if (comando?.tipo === "ESTADO_TURNO") {
-    await responder(await estadoTurno());
-    return;
-  }
   if (comando?.tipo === "DETALLE") {
     const s = await consulta();
     if (s) await mostrarDetalle(s, comando.numero);
@@ -355,16 +353,18 @@ export async function procesarMensajeBot(
   let decision;
   if (conIa && comando?.tipo !== "HUMANO") {
     try {
-      const [configuracion, artistas] = await Promise.all([
+      const [configuracion, artistas, turnos] = await Promise.all([
         leerConfiguracionAsistente({ estudioId: hilo.estudioId }),
         prisma.usuario.findMany({
           where: { estudioId: hilo.estudioId, rol: "ARTISTA", estadoEnEstudio: "ACTIVO", suspendidoAt: null },
           select: { nombre: true, nombreArtistico: true, estilosPrincipales: true },
           orderBy: { nombre: "asc" },
         }),
+        consulta().then(s => s ? turnosParaAsistente(s, zona) : undefined),
       ]);
       decision = await generarRespuestaAsistente(configuracion, mensaje.slice(0, 3000), {
         zonaHoraria: zona,
+        turnos,
         artistasActivos: artistas.map(a => ({
           nombre: a.nombreArtistico || a.nombre || "Artista", estilos: a.estilosPrincipales,
         })),
@@ -383,6 +383,7 @@ export async function procesarMensajeBot(
       where: {
         id,
         estudioId: hilo.estudioId,
+        solicitudId: hilo.solicitudId,
         estudio: { propietarioId: titularId },
         ultimaEntradaAt: hilo.ultimaEntradaAt,
         OR: [{ flujoInstagram: null }, { flujoInstagram: { pausadoAt: null } }],
