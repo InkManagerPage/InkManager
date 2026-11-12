@@ -426,6 +426,7 @@ model Cita {
   completadaAt   DateTime?   @db.Timestamptz(3)
   canceladaAt    DateTime?   @db.Timestamptz(3)
   claveCreacion  String      @unique
+  avisoInstagramConversacionId String?
   huellaCreacion String
   version        Int         @default(0)
   createdAt      DateTime    @default(now())
@@ -647,6 +648,7 @@ model MensajeCanal {
   leidoAt        DateTime?          @db.Timestamptz(3)
   botPendiente   Boolean            @default(false)
   accionBot      String?
+  ecoInstagram   Boolean            @default(false)
 
   @@unique([conversacionId, proveedorId])
   @@index([conversacionId, fecha])

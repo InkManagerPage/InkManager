@@ -45,7 +45,7 @@ export async function procesarColaInstagram(enviar: EnviarBot, ahora = new Date(
           activaInstagram(conexion) && Date.now() - hilo.ultimaEntradaAt.getTime() < ventanaRespuesta) {
         const ultimo = mensajes.at(-1)!;
         const accion = [...mensajes].reverse().find(m => m.accionBot)?.accionBot ?? undefined;
-        const texto = mensajes.filter(m => !m.accionBot).map(m => m.texto).join("\n").slice(-3000);
+        const texto = [...new Set(mensajes.filter(m => !m.accionBot).map(m => m.texto))].join("\n").slice(-3000);
         const procesado = await procesarMensajeBot(hilo.id, titular.id, ultimo.id, texto, enviar, accion, vigente);
         if (procesado === false) return;
       }

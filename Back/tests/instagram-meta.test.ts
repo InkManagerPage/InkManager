@@ -4,6 +4,7 @@ import {
   autorizarInstagram,
   CuentaInstagramNoSeleccionada,
   enviarInstagram,
+  idMensajeInstagram,
   suscribirInstagram,
   urlInstagram,
   type ConfigInstagram,
@@ -17,6 +18,15 @@ const config: ConfigInstagram = {
   clave: Buffer.alloc(32),
   redirect: "https://inkmanager.example/api/mensajes/instagram/callback",
 };
+
+test("el envío y el eco de un DM tienen la misma identidad", () => {
+  const dm = "ig_dm_item:1:IGMessageID:100001:200002:300003";
+  const codificar = (id: string) => Buffer.from(id).toString("base64")
+    .replace(/[Z+/=]/g, c => ({ Z: "ZA", "+": "ZB", "/": "ZC", "=": "ZD" })[c]!);
+  assert.equal(idMensajeInstagram(codificar("new_" + dm)), idMensajeInstagram(codificar(dm)));
+  assert.notEqual(idMensajeInstagram(codificar(dm)), idMensajeInstagram(codificar(dm + "4")));
+  assert.equal(idMensajeInstagram("otro-id"), "otro-id");
+});
 
 test("Instagram inicia Unified Login con su configuración y el estado de la sesión", () => {
   const url = new URL(urlInstagram(config, "estado-qa"));
