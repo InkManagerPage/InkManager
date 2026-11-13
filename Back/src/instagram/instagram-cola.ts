@@ -1,4 +1,5 @@
 import { prisma } from "../config/prisma.js";
+import { titularConPlan } from "../pagos/acceso-plan.js";
 import { ventanaRespuesta } from "../mensajes/mensajes.repository.js";
 import { procesarMensajeBot, type EnviarBot } from "./instagram-bot.service.js";
 import { activaInstagram } from "./instagram.conexion.js";
@@ -10,7 +11,7 @@ export async function procesarColaInstagram(enviar: EnviarBot, ahora = new Date(
     OR: [{ botProcesandoHasta: null }, { botProcesandoHasta: { lte: ahora } }],
   };
   const hilos = await prisma.conversacionCanal.findMany({
-    where: { canal: "INSTAGRAM", ...disponible },
+    where: { canal: "INSTAGRAM", ...disponible, estudio: { propietario: titularConPlan(ahora) } },
     orderBy: { botResponderAt: "asc" },
     select: { id: true, cuentaId: true, estudioId: true, ultimaEntradaAt: true, botResponderAt: true,
       estudio: { select: { propietario: { select: { id: true, rol: true, suspendidoAt: true, estudioId: true } } } } },
@@ -25,7 +26,7 @@ export async function procesarColaInstagram(enviar: EnviarBot, ahora = new Date(
     if (!tomado.count) return;
     const bloqueo = { id: hilo.id, botProcesandoHasta: hasta };
     const vigente = async () => Boolean(await prisma.conversacionCanal.findFirst({
-      where: { ...lote, ...bloqueo }, select: { id: true },
+      where: { ...lote, ...bloqueo, estudio: { propietario: titularConPlan() } }, select: { id: true },
     }));
     try {
       const [mensajes, conexion] = await Promise.all([

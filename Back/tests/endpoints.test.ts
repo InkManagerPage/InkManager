@@ -315,6 +315,13 @@ test("la prueba del asistente usa el negocio de la sesión y devuelve su formula
   const residente = cookiePara("integrante-qa", "ARTISTA", true);
   const independiente = cookiePara("independiente-qa", "ARTISTA", false);
   const sinPlan = cookiePara("sin-plan-qa", "ARTISTA", false);
+  let estudioActivo = true;
+  simulate(t, prisma.estudio, "findFirst", async ({ where }: Args) => {
+    assert.equal(where?.id, estudio.id);
+    assert.equal(where?.propietario?.suscripciones?.some?.plan, "ESTUDIO");
+    if (where?.usuarios) assert.equal(where.usuarios.some.estadoEnEstudio, "ACTIVO");
+    return estudioActivo ? estudio : null;
+  });
   const configuraciones = new Map([
     [estudio.id, { ...configuracionInicial, tono: "Estudio" }],
     ["independiente-qa", { ...configuracionInicial, tono: "Independiente" }],
@@ -369,6 +376,8 @@ test("la prueba del asistente usa el negocio de la sesión y devuelve su formula
     assert.deepEqual(await respuesta.json(), { accion: "FORMULARIO", texto: "Contame tu idea.", enlaceFormulario });
   }
   assert.deepEqual(tonos, ["Estudio", "Independiente"]);
+  estudioActivo = false;
+  assert.equal((await post(ruta, datos, titular)).status, 403);
 });
 test("crear suscripción requiere sesión y un rol profesional", async () => {
   assert.equal(

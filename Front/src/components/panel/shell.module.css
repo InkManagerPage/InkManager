@@ -260,6 +260,23 @@
 .workspace:focus {
   outline: none;
 }
+.avisoPlan {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  max-width: 580px;
+  margin: clamp(16px, 5vw, 64px) auto;
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid #dfe2db;
+  background: #fff;
+}
+.avisoPlan h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+.avisoPlan p {
+  margin: 0;
+}
 .compact {
   grid-template-columns: 76px minmax(0, 1fr);
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { obtener, guardar } from "./disponibilidad.controller.js";
 import {
   crear,
@@ -11,6 +12,7 @@ export const disponibilidadRouter = Router();
 disponibilidadRouter.use(
   requerirSesion,
   requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  requerirPlanVigente,
 );
 disponibilidadRouter.get("/:artistaId", obtener);
 disponibilidadRouter.put("/:artistaId", guardar);

@@ -1,4 +1,5 @@
 import { HttpError } from "../errors/http-error.js";
+import { titularConPlan } from "../pagos/acceso-plan.js";
 import { origenesPermitidos } from "../config/auth.js";
 import { enviarCorreo } from "../correos/correos.service.js";
 import { correoCuenta } from "../correos/correos.templates.js";
@@ -219,11 +220,11 @@ export async function responderInvitacion(
     const estudio = await tx.estudio.findFirst({
       where: {
         id: i.estudioId,
-        propietario: { rol: "ESTUDIO_ADMIN", estudioId: i.estudioId },
+        propietario: { ...titularConPlan(), estudioId: i.estudioId },
       },
       select: { id: true, nombre: true, zonaHoraria: true },
     });
-    if (!estudio) throw new HttpError(409, "El estudio ya no está disponible.");
+    if (!estudio) throw new HttpError(409, "El estudio necesita un plan vigente para incorporar artistas.");
     await tx.usuario.update({
       where: { id: usuarioId },
       data: {

@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
-import { planIndividualVigente } from "../pagos/acceso-plan.js";
+import { periodoPlanVigente, planIndividualVigente } from "../pagos/acceso-plan.js";
 
 export const trabajoPublicado = {
   estado: "PUBLICADO",
@@ -39,7 +39,10 @@ export function consultarCatalogo() {
     select: {
       ...camposArtistaPublico,
       estadoEnEstudio: true,
-      estudio: { select: { slug: true, propietario: { select: { rol: true, suspendidoAt: true } } } },
+      estudio: { select: { slug: true, propietario: { select: {
+        rol: true, suspendidoAt: true,
+        suscripciones: { where: { plan: "ESTUDIO", ...periodoPlanVigente() }, take: 1, select: { id: true } },
+      } } } },
       suscripciones: { where: planIndividualVigente(), take: 1, select: { id: true } },
       galeria: {
         where: trabajoPublicado,

@@ -8,7 +8,7 @@ import { detalleSolicitud } from "./solicitudes.entity.js";
 import { HttpError } from "../errors/http-error.js";
 import type { DatosContacto } from "../contactos/contactos.validation.js";
 import { obtenerOCrearContacto } from "../contactos/contactos.repository.js";
-import { planIndividualVigente } from "../pagos/acceso-plan.js";
+import { planIndividualVigente, titularConPlan } from "../pagos/acceso-plan.js";
 
 export function buscarCuenta(id: string) {
   return prisma.usuario.findUnique({
@@ -197,7 +197,7 @@ export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas, soloInstagram
 
 export function buscarEstudioParaSolicitud(slug: string) {
   return prisma.estudio.findFirst({
-    where: { slug, propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } },
+    where: { slug, propietario: titularConPlan() },
     select: { id: true, nombre: true, propietarioId: true, plazoPropuestasHoras: true },
   });
 }
@@ -210,7 +210,7 @@ export function buscarArtistaParaSolicitud(id: string) {
       suspendidoAt: null,
       OR: [
         { estudioId: null, suscripciones: { some: planIndividualVigente() } },
-        { estadoEnEstudio: "ACTIVO", estudio: { propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } } },
+        { estadoEnEstudio: "ACTIVO", estudio: { propietario: titularConPlan() } },
       ],
     },
     select: {

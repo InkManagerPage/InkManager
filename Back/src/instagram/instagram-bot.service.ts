@@ -5,6 +5,7 @@ import { leerConfiguracionAsistente } from "../asistente/asistente.repository.js
 import { generarRespuestaAsistente, pruebaAsistenteDisponible } from "../asistente/respuesta.js";
 import { origenesPermitidos } from "../config/auth.js";
 import { prisma } from "../config/prisma.js";
+import { titularConPlan } from "../pagos/acceso-plan.js";
 import { HttpError } from "../errors/http-error.js";
 import { bloquearConversacionCanal, ventanaRespuesta } from "../mensajes/mensajes.repository.js";
 import { registrarAviso } from "../operacion/avisos.repository.js";
@@ -484,7 +485,7 @@ export async function notificarConsultas(enviar: EnviarBot) {
         botResponderAt: null,
         ultimaEntradaAt: { gt: new Date(ahora.getTime() - ventanaRespuesta) },
         estudio: {
-          propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null },
+          propietario: titularConPlan(ahora),
           conexionesCanal: { some: conexionVigente },
         },
       },

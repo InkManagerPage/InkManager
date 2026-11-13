@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { tienePlanIndividual } from "../pagos/acceso-plan.js";
 import {
   obtenerEnlaceFormularioArtista,
@@ -18,7 +19,7 @@ import {
 } from "./respuesta.js";
 
 export const asistenteRouter = Router();
-asistenteRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
+asistenteRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), requerirPlanVigente);
 
 const limitarPruebas = rateLimit({
   windowMs: 5 * 60 * 1000,

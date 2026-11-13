@@ -4,7 +4,7 @@ import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
 import { puedeUsarMensajes } from "../mensajes/mensajes.service.js";
-import { planIndividualVigente } from "../pagos/acceso-plan.js";
+import { planIndividualVigente, titularConPlan } from "../pagos/acceso-plan.js";
 import {
   objetoEntrada,
   validarIdConsulta,
@@ -90,27 +90,11 @@ async function destinoWhatsApp(numeroId: string, wabaId: string | undefined) {
   const artistaId = c ? null : (piloto?.artistaId ?? null);
   const cuenta = estudioId
     ? await prisma.estudio
-        .findUnique({
-          where: { id: estudioId },
-          select: {
-            propietario: {
-              select: {
-                id: true,
-                rol: true,
-                estudioId: true,
-                suspendidoAt: true,
-              },
-            },
-          },
+        .findFirst({
+          where: { id: estudioId, propietario: { ...titularConPlan(), estudioId } },
+          select: { propietarioId: true },
         })
-        .then((e) => {
-          const u = e?.propietario;
-          return u?.rol === "ESTUDIO_ADMIN" &&
-            u.estudioId === estudioId &&
-            !u.suspendidoAt
-            ? u.id
-            : null;
-        })
+        .then((e) => e?.propietarioId)
     : await prisma.usuario
         .findFirst({
           where: {

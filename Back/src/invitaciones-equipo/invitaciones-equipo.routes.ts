@@ -2,9 +2,11 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import {
   crear,
   gestionar,
+  listarRecibidas,
   responder,
 } from "./invitaciones-equipo.controller.js";
 const limitarEnvios = rateLimit({
@@ -19,15 +21,18 @@ const limitarEnvios = rateLimit({
 });
 export const invitacionesEquipoRouter = Router();
 invitacionesEquipoRouter.use(requerirSesion);
+invitacionesEquipoRouter.get("/recibidas", requerirRoles("ARTISTA"), listarRecibidas);
 invitacionesEquipoRouter.post(
   "/",
   requerirRoles("ESTUDIO_ADMIN"),
+  requerirPlanVigente,
   limitarEnvios,
   crear,
 );
 invitacionesEquipoRouter.patch(
   "/:id",
   requerirRoles("ESTUDIO_ADMIN"),
+  requerirPlanVigente,
   limitarEnvios,
   gestionar,
 );

@@ -3,6 +3,7 @@ import { HttpError } from "../errors/http-error.js";
 import { verificarToken } from "../auth/auth.tokens.js";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
 import {
   activarConexion,
@@ -65,7 +66,7 @@ webhookWhatsApp.post(
 );
 
 export const mensajesRouter = Router();
-mensajesRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
+mensajesRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), requerirPlanVigente);
 
 const conexion = Router();
 conexion.use(requerirRoles("ESTUDIO_ADMIN"));

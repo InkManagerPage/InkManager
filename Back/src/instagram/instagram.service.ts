@@ -27,7 +27,7 @@ import {
   nombreRemitente,
 } from "./instagram.proveedor.js";
 import { puedeUsarMensajes } from "../mensajes/mensajes.service.js";
-import { planIndividualVigente } from "../pagos/acceso-plan.js";
+import { planIndividualVigente, titularConPlan } from "../pagos/acceso-plan.js";
 import type { EnviarBot } from "./instagram-bot.service.js";
 
 type Evento = {
@@ -73,7 +73,7 @@ export async function recibirInstagram(datos: Webhook) {
         ...(c.estudioId
           ? {
               id: c.estudio?.propietarioId ?? "",
-              rol: "ESTUDIO_ADMIN",
+              ...titularConPlan(),
               estudioId: c.estudioId,
             }
           : { id: c.artistaId!, rol: "ARTISTA", estudioId: null, suscripciones: { some: planIndividualVigente() } }),

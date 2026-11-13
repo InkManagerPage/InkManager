@@ -3,6 +3,7 @@ import { uploadImage } from "./imagenes.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { Rol } from "../types/roles.js";
 
 export const imagenRouter = Router();
@@ -12,6 +13,7 @@ imagenRouter.post(
   "/",
   requerirSesion,
   requerirRoles(Rol.CLIENTE, Rol.ARTISTA, Rol.ESTUDIO_ADMIN, Rol.SUPERADMIN),
+  requerirPlanVigente,
   upload.single("imagen"),
   uploadImage,
 );

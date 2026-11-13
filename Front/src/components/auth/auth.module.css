@@ -185,6 +185,9 @@
   padding-right: 50px;
   background-image: none;
 }
+.passwordInput input::-ms-reveal {
+  display: none;
+}
 .passwordToggle {
   position: absolute;
   top: 1px;

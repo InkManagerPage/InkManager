@@ -24,6 +24,7 @@ interface Props {
   nombre: string;
   subtitulo: string;
   perfil: string;
+  artista?: boolean;
 }
 
 function Navigation({
@@ -31,11 +32,13 @@ function Navigation({
   nombre,
   subtitulo,
   close,
+  artista,
 }: {
   secciones: PanelSection[];
   nombre: string;
   subtitulo: string;
   close?: () => void;
+  artista?: boolean;
 }) {
   const path = usePathname();
   const home = secciones[0]?.ruta || '/estudio';
@@ -45,7 +48,7 @@ function Navigation({
         <span className={styles.brandMark}>im</span>
         <span className={styles.brandName}>InkManager</span>
       </Link>
-      <nav aria-label="Panel del estudio" className={styles.navigation}>
+      <nav aria-label={artista ? 'Panel del artista' : 'Panel del estudio'} className={styles.navigation}>
         {[...new Set(secciones.map((s) => s.grupo))].map((grupo) => (
           <div className={styles.navGroup} key={grupo}>
             <p className={styles.groupLabel}>{grupo}</p>
@@ -88,8 +91,9 @@ function Navigation({
     </>
   );
 }
-function MobileNavigation(props: Pick<Props, 'secciones' | 'nombre' | 'subtitulo'>) {
+function MobileNavigation(props: Pick<Props, 'secciones' | 'nombre' | 'subtitulo' | 'artista'>) {
   const [open, setOpen] = useState(false);
+  const titulo = props.artista ? 'Menú del artista' : 'Menú del estudio';
   return (
     <>
       <button
@@ -106,10 +110,10 @@ function MobileNavigation(props: Pick<Props, 'secciones' | 'nombre' | 'subtitulo
         onHide={() => setOpen(false)}
         className={styles.mobileMenu}
         id="studio-mobile-menu"
-        aria-label="Menú del estudio"
+        aria-label={titulo}
       >
         <Offcanvas.Header closeButton closeLabel="Cerrar">
-          <Offcanvas.Title className="visually-hidden">Menú del estudio</Offcanvas.Title>
+          <Offcanvas.Title className="visually-hidden">{titulo}</Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body>
           <Navigation {...props} close={() => setOpen(false)} />
@@ -118,7 +122,7 @@ function MobileNavigation(props: Pick<Props, 'secciones' | 'nombre' | 'subtitulo
     </>
   );
 }
-export function PanelShell({ children, secciones, nombre, subtitulo, perfil }: Props) {
+export function PanelShell({ children, secciones, nombre, subtitulo, perfil, artista }: Props) {
   const { usuario, logout } = useAuth();
   const path = usePathname(),
     router = useRouter(),
@@ -157,7 +161,7 @@ export function PanelShell({ children, secciones, nombre, subtitulo, perfil }: P
         Ir al contenido
       </a>
       <aside id="panel-sidebar" className={styles.sidebar}>
-        <Navigation secciones={secciones} nombre={nombre} subtitulo={subtitulo} />
+        <Navigation secciones={secciones} nombre={nombre} subtitulo={subtitulo} artista={artista} />
       </aside>
       <div className={styles.mainArea}>
         <header className={styles.topbar}>
@@ -176,8 +180,9 @@ export function PanelShell({ children, secciones, nombre, subtitulo, perfil }: P
               secciones={secciones}
               nombre={nombre}
               subtitulo={subtitulo}
+              artista={artista}
             />
-            <span>Mi estudio</span>
+            <span>{artista ? 'Mi panel' : 'Mi estudio'}</span>
             <span className={styles.divider}>/</span>
             <strong>{secciones.find((s) => s.ruta === path)?.nombre || 'Consultas'}</strong>
           </div>
@@ -190,13 +195,13 @@ export function PanelShell({ children, secciones, nombre, subtitulo, perfil }: P
               <Avatar nombre={usuario!.nombre || nombre} />
               <span className={styles.accountName}>
                 <strong>{usuario!.nombre || nombre}</strong>
-                <small>Titular del estudio</small>
+                <small>{artista ? 'Artista' : 'Titular del estudio'}</small>
               </span>
             </Dropdown.Toggle>
             <Dropdown.Menu>
               <div className={styles.accountEmail}>{usuario!.email}</div>
               <Dropdown.Item as={NextLink} href={perfil}>
-                Perfil del estudio
+                {artista ? 'Mi perfil' : 'Perfil del estudio'}
               </Dropdown.Item>
               <Dropdown.Divider />
               <Dropdown.Item

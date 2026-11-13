@@ -24,7 +24,8 @@ export async function obtenerCatalogo(): Promise<CatalogoPublico> {
         ? estudio &&
           artista.estadoEnEstudio === "ACTIVO" &&
           estudio.propietario?.rol === "ESTUDIO_ADMIN" &&
-          !estudio.propietario.suspendidoAt
+          !estudio.propietario.suspendidoAt &&
+          estudio.propietario.suscripciones.length > 0
           ? `/cotizacion/${encodeURIComponent(estudio.slug)}`
           : null
         : artista.suscripciones.length

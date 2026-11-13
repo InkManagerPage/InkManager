@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError('');
     setCargando(false);
     if (user.rol === 'SUPERADMIN') router.replace('/admin');
-    if (!pathname.startsWith('/suscripcion')) {
+    if (!pathname.startsWith('/suscripcion') && pathname !== '/invitacion-equipo') {
       if (user.rol === 'ARTISTA') router.replace('/artista');
       if (user.rol === 'ESTUDIO_ADMIN') router.replace('/estudio');
     }

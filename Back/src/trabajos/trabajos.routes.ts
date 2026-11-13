@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { Rol } from "../types/roles.js";
 import { upload } from "../middlewares/multer.js";
 import {
@@ -11,7 +12,7 @@ import {
 } from "./trabajos.controller.js";
 
 export const trabajosRouter = Router();
-trabajosRouter.use(requerirSesion, requerirRoles(Rol.ARTISTA));
+trabajosRouter.use(requerirSesion, requerirRoles(Rol.ARTISTA), requerirPlanVigente);
 trabajosRouter.get("/", misTrabajos);
 trabajosRouter.post("/", upload.single("imagen"), crearMiTrabajo);
 trabajosRouter.patch("/:id", upload.single("imagen"), actualizarMiTrabajo);
