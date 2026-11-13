@@ -3,6 +3,7 @@ import {
   cambiarSolicitud,
   crearSolicitudCliente,
   crearSolicitudEstudio,
+  crearSolicitudCercanos,
   obtenerBandeja,
   obtenerEstudioPublico,
   obtenerArtistaPublico,
@@ -48,4 +49,9 @@ export async function crear(req: Request, res: Response) {
 export async function crearParaArtista(req: Request, res: Response) {
   await crearSolicitudCliente(req.params.id, req.body, archivos(req));
   res.status(201).json({ success: true });
+}
+
+export async function crearParaCercanos(req: Request, res: Response) {
+  const resultado = await crearSolicitudCercanos(req.body, archivos(req));
+  res.status(201).json(resultado);
 }

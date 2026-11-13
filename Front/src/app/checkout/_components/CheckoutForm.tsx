@@ -241,6 +241,23 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
     cambiarCampo('expiry', digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
   }
 
+  function mensajeDeErrorDePago(cause: unknown): string {
+    if (cause instanceof Error) return cause.message;
+    if (typeof cause === 'object' && cause !== null) {
+      if ('cause' in cause && Array.isArray(cause.cause)) {
+        const detalles = (cause.cause as Array<{ description?: unknown; code?: unknown }>)
+          .map((item) => item.description ?? item.code)
+          .filter((texto): texto is string => typeof texto === 'string')
+          .join(' ');
+        if (detalles) return `Mercado Pago rechazó el pago: ${detalles}`;
+      }
+      if ('message' in cause && typeof cause.message === 'string') {
+        return `Mercado Pago rechazó el pago: ${cause.message}`;
+      }
+    }
+    return 'No pudimos procesar el pago.';
+  }
+
   async function enviarPago(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -341,7 +358,8 @@ export default function CheckoutForm({ planId, cycleId }: { planId: string; cycl
         );
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No pudimos procesar el pago.');
+      console.error('[pago con tarjeta] Error al procesar el pago:', cause);
+      setError(mensajeDeErrorDePago(cause));
     } finally {
       setLoading(false);
     }

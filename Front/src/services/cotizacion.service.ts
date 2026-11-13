@@ -1,4 +1,8 @@
-import type { CotizacionValues } from '@/types/cotizacion';
+import type {
+  CotizacionValues,
+  ResultadoArtistasCercanos,
+  RespuestaEnvioCercanas,
+} from '@/types/cotizacion';
 import { apiFetch } from '@/lib/api-client';
 import { comprimirImagen } from '@/lib/comprimir-imagen';
 import { fotoFormulario } from '@/lib/fotos-formulario';
@@ -54,4 +58,47 @@ export async function crearSolicitud(
     body,
     signal: AbortSignal.timeout(60000),
   });
+}
+
+export async function consultarArtistasCercanos(
+  lat: number,
+  lng: number,
+  estilo?: string,
+  radio?: number,
+): Promise<ResultadoArtistasCercanos> {
+  const query = new URLSearchParams({
+    lat: String(lat),
+    lng: String(lng),
+    ...(estilo ? { estilo } : {}),
+    ...(radio ? { radio: String(radio) } : {}),
+  });
+  const res = await apiFetch(`/ubicaciones/artistas-cercanos?${query.toString()}`);
+  return (await res.json()) as ResultadoArtistasCercanos;
+}
+
+export async function crearSolicitudPorUbicacion(
+  values: CotizacionValues,
+  claveEnvio: string,
+): Promise<RespuestaEnvioCercanas> {
+  const body = await construirFormData(values);
+  body.set('claveEnvio', claveEnvio);
+  body.set('nombre', values.nombre);
+  body.set('email', values.email);
+  body.set('telefono', values.telefono);
+  body.set('promociones', String(values.promociones));
+  if (values.latitud !== undefined && values.latitud !== null) {
+    body.set('latitud', String(values.latitud));
+  }
+  if (values.longitud !== undefined && values.longitud !== null) {
+    body.set('longitud', String(values.longitud));
+  }
+  if (values.radioKm) {
+    body.set('radio', String(values.radioKm));
+  }
+  const res = await apiFetch('/consultas/publicas/cercanas', {
+    method: 'POST',
+    body,
+    signal: AbortSignal.timeout(60000),
+  });
+  return (await res.json()) as RespuestaEnvioCercanas;
 }

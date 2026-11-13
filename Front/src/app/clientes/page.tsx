@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { CatalogoPublico } from '@/types/artista';
 import { obtenerCatalogo } from '@/services/catalogo.service';
 import PortfolioList from './_components/portfolio/PortfolioList';
@@ -47,6 +48,24 @@ export default async function QuieroTatuarmePage({ searchParams }: Props) {
           <p className={styles.intro}>
             Explorá trabajos de artistas y estudios, y encontrá el estilo que te representa.
           </p>
+          <div style={{ marginTop: '1.25rem' }}>
+            <Link
+              href="/cotizacion"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                background: '#111',
+                color: '#fff',
+              }}
+            >
+              📍 Pedir cotización a artistas de mi zona
+            </Link>
+          </div>
         </header>
         <CombinableFilters stylesArray={catalogo.estilos} cityArray={catalogo.ciudades} />
         <div className={styles.content}>

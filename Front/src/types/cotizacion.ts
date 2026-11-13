@@ -35,6 +35,47 @@ export interface CotizacionValues {
 
   // Paso 8: Información adicional
   tieneTatuajesPrevios: boolean | null;
+
+  // Ubicación del cliente
+  latitud?: number | null;
+  longitud?: number | null;
+  nombreUbicacion?: string;
+  radioKm?: number;
+}
+
+export interface ArtistaCercanoItem {
+  id: string;
+  nombre: string;
+  nombreArtistico: string | null;
+  alias: string | null;
+  ciudad: string | null;
+  pais: string | null;
+  direccion: string | null;
+  radioAlcanceKm: number;
+  distanciaKm: number;
+  estilosPrincipales: string[];
+  esEspecialista: boolean;
+  estudio: {
+    id: string;
+    nombre: string;
+    slug: string;
+  } | null;
+}
+
+export interface ResultadoArtistasCercanos {
+  origen: { latitud: number; longitud: number };
+  estiloSolicitado: string;
+  radioBusquedaKm: number;
+  artistasIdeales: ArtistaCercanoItem[];
+  otrosArtistasCercanos: ArtistaCercanoItem[];
+  totalCercanos: number;
+}
+
+export interface RespuestaEnvioCercanas {
+  success: boolean;
+  totalNotificados: number;
+  artistasIdeales: ArtistaCercanoItem[];
+  otrosArtistasCercanos: ArtistaCercanoItem[];
 }
 
 export interface PasoCotizacionProps {

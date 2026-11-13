@@ -15,6 +15,7 @@ import { StepUbicacionArea } from '@/app/cotizacion/components/steps/StepUbicaci
 import { StepDescripcion } from '@/app/cotizacion/components/steps/StepDescripcion';
 import { StepExtra } from '@/app/cotizacion/components/steps/StepExtra';
 import { StepContacto } from '@/app/cotizacion/components/steps/StepContacto';
+import { StepUbicacionGeografica } from '@/app/cotizacion/components/steps/StepUbicacionGeografica';
 
 const initialValues: CotizacionValues = {
   nombre: '',
@@ -30,9 +31,12 @@ const initialValues: CotizacionValues = {
   descripcion: '',
   imagenReferencia: null,
   tieneTatuajesPrevios: null,
+  latitud: null,
+  longitud: null,
+  nombreUbicacion: '',
 };
 
-const pasos: {
+const pasosBase: {
   titulo: string;
   Componente: (props: PasoCotizacionProps) => React.JSX.Element;
   validar: (v: CotizacionValues) => boolean;
@@ -94,13 +98,26 @@ const pasos: {
   },
 ];
 
+const pasoUbicacion = {
+  titulo: '¿Dónde te gustaría tatuarte?',
+  Componente: StepUbicacionGeografica,
+  validar: (v: CotizacionValues) => typeof v.latitud === 'number' && typeof v.longitud === 'number',
+  mensaje: 'Indicá tu ubicación o seleccioná una ciudad para encontrar artistas cercanos.',
+};
+
 export function CotizacionForm({
   onSubmit,
   error,
+  porUbicacion = false,
 }: {
   onSubmit: (values: CotizacionValues) => Promise<void>;
   error?: string;
+  porUbicacion?: boolean;
 }) {
+  const pasos = porUbicacion
+    ? [pasosBase[0]!, pasosBase[1]!, pasoUbicacion, ...pasosBase.slice(2)]
+    : pasosBase;
+
   const [paso, setPaso] = useState(0);
   const [errorPaso, setErrorPaso] = useState('');
   const titulo = useRef<HTMLHeadingElement>(null);

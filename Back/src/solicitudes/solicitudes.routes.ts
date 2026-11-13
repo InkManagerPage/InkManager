@@ -10,6 +10,7 @@ import {
   mostrarEstudio,
   mostrarArtista,
   mostrarEnlaceArtista,
+  crearParaCercanos,
 } from "./solicitudes.controller.js";
 import { guardar } from "../cotizaciones/cotizaciones.controller.js";
 import { upload, uploadSolicitud } from "../middlewares/multer.js";
@@ -30,6 +31,13 @@ const limitarEnvios = rateLimit({
 
 solicitudesRouter.get("/publicas/:slug", mostrarEstudio);
 solicitudesRouter.get("/publicas/artista/:id", mostrarArtista);
+solicitudesRouter.post(
+  "/publicas/cercanas",
+  limitarEnvios,
+  cargarImagenesSolicitud,
+  crearParaCercanos,
+);
+
 solicitudesRouter.post(
   "/publicas/:slug",
   limitarEnvios,

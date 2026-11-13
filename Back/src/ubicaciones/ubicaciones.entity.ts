@@ -14,4 +14,6 @@ export interface CiudadCatalogo {
   stateId: number;
   stateName: string;
   countryCode: string;
+  latitude?: string;
+  longitude?: string;
 }

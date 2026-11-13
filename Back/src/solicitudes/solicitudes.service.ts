@@ -1,3 +1,4 @@
+import { buscarArtistasCercanosPorEstilo } from "../ubicaciones/geolocalizacion.service.js";
 import { ambitoDeCuenta } from "./solicitudes.ambito.js";
 import { EstadoSolicitud, Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
@@ -380,4 +381,107 @@ export async function crearSolicitudCliente(
     datos, destino: { id, estudioId: null, artistaDestinoId: artista.id },
     contacto, archivos, plazo: 0, promociones: body.promociones === "true",
   });
+}
+
+export async function crearSolicitudCercanos(
+  entrada: unknown,
+  archivos: ArchivosSolicitud,
+) {
+  const body = objetoEntrada(entrada);
+  const datos = validarSolicitudPublica(body);
+  const contacto = validarContactoPresupuesto(body);
+  const latitud = Number(body.latitud);
+  const longitud = Number(body.longitud);
+
+  if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+    throw new HttpError(400, "Se requieren coordenadas válidas (latitud y longitud).");
+  }
+
+  const radio = body.radio ? Number(body.radio) : 80;
+
+  const emparejamiento = await buscarArtistasCercanosPorEstilo({
+    latitud,
+    longitud,
+    estilo: datos.estilo,
+    radioMaximoKm: Number.isFinite(radio) && radio > 0 ? radio : 80,
+  });
+
+  const todos = [
+    ...emparejamiento.artistasIdeales,
+    ...emparejamiento.otrosArtistasCercanos,
+  ];
+
+  if (todos.length === 0) {
+    throw new HttpError(404, "No encontramos artistas cercanos a tu ubicación.");
+  }
+
+  let zona: Awaited<ReturnType<typeof subirImagen>> | undefined;
+  let referencia: Awaited<ReturnType<typeof subirImagen>> | undefined;
+
+  try {
+    if (archivos.zona) zona = await subirImagen(archivos.zona);
+    if (archivos.referencia) referencia = await subirImagen(archivos.referencia);
+
+    const destinosProcesados = new Set<string>();
+    let notificados = 0;
+
+    for (const artista of todos) {
+      const destinoKey = artista.estudio ? `estudio:${artista.estudio.id}` : `artista:${artista.id}`;
+      if (destinosProcesados.has(destinoKey)) continue;
+      destinosProcesados.add(destinoKey);
+
+      const id = crypto.randomUUID();
+      const destino = artista.estudio
+        ? { id, estudioId: artista.estudio.id }
+        : { id, estudioId: null, artistaDestinoId: artista.id };
+
+      await prisma.$transaction(async (tx) => {
+        await repo.guardarSolicitudPublica(tx, {
+          ...datos,
+          ...destino,
+          titulo: "Consulta de " + datos.estilo,
+          canal: "WEB",
+          imagenZonaMarcada: zona?.url,
+          referencias: referencia ? [referencia.url] : [],
+        }, contacto);
+
+        if (artista.estudio) {
+          const estudio = await tx.estudio.findUnique({
+            where: { id: artista.estudio.id },
+            select: { propietarioId: true },
+          });
+          if (estudio?.propietarioId) {
+            await registrarAviso(tx, {
+              usuarioId: estudio.propietarioId,
+              clave: "consulta:" + id,
+              titulo: "Nueva consulta por cercanía",
+              detalle: "Consulta de " + datos.estilo,
+              destino: "/estudio/consultas?consulta=" + id,
+            });
+          }
+        } else {
+          await registrarAviso(tx, {
+            usuarioId: artista.id,
+            clave: "consulta:" + id,
+            titulo: "Nueva consulta por cercanía",
+            detalle: "Consulta de " + datos.estilo,
+            destino: "/artista/consultas?consulta=" + id,
+          });
+        }
+      });
+      notificados++;
+    }
+
+    return {
+      success: true,
+      totalNotificados: notificados,
+      artistasIdeales: emparejamiento.artistasIdeales,
+      otrosArtistasCercanos: emparejamiento.otrosArtistasCercanos,
+    };
+  } catch (error) {
+    await Promise.all([zona, referencia].map(imagen =>
+      imagen ? eliminarImagenSegura(imagen.public_id) : undefined,
+    ));
+    throw error;
+  }
 }
