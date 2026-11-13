@@ -855,13 +855,17 @@ export async function procesarWebhookMercadoPago(
   }
 }
 
-async function notificarPago(pagoId: string, correo: ReturnType<typeof correoCuenta>) {
+async function notificarPago(
+  pagoId: string,
+  estado: EstadoPagoSuscripcion,
+  correo: ReturnType<typeof correoCuenta>,
+) {
   await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "PagoSuscripcion" WHERE "id" = ${pagoId} FOR UPDATE`;
     const pago = await tx.pagoSuscripcion.findUnique({
-      where: { id: pagoId }, select: { correoEnviadoAt: true },
+      where: { id: pagoId }, select: { estado: true, correoEnviadoAt: true },
     });
-    if (!pago || pago.correoEnviadoAt) return;
+    if (!pago || pago.estado !== estado || pago.correoEnviadoAt) return;
     await enviarCorreo(correo);
     await tx.pagoSuscripcion.update({
       where: { id: pagoId }, data: { correoEnviadoAt: new Date() },
@@ -990,6 +994,7 @@ async function procesarPagoUnico(dataId: string): Promise<void> {
 
       return {
         pagoId: pagoGuardado.id,
+        estado: estadoPago,
         correo: correoCuenta({
           para: suscripcion.usuario.email,
           nombre: suscripcion.usuario.nombre,
@@ -1008,7 +1013,7 @@ async function procesarPagoUnico(dataId: string): Promise<void> {
     const factura = await buscarFacturaMensual(aviso.preapprovalId, paymentId);
     if (factura) await procesarPagoAutorizado(factura);
   } else if (aviso && "pagoId" in aviso && aviso.pagoId) {
-    await notificarPago(aviso.pagoId, aviso.correo);
+    await notificarPago(aviso.pagoId, aviso.estado, aviso.correo);
   }
 }
 
@@ -1175,13 +1180,14 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
       moneda,
       aprobadoAt:
         estado === EstadoPagoSuscripcion.APROBADO ? fechaAprobacion : null,
+        ...(existe && existe.estado !== estado ? { correoEnviadoAt: null } : {}),
       },
     });
 
     let proximoCobroConfirmado = suscripcion.proximoCobroAt;
     let renovacionActiva = false;
 
-    if (estado === EstadoPagoSuscripcion.APROBADO) {
+    if (estado === EstadoPagoSuscripcion.APROBADO && existe?.estado !== EstadoPagoSuscripcion.APROBADO) {
       const proximoCobroAt = fechaValida(detalles.next_payment_date);
       const finPagado = proximoCobroAt && proximoCobroAt > fechaAprobacion
         ? proximoCobroAt : sumarUnMes(fechaAprobacion);
@@ -1201,6 +1207,8 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
 
       renovacionActiva = activada.count > 0;
 
+    } else if (estado === EstadoPagoSuscripcion.APROBADO) {
+      renovacionActiva = suscripcion.estado === EstadoSuscripcion.ACTIVA;
     } else if (
       estado === EstadoPagoSuscripcion.RECHAZADO &&
       detalles.status === "rejected" &&
@@ -1271,18 +1279,19 @@ async function procesarPagoAutorizado(dataId: string): Promise<void> {
 
       return {
         pagoId: pago.id,
+        estado,
         correo: correoCuenta({
           para: suscripcion.usuario.email,
           nombre: suscripcion.usuario.nombre,
           asunto,
           mensaje,
-          clave: `pago-suscripcion:${mercadoPagoId}`,
+          clave: `pago-suscripcion:${mercadoPagoId}:${estado}`,
           ...(accion ? { accion } : {}),
         }),
       };
     }
   });
-  if (aviso) await notificarPago(aviso.pagoId, aviso.correo);
+  if (aviso) await notificarPago(aviso.pagoId, aviso.estado, aviso.correo);
 }
 
 export async function enviarAvisosVencimiento(): Promise<void> {
