@@ -15,6 +15,8 @@ import { ArtistProfileProvider, useArtistProfile } from './ArtistProfileProvider
 import { ArtistPanelProvider, useArtistPanel } from './ArtistPanelProvider';
 import { Avatar, PanelIcon, type IconoPanel } from './PanelUI';
 import { useDiscardChanges } from '@/components/forms/UnsavedChanges';
+import { AccesoPanel } from '@/components/panel/AccesoPanel';
+import { PanelShell } from '@/components/panel/PanelShell';
 import styles from '@/components/panel/shell.module.css';
 
 const navegacion: { nombre: string; ruta: string; icono: IconoPanel; grupo: string }[] = [
@@ -81,13 +83,26 @@ export function ArtistShell({ children }: { children: ReactNode }) {
       </main>
     );
   return (
-    <ConsultasProvider key={usuario.id}>
-      <ArtistProfileProvider key={usuario.id}>
-        <ArtistPanelProvider>
-          <ArtistPanel>{children}</ArtistPanel>
-        </ArtistPanelProvider>
-      </ArtistProfileProvider>
-    </ConsultasProvider>
+    <AccesoPanel
+      key={usuario.id + (usuario.estudioId ?? '')}
+      ruta="/artista"
+      vinculado={Boolean(usuario.estudioId)}
+      mostrarPanel={(contenido, habilitado) => habilitado ? (
+        <ConsultasProvider>
+          <ArtistProfileProvider>
+            <ArtistPanelProvider>
+              <ArtistPanel>{contenido}</ArtistPanel>
+            </ArtistPanelProvider>
+          </ArtistProfileProvider>
+        </ConsultasProvider>
+      ) : (
+        <PanelShell artista secciones={navegacion} nombre={usuario.nombre || usuario.email} subtitulo="Mi cuenta" perfil="/artista/perfil">
+          {contenido}
+        </PanelShell>
+      )}
+    >
+      {children}
+    </AccesoPanel>
   );
 }
 

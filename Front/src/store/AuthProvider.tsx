@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import * as auth from '@/services/auth.service';
 import type { UsuarioSesion } from '@/types/auth';
@@ -21,6 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [intento, setIntento] = useState(0);
   const consulta = useRef<AbortController | null>(null);
+  const reintentar = useCallback(() => {
+    setCargando(true);
+    setIntento((value) => value + 1);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     consulta.current = controller;
@@ -48,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError('');
     setCargando(false);
     if (user.rol === 'SUPERADMIN') router.replace('/admin');
-    if (!pathname.startsWith('/suscripcion')) {
+    if (!pathname.startsWith('/suscripcion') && pathname !== '/invitacion-equipo') {
       if (user.rol === 'ARTISTA') router.replace('/artista');
       if (user.rol === 'ESTUDIO_ADMIN') router.replace('/estudio');
     }
@@ -72,10 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         usuario,
         cargando,
         error,
-        reintentar: () => {
-          setCargando(true);
-          setIntento((value) => value + 1);
-        },
+        reintentar,
         login,
         logout,
         eliminarCuenta,

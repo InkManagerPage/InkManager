@@ -4,8 +4,13 @@ import { HttpError } from "../errors/http-error.js";
 const api = "https://api.mercadopago.com";
 
 export class ErrorMercadoPago extends HttpError {
-  constructor(public estadoProveedor: number) {
-    super(502, "Mercado Pago no pudo completar la operación. Intentá nuevamente.");
+  constructor(public estadoProveedor: number, compradorIncompatible = false) {
+    super(
+      compradorIncompatible ? 422 : 502,
+      compradorIncompatible
+        ? "Usá el correo de tu cuenta de Mercado Pago. Si estás probando, ingresá el correo del comprador de prueba."
+        : "Mercado Pago no pudo completar la operación. Intentá nuevamente.",
+    );
   }
 }
 
@@ -92,7 +97,13 @@ export async function solicitarMercadoPago<T>(
   const cuerpo: unknown = await respuesta.json().catch(() => null);
   if (!respuesta.ok || !cuerpo || typeof cuerpo !== "object") {
     console.error(`Mercado Pago respondió HTTP ${respuesta.status}.`);
-    throw new ErrorMercadoPago(respuesta.status);
+    const compradorIncompatible =
+      ruta === "/preapproval" &&
+      opciones.method === "POST" &&
+      respuesta.status === 400 &&
+      (cuerpo as { message?: unknown } | null)?.message ===
+        "Both payer and collector must be real or test users";
+    throw new ErrorMercadoPago(respuesta.status, compradorIncompatible);
   }
   return cuerpo as T;
 }

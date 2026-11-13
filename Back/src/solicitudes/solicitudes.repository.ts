@@ -8,7 +8,7 @@ import { detalleSolicitud } from "./solicitudes.entity.js";
 import { HttpError } from "../errors/http-error.js";
 import type { DatosContacto } from "../contactos/contactos.validation.js";
 import { obtenerOCrearContacto } from "../contactos/contactos.repository.js";
-import { planIndividualVigente } from "../pagos/acceso-plan.js";
+import { planIndividualVigente, titularConPlan } from "../pagos/acceso-plan.js";
 
 export function buscarCuenta(id: string) {
   return prisma.usuario.findUnique({
@@ -149,22 +149,25 @@ export async function mutarSolicitud<T>(
   );
 }
 
-export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas) {
+export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas, soloInstagram = false) {
   const filtro =
     !a ? Prisma.sql`TRUE` : a.tipo === "INDEPENDIENTE"
       ? Prisma.sql`s."artistaDestinoId"=${a.usuarioId} AND s."estudioId" IS NULL`
       : Prisma.sql`s."estudioId"=${a.estudioId}`;
   // Un lote evita abrir una transacción remota por cada consulta vencida.
   await prisma.$executeRaw(Prisma.sql`
-    WITH vencidas AS (
+    WITH reloj AS (
+      SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS ahora
+    ), vencidas AS (
       SELECT s."id" FROM "Solicitud" s
-      WHERE ${filtro} AND s."estado" IN ('PENDIENTE','EN_COTIZACION') AND s."cierrePropuestasAt"<=CURRENT_TIMESTAMP
+      WHERE ${filtro} AND s."estado" IN ('PENDIENTE','EN_COTIZACION') AND s."cierrePropuestasAt"<=(SELECT ahora FROM reloj)
+        AND (${!soloInstagram} OR s."canal"='INSTAGRAM')
       ORDER BY s."cierrePropuestasAt",s."id" LIMIT 200 FOR UPDATE SKIP LOCKED
     ), opciones AS (
       SELECT s."id",count(c."id")::int AS cantidad,min(c."artistaId") AS artista
       FROM vencidas v JOIN "Solicitud" s ON s."id"=v."id"
       LEFT JOIN "Cotizacion" c ON c."solicitudId"=s."id"
-        AND (c."validaHasta" IS NULL OR c."validaHasta">=CURRENT_TIMESTAMP)
+        AND (c."validaHasta" IS NULL OR c."validaHasta">=(SELECT ahora FROM reloj))
         AND EXISTS (SELECT 1 FROM "Usuario" u WHERE u."id"=c."artistaId" AND u."rol"='ARTISTA' AND u."suspendidoAt" IS NULL
           AND ((s."estudioId" IS NOT NULL AND u."estudioId"=s."estudioId" AND u."estadoEnEstudio"='ACTIVO')
           OR (s."estudioId" IS NULL AND u."id"=s."artistaDestinoId" AND u."estudioId" IS NULL)))
@@ -174,21 +177,27 @@ export async function cerrarVencidasDelAmbito(a?: AmbitoConsultas) {
         "estado"=(CASE WHEN o.cantidad=1 THEN 'ASIGNADA' WHEN o.cantidad>1 THEN 'ELECCION_CLIENTE' ELSE 'POR_ASIGNAR' END)::"EstadoSolicitud",
         "artistaAsignadoId"=CASE WHEN o.cantidad=1 THEN o.artista ELSE NULL END,
         "asignadaPor"=CASE WHEN o.cantidad=1 THEN 'UNICA_PROPUESTA' ELSE NULL END,
-        "cerradaAt"=CURRENT_TIMESTAMP,"updatedAt"=CURRENT_TIMESTAMP,"version"=s."version"+1
+        "cerradaAt"=(SELECT ahora FROM reloj),"updatedAt"=(SELECT ahora FROM reloj),"version"=s."version"+1
       FROM opciones o WHERE s."id"=o."id"
-      RETURNING s."id",s."artistaAsignadoId",s."titulo",s."version"
+      RETURNING s."id",s."artistaAsignadoId",s."titulo",s."version",s."estado",s."canal",s."estudioId"
     )
-    INSERT INTO "AvisoPanel" ("id","usuarioId","clave","titulo","detalle","destino")
+    INSERT INTO "AvisoPanel" ("id","usuarioId","clave","titulo","detalle","destino","urgente","createdAt")
     SELECT gen_random_uuid()::text,"artistaAsignadoId",'asignacion:' || "id" || ':' || ("version"-1),
-      'Te asignaron una consulta',COALESCE(NULLIF("titulo",''),'Nueva asignación'),'/artista/consultas?consulta=' || "id"
+      'Te asignaron una consulta',COALESCE(NULLIF("titulo",''),'Nueva asignación'),'/artista/consultas?consulta=' || "id",false,(SELECT ahora FROM reloj)
     FROM actualizadas WHERE "artistaAsignadoId" IS NOT NULL
+    UNION ALL
+    SELECT gen_random_uuid()::text,e."propietarioId",'sin-propuestas:' || a."id",
+      'Consulta sin propuestas',COALESCE(NULLIF(a."titulo",''),'Revisá quién puede atender la consulta.'),
+      '/estudio/consultas?consulta=' || a."id",true,(SELECT ahora FROM reloj)
+    FROM actualizadas a JOIN "Estudio" e ON e."id"=a."estudioId"
+    WHERE a."estado"='POR_ASIGNAR' AND a."canal"='INSTAGRAM' AND e."propietarioId" IS NOT NULL
     ON CONFLICT ("usuarioId","clave") DO NOTHING
   `);
 }
 
 export function buscarEstudioParaSolicitud(slug: string) {
   return prisma.estudio.findFirst({
-    where: { slug, propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } },
+    where: { slug, propietario: titularConPlan() },
     select: { id: true, nombre: true, propietarioId: true, plazoPropuestasHoras: true },
   });
 }
@@ -201,7 +210,7 @@ export function buscarArtistaParaSolicitud(id: string) {
       suspendidoAt: null,
       OR: [
         { estudioId: null, suscripciones: { some: planIndividualVigente() } },
-        { estadoEnEstudio: "ACTIVO", estudio: { propietario: { rol: "ESTUDIO_ADMIN", suspendidoAt: null } } },
+        { estadoEnEstudio: "ACTIVO", estudio: { propietario: titularConPlan() } },
       ],
     },
     select: {

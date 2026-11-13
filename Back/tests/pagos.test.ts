@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { HttpError } from "../src/errors/http-error.js";
 import { prisma } from "../src/config/prisma.js";
-import { cancelarSuscripcion, crearSuscripcion } from "../src/pagos/pagos.service.js";
+import { cancelarSuscripcion, crearSuscripcion, obtenerEstadoSuscripcion } from "../src/pagos/pagos.service.js";
 import { obtenerPrecio, validarPlanYCiclo } from "../src/pagos/planes.js";
 import { validarFirmaWebhook } from "../src/pagos/pagos.service.js";
 
@@ -12,7 +12,8 @@ function reemplazar(target: object, key: string, value: unknown): () => void {
   const original = record[key];
   record[key] = value;
   return () => {
-    record[key] = original;
+    if (target === process.env && original === undefined) delete record[key];
+    else record[key] = original;
   };
 }
 
@@ -48,6 +49,14 @@ test("la solicitud de plan rechaza opciones que no están habilitadas", () => {
       error instanceof HttpError && error.message.includes("DNI"),
   );
   assert.throws(() => validarPlanYCiclo(null), HttpError);
+  assert.throws(
+    () => validarPlanYCiclo({ plan: "ESTUDIO", ciclo: "MENSUAL", payer_email: "sin-correo" }),
+    HttpError,
+  );
+  assert.throws(
+    () => validarPlanYCiclo({ plan: "ESTUDIO", ciclo: "ANUAL", payer_email: "qa@example.test" }),
+    HttpError,
+  );
 });
 
 test("el plan individual requiere un artista sin estudio", async () => {
@@ -181,10 +190,10 @@ test("crea checkout alojado con precio del servidor y sin datos de tarjeta", asy
     assert.equal(autoRecurring?.transaction_amount, 12000);
     assert.equal(solicitud?.body.status, "pending");
     assert.equal(solicitud?.body.payer_email, "artista@example.test");
-    assert.equal(
-      solicitud?.body.notification_url,
-      process.env.MERCADOPAGO_WEBHOOK_URL,
-    );
+    assert.equal(autoRecurring?.frequency, 1);
+    assert.equal(autoRecurring?.frequency_type, "months");
+    assert.match(String(solicitud?.body.back_url), /\/checkout\/pending\/[\da-f-]{36}$/);
+    assert.equal(solicitud?.headers.get("X-Idempotency-Key"), solicitud?.body.external_reference);
     assert.equal(
       solicitud?.headers.get("Authorization"),
       "Bearer test-access-token",
@@ -572,4 +581,138 @@ test("la cancelación inmediata desactiva el plan anual sin reembolso", async (t
   if (periodoHasta instanceof Date) {
     assert.ok(Math.abs(Date.now() - periodoHasta.getTime()) < 1000);
   }
+});
+
+test("cancela el mensual pendiente con el estado que acepta Mercado Pago", async (t) => {
+  t.after(reemplazar(process.env, "MERCADOPAGO_ACCESS_TOKEN", "token-de-prueba"));
+  t.after(reemplazar(prisma.suscripcion, "findFirst", async () => ({
+    id: "mensual-pendiente", ciclo: "MENSUAL", estado: "PENDIENTE",
+    mercadoPagoId: "preapproval-test", mpPaymentId: null, periodoHasta: null,
+  })));
+  t.after(reemplazar(prisma.suscripcion, "findUnique", async () => null));
+  t.after(reemplazar(prisma.suscripcion, "update", async ({ data }: { data: Record<string, unknown> }) => {
+    assert.equal(data.estado, "CANCELADA");
+    return data;
+  }));
+  const proveedor = t.mock.method(globalThis, "fetch", async (input, init) => {
+    if (String(input) === "https://api.mercadopago.com/authorized_payments/search?preapproval_id=preapproval-test")
+      return Response.json({ results: [] });
+    assert.equal(String(input), "https://api.mercadopago.com/preapproval/preapproval-test");
+    assert.equal(init?.method, "PUT");
+    assert.deepEqual(JSON.parse(String(init?.body)), { status: "cancelled" });
+    return Response.json({ status: "cancelled" });
+  });
+
+  assert.equal((await cancelarSuscripcion("usuario-test", undefined)).estado, "CANCELADA");
+  assert.equal(proveedor.mock.callCount(), 2);
+});
+
+test("verifica el mensual aprobado sin webhook y solo para el titular de la suscripción", async (t) => {
+  const id = "suscripcion-test";
+  const mercadoPagoId = "preapproval-test";
+  const fila = {
+    id, mercadoPagoId, referenciaExterna: id, ciclo: "MENSUAL", bonificada: false,
+    plan: "ESTUDIO", estado: "PENDIENTE", monto: 100, moneda: "ARS",
+    periodoHasta: null, proximoCobroAt: null, usuario: { email: "qa@example.test", nombre: "QA" },
+  };
+  t.after(reemplazar(process.env, "MERCADOPAGO_ACCESS_TOKEN", "token-de-prueba"));
+  t.after(reemplazar(prisma.suscripcion, "findFirst", async ({ where }: { where: Record<string, unknown> }) =>
+    where.usuarioId === "titular" || where.OR ? fila : null,
+  ));
+  t.after(reemplazar(prisma, "$transaction", async (fn: (tx: unknown) => unknown) =>
+    fn({
+      $queryRaw: async () => [],
+      suscripcion: {
+        findUnique: async () => fila,
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          Object.assign(fila, data);
+          return { count: 1 };
+        },
+      },
+      pagoSuscripcion: {
+        findUnique: async () => null,
+        upsert: async ({ create }: { create: Record<string, unknown> }) => {
+          assert.equal(create.estado, "APROBADO");
+          assert.equal(create.monto, 100);
+          assert.equal(create.suscripcionId, id);
+          return { id: "pago-test", correoEnviadoAt: new Date() };
+        },
+      },
+    }),
+  ));
+  const factura = {
+    id: 123, preapproval_id: mercadoPagoId, external_reference: id,
+    transaction_amount: 100, currency_id: "ARS", payment: { status: "approved" },
+  };
+  const proveedor = t.mock.method(globalThis, "fetch", async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/authorized_payments/search") {
+      assert.equal(url.searchParams.get("preapproval_id"), mercadoPagoId);
+      return Response.json({ results: [{ ...factura, id: 999, preapproval_id: "ajena" }, factura] });
+    }
+    if (url.pathname === "/authorized_payments/123") return Response.json(factura);
+    assert.equal(url.pathname, "/preapproval/" + mercadoPagoId);
+    return Response.json({
+      id: mercadoPagoId, external_reference: id,
+      next_payment_date: new Date(Date.now() + 30 * 86400000).toISOString(),
+    });
+  });
+
+  await assert.rejects(obtenerEstadoSuscripcion(id, "otro-usuario", true), { status: 404 });
+  assert.equal(proveedor.mock.callCount(), 0);
+  assert.equal((await obtenerEstadoSuscripcion(id, "titular")).subscription.estado, "PENDIENTE");
+  const verificada = (await obtenerEstadoSuscripcion(id, "titular", true)).subscription;
+  assert.equal(verificada.estado, "ACTIVA");
+  assert.equal("mercadoPagoId" in verificada, false);
+  assert.equal((await obtenerEstadoSuscripcion(id, "titular", true)).subscription.estado, "ACTIVA");
+  assert.equal(proveedor.mock.callCount(), 3);
+});
+
+test("cierra el checkout anual y confirma que no haya pagos antes de cancelar", async (t) => {
+  t.after(reemplazar(process.env, "MERCADOPAGO_ACCESS_TOKEN", "token-de-prueba"));
+  const id = "anual-pendiente";
+  const preferencia = {
+    id: "12345678-00000000-0000-0000-0000-000000000000",
+    external_reference: id,
+    expires: true,
+    expiration_date_from: new Date(Date.now() - 60_000).toISOString(),
+    expiration_date_to: new Date(Date.now() + 60_000).toISOString(),
+  };
+  t.after(reemplazar(prisma.suscripcion, "findFirst", async () => ({
+    id, ciclo: "ANUAL", estado: "PENDIENTE", mercadoPagoId: preferencia.id,
+    mpPaymentId: null, periodoHasta: null,
+  })));
+  t.after(reemplazar(prisma.suscripcion, "findUnique", async () => null));
+  let busquedaConfirmada = false;
+  let cerrada = false;
+  t.after(reemplazar(prisma.suscripcion, "updateMany", async ({ where, data }: {
+    where: Record<string, unknown>; data: Record<string, unknown>;
+  }) => {
+    assert.ok(busquedaConfirmada);
+    assert.deepEqual(where, { id, estado: "PENDIENTE", mpPaymentId: null });
+    assert.equal(data.estado, "CANCELADA");
+    return { count: 1 };
+  }));
+  t.mock.method(globalThis, "fetch", async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/checkout/preferences/" + preferencia.id) {
+      if (init?.method === "PUT") {
+        const vigencia = JSON.parse(String(init.body));
+        assert.equal(vigencia.expires, true);
+        assert.ok(Date.parse(vigencia.expiration_date_from) < Date.parse(vigencia.expiration_date_to));
+        assert.ok(Date.parse(vigencia.expiration_date_to) <= Date.now());
+        cerrada = true;
+        return Response.json({ ...preferencia, ...vigencia });
+      }
+      return Response.json(preferencia);
+    }
+    assert.ok(cerrada);
+    assert.equal(url.pathname, "/v1/payments/search");
+    assert.equal(url.searchParams.get("external_reference"), id);
+    assert.equal(url.searchParams.has("range"), false);
+    busquedaConfirmada = true;
+    return Response.json({ results: [], paging: { total: 0 } });
+  });
+
+  assert.equal((await cancelarSuscripcion("usuario-test", undefined)).estado, "CANCELADA");
 });

@@ -57,7 +57,9 @@ npm run db:generate
 
 > Estos comandos modifican la base indicada por `DATABASE_URL`. Confirmá que apunte a staging/pruebas antes de ejecutarlos; no apliques migraciones para validar el flujo contra producción.
 
-Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` con credenciales de prueba de una aplicación de Mercado Pago. `MERCADOPAGO_WEBHOOK_URL` debe apuntar por HTTPS a `https://<dominio-publico>/api/webhooks/mercadopago`; para desarrollo local necesitás un túnel HTTPS. En Mercado Pago habilitá los eventos `subscription_preapproval`, `subscription_authorized_payment` y `payment` para sincronizar pagos anuales. No uses credenciales de producción para las pruebas.
+Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRET` con credenciales de prueba de una aplicación de Mercado Pago. `MERCADOPAGO_WEBHOOK_URL` debe apuntar por HTTPS a `https://<dominio-publico>/api/webhooks/mercadopago`; para desarrollo local necesitás un túnel HTTPS. En Mercado Pago habilitá **Pagos** y **Planes y suscripciones** (eventos `payment`, `subscription_preapproval` y `subscription_authorized_payment`) para sincronizar los cobros iniciales y las renovaciones. No uses credenciales de producción para las pruebas.
+
+Con un vendedor de prueba podés configurar `MP_PLAN_INDIVIDUAL_MENSUAL_ARS=100` y `MP_PLAN_ESTUDIO_MENSUAL_ARS=100`, y `MP_PLAN_INDIVIDUAL_ANUAL_ARS=500` y `MP_PLAN_ESTUDIO_ANUAL_ARS=500`. Los nuevos intentos toman esos montos. Cancelá los intentos pendientes de un precio anterior antes de crear otros. En el mensual, usá el correo del comprador de prueba generado por Mercado Pago.
 
 | Endpoint                                              | Acceso                           | Función                                                                       |
 | ----------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
@@ -67,6 +69,7 @@ Configurá las variables `MERCADOPAGO_ACCESS_TOKEN` y `MERCADOPAGO_WEBHOOK_SECRE
 | `POST /api/pagos/cancelar-suscripcion`                | Sesión propia o token del correo | Cancela renovaciones en Mercado Pago y conserva la fecha de período abonado.  |
 | `POST /api/pagos/cancelar-suscripcion-inmediatamente` | Sesión ARTISTA o ESTUDIO_ADMIN   | Cancela el acceso inmediatamente para permitir una nueva contratación.        |
 | `GET /api/pagos/suscripcion/:id`                      | Sesión propietaria               | Consulta el resultado individual del checkout.                                |
+| `POST /api/pagos/suscripcion/:id/verificar`           | Sesión propietaria               | Si el mensual sigue pendiente, verifica su factura directamente en Mercado Pago. |
 | `POST /api/webhooks/mercadopago`                      | Firma HMAC válida                | Actualiza suscripciones, pagos aprobados/rechazados y correos.                |
 
 El correo de confirmación se envía al confirmarse un cobro y trae un enlace de cancelación de un solo uso, almacenado como hash y válido hasta el fin del período. Los correos de prueba con `MAIL_TRANSPORT=preview` se guardan en `Back/.mail-preview/`; para enviarlos por email real, configurá Resend. El backend revisa cada seis horas si hay renovaciones dentro de los próximos tres días y evita repetir avisos ya enviados.
@@ -76,7 +79,7 @@ El correo de confirmación se envía al confirmarse un cobro y trae un enlace de
 1. Usá una base de datos de staging/pruebas; aplicá la migración anterior.
 2. Completá las variables de Mercado Pago con credenciales de prueba y levantá el backend, el frontend y el túnel HTTPS.
 3. Creá una cuenta ARTISTA para probar Individual o ESTUDIO_ADMIN para Estudio. Desde `/estudios#planes`, elegí plan y ciclo.
-4. Completá el checkout con un usuario y medio de pago de prueba de Mercado Pago. El frontend consulta el resultado individual; el estado solo cambia a `ACTIVA` al llegar la confirmación firmada del pago.
+4. Completá el checkout con un usuario y medio de pago de prueba de Mercado Pago. El plan se activa cuando el servidor confirma el cobro con Mercado Pago. Si el mensual sigue pendiente, el regreso del checkout o el botón **Verificar pago** consultan la factura.
 5. Revisá `GET /api/pagos/suscripcion` y `Back/.mail-preview/` para verificar estado, monto y correo en modo preview.
 6. Abrí el enlace de cancelación recibido y confirmá la acción. Verificá en Mercado Pago que la suscripción no renueve y en la respuesta/base que `periodoHasta` se conserva.
 7. Probá un medio de pago rechazado y verificá el estado `VENCIDA` y el email de alerta. Usá las herramientas de prueba de Webhooks de Mercado Pago para validar los eventos.

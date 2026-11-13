@@ -5,6 +5,7 @@ import { useAuth } from '@/store/AuthProvider';
 import { ConsultasProvider } from '@/store/ConsultasProvider';
 import { useConsultas } from '@/hooks/useConsultas';
 import { PanelShell, type PanelSection } from '@/components/panel/PanelShell';
+import { AccesoPanel } from '@/components/panel/AccesoPanel';
 import { StudioProvider, useStudio } from './StudioProvider';
 import styles from '@/components/panel/shell.module.css';
 
@@ -72,11 +73,23 @@ export function StudioShell({ children }: { children: ReactNode }) {
       </main>
     );
   return (
-    <ConsultasProvider key={usuario.id}>
-      <StudioProvider key={usuario.id}>
-        <Workspace>{children}</Workspace>
-      </StudioProvider>
-    </ConsultasProvider>
+    <AccesoPanel
+      key={usuario.id}
+      ruta="/estudio"
+      mostrarPanel={(contenido, habilitado) => habilitado ? (
+        <ConsultasProvider>
+          <StudioProvider>
+            <Workspace>{contenido}</Workspace>
+          </StudioProvider>
+        </ConsultasProvider>
+      ) : (
+        <PanelShell secciones={sections} nombre={usuario.nombre || usuario.email} subtitulo="Cuenta del estudio" perfil="/estudio/perfil">
+          {contenido}
+        </PanelShell>
+      )}
+    >
+      {children}
+    </AccesoPanel>
   );
 }
 function Workspace({ children }: { children: ReactNode }) {

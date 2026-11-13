@@ -2,6 +2,7 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { tieneAccesoAlPanel } from "./acceso-plan.js";
 import {
   cancelarPagoInmediatamente,
   cancelarPago,
@@ -20,6 +21,9 @@ const limitarOperacionesPago = rateLimit({
 });
 
 router.get("/planes", listarPlanes);
+router.get("/acceso", requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), async (req, res) => {
+  res.json({ habilitado: await tieneAccesoAlPanel(req.usuario!) });
+});
 router.post(
   "/crear-suscripcion",
   requerirSesion,
@@ -31,6 +35,13 @@ router.get(
   "/suscripcion/:id",
   requerirSesion,
   requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  consultarPago,
+);
+router.post(
+  "/suscripcion/:id/verificar",
+  requerirSesion,
+  requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: true, legacyHeaders: false }),
   consultarPago,
 );
 router.post("/cancelar-suscripcion", limitarOperacionesPago, cancelarPago);

@@ -19,17 +19,10 @@ export async function iniciarPago(
 ): Promise<void> {
   res.set("Cache-Control", "no-store");
   try {
-    console.log("📦 Solicitud de crear suscripción:", {
-      body: req.body,
-      usuario: req.usuario?.email,
-      usuarioRol: req.usuario?.rol,
-    });
     if (!req.usuario) throw new HttpError(401, "Debés iniciar sesión.");
     const resultado = await crearSuscripcion(req.usuario, req.body);
-    console.log("✅ Suscripción creada:", resultado);
     res.status(201).json(resultado);
   } catch (error) {
-    console.error("❌ Error en crear suscripción:", error);
     next(error);
   }
 }
@@ -52,7 +45,7 @@ export async function consultarPago(
       throw new HttpError(400, "El identificador de suscripción no es válido.");
     }
     res.status(200).json(
-      await obtenerEstadoSuscripcion(id, req.usuario.id),
+      await obtenerEstadoSuscripcion(id, req.usuario.id, req.method === "POST"),
     );
   } catch (error) {
     next(error);

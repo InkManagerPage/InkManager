@@ -73,6 +73,18 @@ export async function historialWhatsApp(a: AmbitoConsultas, conversacionId: stri
   return presentarMensajes(filas, tamanoPaginaMensajes);
 }
 
+export async function bloquearConversacionWhatsApp(
+  tx: Prisma.TransactionClient,
+  id: string,
+) {
+  await tx.$queryRaw`
+    SELECT "id"
+    FROM "ConversacionWhatsApp"
+    WHERE "id" = ${id}
+    FOR NO KEY UPDATE
+  `;
+}
+
 export async function registrarEntrada(datos: {
   numeroId: string;
   remitente: string;
@@ -110,6 +122,11 @@ export async function registrarEntrada(datos: {
         },
         select: { id: true, estudioId: true, artistaId: true },
       });
+
+      if (datos.propio) {
+        await bloquearConversacionWhatsApp(tx, hilo.id);
+      }
+
       if (
         hilo.estudioId !== datos.estudioId ||
         hilo.artistaId !== datos.artistaId
@@ -128,7 +145,9 @@ export async function registrarEntrada(datos: {
         ],
         skipDuplicates: true,
       });
+
       if (!count) return;
+
       if (!datos.propio)
         await tx.conversacionWhatsApp.updateMany({
           where: { id: hilo.id, ultimaEntradaAt: { lte: datos.fecha } },
@@ -138,6 +157,7 @@ export async function registrarEntrada(datos: {
         where: { id: hilo.id, ultimaActividad: { lt: datos.fecha } },
         data: { ultimaActividad: datos.fecha },
       });
+
       if (!datos.propio)
         await registrarAviso(tx, {
           usuarioId: datos.destinatario,
@@ -161,13 +181,73 @@ export async function registrarEstado(
   estado: EstadoMensajeWhatsApp,
   anteriores: EstadoMensajeWhatsApp[],
 ) {
-  await prisma.mensajeWhatsApp.updateMany({
-    where: {
-      propio: true,
-      estado: { in: anteriores },
-      conversacion: { numeroId },
-      OR: [{ proveedorId }, ...(id ? [{ id, proveedorId: null }] : [])],
+  await prisma.$transaction(
+    async (tx) => {
+      const local = id
+        ? await tx.mensajeWhatsApp.findFirst({
+            where: {
+              id,
+              propio: true,
+              conversacion: { numeroId },
+              OR: [{ proveedorId: null }, { proveedorId }],
+            },
+            select: {
+              id: true,
+              conversacionId: true,
+            },
+          })
+        : null;
+
+      const mensaje = local ?? await tx.mensajeWhatsApp.findFirst({
+        where: {
+          proveedorId,
+          propio: true,
+          conversacion: { numeroId },
+        },
+        select: {
+          id: true,
+          conversacionId: true,
+        },
+      });
+
+      if (!mensaje) return;
+
+      await bloquearConversacionWhatsApp(tx, mensaje.conversacionId);
+
+      if (local) {
+        await tx.mensajeWhatsApp.deleteMany({
+          where: {
+            conversacionId: local.conversacionId,
+            proveedorId,
+            propio: true,
+            claveEnvio: null,
+            id: { not: local.id },
+          },
+        });
+
+        await tx.mensajeWhatsApp.updateMany({
+          where: {
+            id: local.id,
+            propio: true,
+            estado: { in: anteriores },
+            OR: [{ proveedorId: null }, { proveedorId }],
+          },
+          data: { proveedorId, estado },
+        });
+
+        return;
+      }
+
+      await tx.mensajeWhatsApp.updateMany({
+        where: {
+          id: mensaje.id,
+          propio: true,
+          estado: { in: anteriores },
+          conversacion: { numeroId },
+        },
+        data: { proveedorId, estado },
+      });
     },
-    data: { proveedorId, estado },
-  });
+    { timeout: 20000 },
+  );
 }

@@ -4,6 +4,7 @@ import {
   autorizarInstagram,
   CuentaInstagramNoSeleccionada,
   enviarInstagram,
+  idMensajeInstagram,
   suscribirInstagram,
   urlInstagram,
   type ConfigInstagram,
@@ -17,6 +18,15 @@ const config: ConfigInstagram = {
   clave: Buffer.alloc(32),
   redirect: "https://inkmanager.example/api/mensajes/instagram/callback",
 };
+
+test("el envío y el eco de un DM tienen la misma identidad", () => {
+  const dm = "ig_dm_item:1:IGMessageID:100001:200002:300003";
+  const codificar = (id: string) => Buffer.from(id).toString("base64")
+    .replace(/[Z+/=]/g, c => ({ Z: "ZA", "+": "ZB", "/": "ZC", "=": "ZD" })[c]!);
+  assert.equal(idMensajeInstagram(codificar("new_" + dm)), idMensajeInstagram(codificar(dm)));
+  assert.notEqual(idMensajeInstagram(codificar(dm)), idMensajeInstagram(codificar(dm + "4")));
+  assert.equal(idMensajeInstagram("otro-id"), "otro-id");
+});
 
 test("Instagram inicia Unified Login con su configuración y el estado de la sesión", () => {
   const url = new URL(urlInstagram(config, "estado-qa"));
@@ -66,7 +76,7 @@ test("Instagram autoriza solo una cuenta, suscribe mensajes y responde usando su
     assert.equal(init.method, "POST");
     if (ruta === "/v24.0/789/subscribed_apps") {
       assert.equal(url.hostname, "graph.facebook.com");
-      assert.equal(String(init.body), "subscribed_fields=messages");
+      assert.equal(new URLSearchParams(String(init.body)).get("subscribed_fields"), "messages,messaging_postbacks");
       return Response.json({ success: true });
     }
     assert.equal(ruta, "/v24.0/789/messages");

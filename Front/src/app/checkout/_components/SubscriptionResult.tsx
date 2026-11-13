@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/store/AuthProvider';
 import styles from './subscription-result.module.css';
@@ -28,7 +27,6 @@ function isPlanSuscripcion(value: unknown): value is 'INDIVIDUAL' | 'ESTUDIO' {
 }
 
 export default function SubscriptionResult({ subscriptionId }: { subscriptionId: string }) {
-  const router = useRouter();
   const { reintentar } = useAuth();
   const [status, setStatus] = useState<ResultStatus>('checking');
   const [message, setMessage] = useState('');
@@ -42,9 +40,16 @@ export default function SubscriptionResult({ subscriptionId }: { subscriptionId:
 
     async function consultarEstado() {
       try {
-        const response = await apiFetch(`pagos/suscripcion/${encodeURIComponent(subscriptionId)}`, {
-          signal: controller.signal,
-        });
+        const ruta = `pagos/suscripcion/${encodeURIComponent(subscriptionId)}`;
+        const signal = controller.signal;
+        const response = attempts % 4 === 0
+          ? await apiFetch(ruta + '/verificar', { method: 'POST', signal }).catch((error) => {
+              if (error instanceof ApiError && [429, 502, 503].includes(error.status)) {
+                return apiFetch(ruta, { signal });
+              }
+              throw error;
+            })
+          : await apiFetch(ruta, { signal });
         const body: unknown = await response.json();
         if (
           typeof body !== 'object' ||
@@ -159,12 +164,12 @@ export default function SubscriptionResult({ subscriptionId }: { subscriptionId:
         <div className={styles.actions}>
           {estadoVisible === 'active' ? (
             <>
-              <button
+              <Link
                 className={styles.primaryButton}
-                onClick={() => router.push('/estudios')}
+                href={plan === 'ESTUDIO' ? '/estudio/suscripcion' : '/artista/suscripcion'}
               >
-                Ir a mis planes <span aria-hidden="true">→</span>
-              </button>
+                Ir a mi suscripción <span aria-hidden="true">→</span>
+              </Link>
               <Link className={styles.secondaryButton} href="/">
                 Volver al inicio
               </Link>

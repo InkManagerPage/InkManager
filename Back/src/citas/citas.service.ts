@@ -60,6 +60,7 @@ async function comprobarArtista(
       id: artistaId,
       rol: "ARTISTA",
       estudioId: a.estudioId,
+      ...(requiereActivo ? { suspendidoAt: null } : {}),
       ...(requiereActivo && a.estudioId ? { estadoEnEstudio: "ACTIVO" } : {}),
     },
     select: { id: true },
@@ -86,7 +87,7 @@ async function comprobarHorario(
     );
 }
 
-export async function crearTurno(usuarioId: string, entrada: unknown) {
+export async function crearTurno(usuarioId: string, entrada: unknown, origen?: "instagram") {
   const a = await resolverAmbito(usuarioId);
   asegurarEditor(a);
   const d = validarCita(entrada, a.zonaHoraria),
@@ -144,6 +145,17 @@ export async function crearTurno(usuarioId: string, entrada: unknown) {
       const cotizacion = s.cotizaciones.find(
         (p) => p.artistaId === s.artistaAsignadoId,
       );
+      if (origen === "instagram" && (!a.administra || s.canal !== "INSTAGRAM" ||
+          !cotizacion?.duracionMinutos || d.inicioAt <= new Date() ||
+          (cotizacion.validaHasta && cotizacion.validaHasta < new Date())))
+        throw new HttpError(409, "La propuesta o el horario ya no está disponible.");
+      const conversaciones = origen === "instagram" ? [] : await tx.conversacionCanal.findMany({
+        where: { canal: "INSTAGRAM", solicitudId: s.id, estudioId: a.estudioId,
+          artistaId: a.estudioId ? null : a.usuarioId },
+        select: { id: true, flujoInstagram: { select: { solicitudId: true } } },
+      });
+      const conversacion = conversaciones.find(c => c.flujoInstagram?.solicitudId === s.id)
+        ?? (conversaciones.length === 1 ? conversaciones[0] : undefined);
       const cita = await tx.cita.create({
         data: {
           ...d,
@@ -152,6 +164,7 @@ export async function crearTurno(usuarioId: string, entrada: unknown) {
           creadaPorId: usuarioId,
           claveCreacion,
           huellaCreacion,
+          avisoInstagramConversacionId: conversacion?.id,
         },
         include: detalleCita,
       });

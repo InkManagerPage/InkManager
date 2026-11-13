@@ -385,6 +385,7 @@ function QueryDetail({ consulta: c }: { consulta: ConsultaGuardada }) {
           <p>
             Seña: {moneda(p.sena)}
             {p.validez ? ` · Válido hasta ${mostrarFecha(p.validez)}` : ''}
+            {p.duracionMinutos ? ` · ${p.duracionMinutos} min` : ''}
           </p>
           <p>{p.detalle}</p>
           {p.boceto && (
@@ -586,14 +587,18 @@ function QuoteEditor({ consulta, onSaved }: { consulta: ConsultaGuardada; onSave
   return (
     <PanelForm<PresupuestoPanel>
       initialValues={
-        propia || {
+        propia ? { ...propia, duracionMinutos: propia.duracionMinutos ?? 0 } : {
           importe: 0,
           sena: 0,
           detalle: '',
+          duracionMinutos: 0,
           validez: moverFecha(fechaLocal(new Date()), 14),
         }
       }
-      validate={erroresPresupuesto}
+      validate={(v) => ({
+        ...erroresPresupuesto(v),
+        ...(!v.duracionMinutos && { duracionMinutos: 'Indicá la duración estimada.' }),
+      })}
       onSave={async (v) => {
         if (procesando) return 'Esperá a que termine de optimizarse la imagen.';
         await proponer(consulta.id, v, version, imagen);
@@ -627,7 +632,10 @@ function QuoteEditor({ consulta, onSaved }: { consulta: ConsultaGuardada; onSave
         minLength={10}
         maxLength={1200}
       />
-      <PanelField name="validez" label="Válido hasta" type="date" required />
+      <div className={styles.formGrid}>
+        <PanelField name="duracionMinutos" label="Duración estimada (minutos)" type="number" min={30} max={480} step={1} required />
+        <PanelField name="validez" label="Válido hasta" type="date" required />
+      </div>
       <PhotoField
         id="quote-image"
         label="Boceto"

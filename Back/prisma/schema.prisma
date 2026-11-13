@@ -397,6 +397,7 @@ model Cotizacion {
   validaHasta    DateTime?
   bocetoUrl      String?
   bocetoPublicId String?
+  duracionMinutos Int?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   citas          Cita[]
@@ -425,6 +426,7 @@ model Cita {
   completadaAt   DateTime?   @db.Timestamptz(3)
   canceladaAt    DateTime?   @db.Timestamptz(3)
   claveCreacion  String      @unique
+  avisoInstagramConversacionId String?
   huellaCreacion String
   version        Int         @default(0)
   createdAt      DateTime    @default(now())
@@ -507,6 +509,7 @@ model Suscripcion {
   ciclo                      CicloSuscripcion
   estado                     EstadoSuscripcion  @default(PENDIENTE)
   monto                      Decimal            @db.Decimal(12, 2)
+  bonificada                 Boolean            @default(false)
   moneda                     String             @default("ARS")
   mercadoPagoId              String?            @unique
   mpPaymentId                String?            @unique
@@ -611,6 +614,8 @@ model ConversacionCanal {
   solicitud       Solicitud?     @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
   ultimaEntradaAt DateTime       @db.Timestamptz(3)
   ultimaActividad DateTime       @db.Timestamptz(3)
+  botResponderAt  DateTime?      @db.Timestamptz(3)
+  botProcesandoHasta DateTime?   @db.Timestamptz(3)
   mensajes        MensajeCanal[]
 
   @@unique([canal, cuentaId, remitente])
@@ -642,6 +647,9 @@ model MensajeCanal {
   estado         EstadoMensajeCanal
   fecha          DateTime           @db.Timestamptz(3)
   leidoAt        DateTime?          @db.Timestamptz(3)
+  botPendiente   Boolean            @default(false)
+  accionBot      String?
+  ecoInstagram   Boolean            @default(false)
 
   @@unique([conversacionId, proveedorId])
   @@index([conversacionId, fecha])
@@ -731,6 +739,7 @@ model AvisoPanel {
   destino   String
   createdAt DateTime  @default(now())
   leidaAt   DateTime? @db.Timestamptz(3)
+  urgente   Boolean   @default(false)
 
   @@unique([usuarioId, clave])
   @@index([usuarioId, createdAt])

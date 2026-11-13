@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { DateTime } from "luxon";
 import { prisma } from "../config/prisma.js";
+import { planIndividualVigente, titularConPlan } from "../pagos/acceso-plan.js";
 import { enviarCorreo } from "../correos/correos.service.js";
 import type { Correo } from "../correos/correos.entity.js";
 import { cerrarVencidasDelAmbito } from "../solicitudes/solicitudes.repository.js";
@@ -314,6 +315,8 @@ export async function procesarRecordatorios(
   enviar: Enviar = enviarCorreo,
 ) {
   let cursor: string | undefined;
+  const titular = titularConPlan(ahora.toJSDate());
+  const suscripciones = { some: planIndividualVigente(ahora.toJSDate()) };
   const reglasActivas = {
     is: { reglas: { path: ["clientesHabilitados"], equals: true } },
   } satisfies Prisma.PreferenciasCorreoNullableScalarRelationFilter;
@@ -343,12 +346,12 @@ export async function procesarRecordatorios(
             OR: [
               {
                 solicitud: { estudioId: null },
-                artista: { preferenciasCorreo: reglasActivas },
+                artista: { preferenciasCorreo: reglasActivas, estudioId: null, suscripciones },
               },
               {
                 solicitud: {
                   estudio: {
-                    propietario: { preferenciasCorreo: reglasActivas },
+                    propietario: { ...titular, preferenciasCorreo: reglasActivas },
                   },
                 },
               },
@@ -376,10 +379,13 @@ export async function procesarRecordatorios(
             is: { reglas: { path: ["artistaHabilitado"], equals: true } },
           },
           OR: [
-            { rol: "ESTUDIO_ADMIN", estudioId: { not: null } },
+            { ...titular, estudioId: { not: null } },
             {
               rol: "ARTISTA",
-              OR: [{ estudioId: null }, { estadoEnEstudio: "ACTIVO" }],
+              OR: [
+                { estudioId: null, suscripciones },
+                { estadoEnEstudio: "ACTIVO", estudio: { propietario: titular } },
+              ],
             },
           ],
         },

@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { crear, actualizar, zonaHoraria } from "./citas.controller.js";
 export const citasRouter = Router();
-citasRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
+citasRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), requerirPlanVigente);
 citasRouter.post("/", crear);
 citasRouter.patch("/zona-horaria", zonaHoraria);
 citasRouter.patch("/:id", actualizar);

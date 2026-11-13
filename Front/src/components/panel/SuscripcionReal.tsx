@@ -8,9 +8,12 @@ import { PanelForm, PanelSubmitButton } from './PanelForm';
 import styles from './workspace.module.css';
 
 type Suscripcion = {
+  id: string;
   plan: string;
   ciclo: string;
-  estado: 'PENDIENTE' | 'ACTIVA' | 'VENCIDA' | 'CANCELADA' | 'ERROR';
+  estado: 'PENDIENTE' | 'ACTIVA' | 'VENCIDA' | 'CANCELADA' | 'PAUSADA' | 'RECHAZADA' | 'ERROR';
+  bonificada: boolean;
+  renovacion: boolean;
   monto: number;
   moneda: string;
   proximoCobroAt: string | null;
@@ -22,6 +25,8 @@ const estado = {
   ACTIVA: 'Activa',
   VENCIDA: 'Vencida',
   CANCELADA: 'Cancelada',
+  PAUSADA: 'Pausada',
+  RECHAZADA: 'Rechazada',
   ERROR: 'Error',
 };
 export function SuscripcionReal({
@@ -38,7 +43,8 @@ export function SuscripcionReal({
   const [confirmarInmediata, setConfirmarInmediata] = useState(false);
   const s = datos?.suscripcion;
   const puedeElegirPlan =
-    !s || (['CANCELADA', 'VENCIDA', 'ERROR'].includes(s.estado) && !s.periodoAbonadoVigente);
+    !s ||
+    (['CANCELADA', 'VENCIDA', 'RECHAZADA', 'ERROR'].includes(s.estado) && !s.periodoAbonadoVigente);
   return (
     <>
       <PageHeader titulo="Suscripción">
@@ -46,6 +52,18 @@ export function SuscripcionReal({
           <Link className={styles.button} href={`/checkout?plan=${plan}&cycle=MENSUAL`}>
             Suscribirme ahora
           </Link>
+        )}
+        {puedeContratar && s?.estado === 'PENDIENTE' && (
+          <>
+            {s.id && (
+              <Link className={styles.secondaryButton} href={`/checkout/pending/${s.id}`}>
+                Verificar pago
+              </Link>
+            )}
+            <Link className={styles.button} href={`/checkout?plan=${s.plan}&cycle=${s.ciclo}`}>
+              Continuar pago
+            </Link>
+          </>
         )}
       </PageHeader>
       {error && (
@@ -71,40 +89,62 @@ export function SuscripcionReal({
             <strong>{estado[s.estado]}</strong>
           </div>
           <div className={styles.surfaceBody}>
-            <p>
-              {new Intl.NumberFormat('es-AR', { style: 'currency', currency: s.moneda }).format(
-                s.monto,
-              )}{' '}
-              · {s.ciclo === 'ANUAL' ? 'Anual' : 'Mensual'}
-            </p>
-            {s.estado === 'ACTIVA' && s.proximoCobroAt && (
+            {s.bonificada ? (
+              <p>
+                Plan bonificado{' '}
+                {s.periodoHasta
+                  ? 'hasta el ' + new Date(s.periodoHasta).toLocaleDateString('es-AR')
+                  : 'sin vencimiento'}
+              </p>
+            ) : (
+              <p>
+                {new Intl.NumberFormat('es-AR', { style: 'currency', currency: s.moneda }).format(
+                  s.monto,
+                )}
+                {' · '}
+                {s.ciclo === 'ANUAL' ? 'Anual' : 'Mensual'}
+              </p>
+            )}
+            {s.renovacion && s.estado === 'ACTIVA' && s.proximoCobroAt && (
               <p>Próximo cobro el {new Date(s.proximoCobroAt).toLocaleDateString('es-AR')}</p>
             )}
-            {s.estado === 'CANCELADA' && s.periodoHasta && (
+            {!s.bonificada && (!s.renovacion || s.estado === 'PAUSADA') && s.periodoHasta && (
               <p>Período abonado hasta el {new Date(s.periodoHasta).toLocaleDateString('es-AR')}</p>
             )}
-            {['ACTIVA', 'PENDIENTE'].includes(s.estado) && (
-              <div className="d-flex flex-wrap gap-2">
-                <button className={styles.secondaryButton} onClick={() => setConfirmar(true)}>
-                  Cancelar renovación
-                </button>
-                <button
-                  className={styles.secondaryButton}
-                  onClick={() => setConfirmarInmediata(true)}
-                >
-                  Cancelar suscripción ahora
-                </button>
-              </div>
-            )}
+            {puedeContratar &&
+              !s.bonificada &&
+              ['ACTIVA', 'PENDIENTE', 'PAUSADA'].includes(s.estado) && (
+                <div className="d-flex flex-wrap gap-2">
+                  {(s.renovacion || s.estado === 'PENDIENTE') && (
+                    <button className={styles.secondaryButton} onClick={() => setConfirmar(true)}>
+                      {s.estado === 'PENDIENTE' ? 'Cancelar intento' : 'Cancelar renovación'}
+                    </button>
+                  )}
+                  {s.estado !== 'PENDIENTE' && (
+                    <button
+                      className={styles.secondaryButton}
+                      onClick={() => setConfirmarInmediata(true)}
+                    >
+                      Cancelar suscripción ahora
+                    </button>
+                  )}
+                </div>
+              )}
           </div>
         </section>
       )}
       <Modal show={confirmar} onHide={() => setConfirmar(false)} centered>
         <Modal.Header closeButton closeLabel="Cerrar">
-          <Modal.Title as="h2">Cancelar renovación</Modal.Title>
+          <Modal.Title as="h2">
+            {s?.estado === 'PENDIENTE' ? 'Cancelar intento' : 'Cancelar renovación'}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>Se cancelará la renovación en Mercado Pago.</p>
+          <p>
+            {s?.estado === 'PENDIENTE'
+              ? 'Se cerrará el intento de pago en Mercado Pago.'
+              : 'Se cancelará la renovación en Mercado Pago.'}
+          </p>
           <PanelForm
             initialValues={{}}
             validate={() => ({})}

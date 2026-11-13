@@ -14,7 +14,7 @@ Los titulares y los artistas independientes administran sus conexiones. Los arti
 
 1. En la app de Meta de InkManager, crear una configuración de **API de Instagram con inicio de sesión unificado**. Requerir una cuenta profesional de Instagram y seleccionar `instagram_basic` e `instagram_manage_messages`. Elegir un token de usuario del sistema y guardar el identificador de configuración. Usar cuentas de prueba con rol en la app durante el desarrollo. [Inicio de sesión unificado de Meta](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-unified-login/get-started)
 2. Registrar la URL HTTPS del frontend más `/api/mensajes/instagram/callback` como URI de redirección en **Business Login**. El backend arma esta URL con `FRONTEND_URL`; ambas deben coincidir exactamente.
-3. En Webhooks, registrar la URL pública HTTPS del backend más `/api/webhooks/instagram` y suscribirse a `messages` del objeto `instagram`. Usar el mismo token de verificación que en el backend.
+3. En Webhooks, registrar la URL pública HTTPS del backend más `/api/webhooks/instagram` y suscribirse a `messages` y `messaging_postbacks` del objeto `instagram`. Usar el mismo token de verificación que en el backend. Las cuentas autorizadas antes de habilitar `messaging_postbacks` pueden volver a conectar Instagram para suscribir los botones del chat.
 4. Habilitar el acceso a mensajes para herramientas conectadas en la cuenta profesional de Instagram. Luego, desde **Configuración → Cuentas asociadas → Conectar Instagram**, autorizar una sola cuenta profesional.
 
 | Variable de backend | Valor |
@@ -30,14 +30,17 @@ Se guarda un perfil de Instagram por negocio. El token queda cifrado en el servi
 
 ### Bot de Instagram para consultas
 
-Aplicar `npm run db:piloto-instagram` y `npm run db:asistente` si faltan las tablas del asistente y regenerar Prisma Client. Configurar `FRONTEND_URL` con la URL pública y `GROQ_API_KEY` en el backend. El modelo predeterminado es `openai/gpt-oss-20b`.
+Aplicar `npm run db:piloto-instagram` y `npm run db:asistente` si faltan las tablas del asistente. La agenda del bot requiere `npm run db:chatbot-turnos` y luego `npm run db:instagram-agenda`. Regenerar Prisma Client antes de compilar. Configurar `FRONTEND_URL` con la URL pública y `GROQ_API_KEY` en el backend. El modelo predeterminado es `openai/gpt-oss-20b`.
 
 Cada titular habilita el bot al conectar la cuenta profesional de su estudio. InkManager comparte el webhook de Meta e identifica el estudio por la cuenta de Instagram que recibió el mensaje. Cada estudio usa su configuración del asistente, su formulario y sus propuestas. Para incorporar cuentas externas, solicitar a Meta el acceso avanzado a los permisos requeridos. [Niveles de acceso de Meta](https://developers.facebook.com/docs/graph-api/overview/access-levels/)
 
 - En **Configuración → Asistente**, el titular puede importar, editar y descargar su JSON y simular mensajes. Con Groq configurado, el bot interpreta las consultas en lenguaje natural y responde con los servicios, políticas y preguntas frecuentes del negocio. Al pedir presupuesto, comparte un formulario por conversación que vence a las 24 horas y admite un único envío. El bot también admite comandos cuando Groq no está configurado.
-- Al recibir el formulario, la consulta queda vinculada al DM. El backend confirma la recepción y comparte las propuestas vigentes si hay varias. El cliente responde con el código de la propuesta y el backend comprueba el estado y la vigencia antes de asignar.
-- Cuando el cliente pide un turno o hablar con una persona, el bot avisa al titular y se pausa en ese hilo. El equipo coordina la fecha y la seña. **BOT** reanuda la asistencia automática.
-- Las respuestas automáticas se envían dentro de las 24 horas desde el último mensaje del cliente. Al recibir otro DM se abre una ventana nueva para el seguimiento. Los estados de envío se ven en la bandeja. El equipo gestiona las consultas que llegan por la web. El cierre por plazo usa el programador de recordatorios o la actualización de la bandeja de consultas.
+- El bot espera diez segundos desde el último mensaje de la conversación y responde al grupo. Cada mensaje queda en el historial.
+- Al recibir el formulario, la consulta queda vinculada al DM. Los artistas cargan el precio, la seña informativa, el boceto y la duración estimada. El bot comparte las propuestas vigentes en tarjetas con imagen, detalle y botones. El cliente también puede elegir por número.
+- El cliente elige un día, indica una hora y confirma la reserva por texto. El bot comprueba la agenda del artista asignado y registra el turno sin requerir pago. Si el horario se ocupó, ofrece alternativas. Las propuestas anteriores sin duración requieren revisión del estudio para agendar.
+- Si el equipo crea un turno desde el panel con un chat de Instagram vinculado, InkManager informa la fecha, la hora y el estado de la reserva dentro de la ventana de respuesta. El cliente puede consultar su próximo turno en el mismo chat.
+- Si la consulta cierra sin propuestas, el titular recibe una notificación urgente. Cuando el cliente pide hablar con una persona, el bot avisa al titular y se pausa en ese hilo. El titular puede usar **Pausar bot** y **Activar bot** en el encabezado de la conversación.
+- Las respuestas automáticas se envían dentro de las 24 horas desde el último mensaje del cliente. Al recibir otro DM se abre una ventana nueva para el seguimiento. Los estados de envío se ven en la bandeja. El bot revisa el vencimiento de las consultas de Instagram aunque el panel esté cerrado. El equipo gestiona las consultas que llegan por la web.
 
 ## WhatsApp
 

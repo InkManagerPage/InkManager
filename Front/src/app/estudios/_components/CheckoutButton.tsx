@@ -13,16 +13,17 @@ export default function CheckoutButton({ plan }: CheckoutButtonProps) {
       <Link
         href={`/checkout?plan=${plan.id}&cycle=MENSUAL`}
         className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
-        aria-label={`Suscribirte al plan ${plan.name} mensual por ${plan.price} pesos`}
+        aria-label={`Plan ${plan.name} mensual${plan.precio ? ` por ${plan.precio.mensual} pesos al mes` : ''}`}
       >
-        Mensual · ${plan.price.toLocaleString('es-AR')} / mes <span aria-hidden="true">↗</span>
+        Mensual{plan.precio && ` · $${plan.precio.mensual.toLocaleString('es-AR')} / mes`}
+        <span aria-hidden="true">↗</span>
       </Link>
       <Link
         href={`/checkout?plan=${plan.id}&cycle=ANUAL`}
         className={`btn ${styles.planButton} ${styles.planCheckoutButton}`}
-        aria-label={`Suscribirte al plan ${plan.name} anual por ${plan.annualPrice} pesos`}
+        aria-label={`Plan ${plan.name} anual${plan.precio ? ` por ${plan.precio.anual} pesos al año` : ''}`}
       >
-        Anual · ${plan.annualPrice.toLocaleString('es-AR')} / año
+        Anual{plan.precio && ` · $${plan.precio.anual.toLocaleString('es-AR')} / año`}
         <span aria-hidden="true">↗</span>
       </Link>
     </div>

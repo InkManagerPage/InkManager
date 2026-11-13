@@ -21,6 +21,7 @@ type Row = Record<string, any>;
 const usuarios = new Map<string, Row>();
 const fotos = new Map<string, Row>();
 const sesiones = new Map<string, Row>();
+const cuentasConPlan = new Set<string>();
 const eliminadas: string[] = [];
 let subidas = 0;
 let fallaEscritura = false;
@@ -102,10 +103,14 @@ beforeEach((t) => {
   usuarios.clear();
   fotos.clear();
   sesiones.clear();
+  cuentasConPlan.clear();
   eliminadas.length = 0;
   subidas = 0;
   fallaEscritura = false;
   t.mock.method(console, "error", () => {});
+  reemplazar(t, prisma.suscripcion, "findFirst", async ({ where }: Row) =>
+    where.plan === "INDIVIDUAL" && cuentasConPlan.has(where.usuarioId) ? { id: "plan" } : null,
+  );
   reemplazar(t, prisma.usuario, "findUnique", async ({ where, select }: Row) =>
     seleccionar(usuarios.get(where.id), select),
   );
@@ -206,7 +211,7 @@ const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lN8AAAAASUVORK5CYII=",
   "base64",
 );
-function cuenta(rol = "ARTISTA", completo = false) {
+function cuenta(rol = "ARTISTA", completo = false, conPlan = true) {
   const id = randomUUID();
   const sesion = randomUUID();
   const usuario = {
@@ -231,6 +236,7 @@ function cuenta(rol = "ARTISTA", completo = false) {
     estadoVerificacion: "NO_VERIFICADO",
   };
   usuarios.set(id, usuario);
+  if (conPlan && rol === "ARTISTA") cuentasConPlan.add(id);
   sesiones.set(sesion, {
     id: sesion,
     usuarioId: id,
@@ -239,6 +245,21 @@ function cuenta(rol = "ARTISTA", completo = false) {
   });
   return { usuario, cookie: `inkmanager_session=${crearToken(id, sesion)}` };
 }
+
+test("sin un plan vigente el artista puede consultar su acceso pero no su perfil ni sus trabajos", async () => {
+  const { usuario, cookie } = cuenta("ARTISTA", false, false);
+  const acceso = await request("/pagos/acceso", cookie);
+  assert.equal(acceso.status, 200);
+  assert.deepEqual(await acceso.json(), { habilitado: false });
+  assert.equal((await request("/artistas/perfil", cookie)).status, 403);
+  assert.equal((await request("/consultas", cookie)).status, 403);
+  assert.equal((await request("/trabajos", cookie)).status, 403);
+  assert.equal((await form("/trabajos", "POST", {}, cookie, true)).status, 403);
+  assert.equal(subidas, 0);
+  cuentasConPlan.add(usuario.id);
+  assert.deepEqual(await (await request("/pagos/acceso", cookie)).json(), { habilitado: true });
+  assert.equal((await request("/trabajos", cookie)).status, 200);
+});
 function trabajo(usuarioId: string, estado = "BORRADOR") {
   const row = {
     id: randomUUID(),

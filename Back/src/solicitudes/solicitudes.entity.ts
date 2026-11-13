@@ -36,7 +36,7 @@ export const detalleSolicitud = {
         },
       },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   },
 } satisfies Prisma.SolicitudInclude;
 export type SolicitudCompleta = Prisma.SolicitudGetPayload<{
@@ -90,6 +90,7 @@ export function presentarSolicitud(
         sena: Number(c.montoSena),
         detalle: c.mensaje || "",
         validez: c.validaHasta?.toISOString().slice(0, 10) || "",
+        duracionMinutos: c.duracionMinutos ?? undefined,
         boceto: c.bocetoUrl || "",
         fecha: c.updatedAt.toISOString(),
       })),

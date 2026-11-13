@@ -2,6 +2,7 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import {
   listar,
   actualizar,
@@ -55,6 +56,7 @@ solicitudesRouter.post(
 solicitudesRouter.use(
   requerirSesion,
   requerirRoles("ARTISTA", "ESTUDIO_ADMIN"),
+  requerirPlanVigente,
 );
 
 solicitudesRouter.get("/", listar);

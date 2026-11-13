@@ -161,6 +161,10 @@ export async function cambiarSolicitud(
     if (body.accion === "CERRAR") {
       const cerrada = await cerrarEnTransaccion(tx, s);
       const artistaId = cerrada.artistaAsignadoId;
+      if (cerrada.version !== s.version && cerrada.estado === "POR_ASIGNAR" && s.canal === "INSTAGRAM" && s.estudioId)
+        await registrarAviso(tx, { usuarioId, clave: "sin-propuestas:" + id, urgente: true,
+          titulo: "Consulta sin propuestas", detalle: s.titulo || "Revisá quién puede atender la consulta.",
+          destino: "/estudio/consultas?consulta=" + id });
       if (artistaId && artistaId !== usuarioId && cerrada.version !== s.version)
         await registrarAviso(tx, { usuarioId: artistaId, clave: "asignacion:" + id + ":" + version,
           titulo: "Te asignaron una consulta", detalle: s.titulo || "Nueva asignación",

@@ -4,6 +4,7 @@ import { prisma } from "../config/prisma.js";
 import { HttpError } from "../errors/http-error.js";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
 import {
   objetoEntrada,
@@ -22,7 +23,7 @@ import { leerAvisos, listarAvisos } from "./avisos.repository.js";
 import { resumenMensajes } from "../mensajes/mensajes.service.js";
 
 export const operacionRouter = Router();
-operacionRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
+operacionRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), requerirPlanVigente);
 
 const perfil = {
   nombre: true,

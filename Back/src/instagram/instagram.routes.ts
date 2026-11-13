@@ -5,6 +5,7 @@ import { coincide, firmaValida } from "../config/seguridad-integraciones.js";
 import { HttpError } from "../errors/http-error.js";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
+import { requerirPlanVigente } from "../middlewares/plan-vigente.js";
 import { resolverAmbito } from "../solicitudes/solicitudes.service.js";
 import {
   desconectarInstagram,
@@ -24,6 +25,7 @@ import {
   recibirInstagram,
   responderInstagram,
   vincularInstagram,
+  cambiarBotInstagram,
 } from "./instagram.service.js";
 
 export const webhookInstagram = Router();
@@ -76,7 +78,7 @@ const sesionDe = (req: Request) =>
   verificarToken(req.cookies.inkmanager_session).sesionId;
 
 export const instagramRouter = Router();
-instagramRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"));
+instagramRouter.use(requerirSesion, requerirRoles("ARTISTA", "ESTUDIO_ADMIN"), requerirPlanVigente);
 instagramRouter.get("/conexion", async (req, res) => {
   res.json(await estadoInstagram(await resolverAmbito(req.usuario!.id)));
 });
@@ -141,5 +143,9 @@ instagramRouter.patch("/:id/lectura", async (req, res) => {
 });
 instagramRouter.put("/:id/consulta", async (req, res) => {
   await vincularInstagram(req.usuario!.id, req.params.id, req.body);
+  res.sendStatus(204);
+});
+instagramRouter.put("/:id/bot", async (req, res) => {
+  await cambiarBotInstagram(req.usuario!.id, req.params.id, req.body);
   res.sendStatus(204);
 });

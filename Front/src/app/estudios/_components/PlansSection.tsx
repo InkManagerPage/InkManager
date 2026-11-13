@@ -1,8 +1,11 @@
+'use client';
+
 import CheckoutButton from './CheckoutButton';
 import styles from './landing.module.css';
 import ConoceMasButton from './ConocerMasButton';
+import { usePanelData } from '@/hooks/usePanelData';
+import type { PrecioPlan } from '@/types/plan';
 
-// Para cambiar los planes, editá los datos de esta lista.
 const plans = [
   {
     id: 'INDIVIDUAL' as const,
@@ -39,8 +42,6 @@ const plans = [
       },
     ],
     image: '/images/artist-hands.jpg',
-    price: 12000,
-    annualPrice: 120000,
   },
   {
     id: 'ESTUDIO' as const,
@@ -84,12 +85,11 @@ const plans = [
       },
     ],
     image: '/images/studio-session.jpg',
-    price: 35000,
-    annualPrice: 350000,
   },
 ];
 
 export function PlansSection() {
+  const { datos } = usePanelData<{ plans: PrecioPlan[] }>('/pagos/planes');
   return (
     <section id="planes" className={styles.section} aria-labelledby="plans-title">
       <div className={`container-fluid ${styles.container}`}>
@@ -97,31 +97,33 @@ export function PlansSection() {
           <h2 id="plans-title">Elegí cómo llevar tu negocio.</h2>
         </header>
         <div className={`row g-4 justify-content-center ${styles.plans}`}>
-          {plans.map((plan) => (
-            <div className="col-md-6" key={plan.name}>
-              <article className={`card h-100 ${styles.plan}`}>
-                <div className="card-body d-flex flex-column">
-                  <h3>{plan.name}</h3>
-                  <p>{plan.description}</p>
-                  <p>
-                    ARS {plan.price.toLocaleString('es-AR')} por mes.
-                    <br />
-                    El plan anual incluye 2 meses bonificados.
-                  </p>
-                  <ul>
-                    {plan.features.map((feature) => (
-                      <li key={feature}>
-                        <span aria-hidden="true">✓</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <ConoceMasButton plan={plan} />
-                  <CheckoutButton plan={plan} />
-                </div>
-              </article>
-            </div>
-          ))}
+          {plans.map((contenido) => {
+            const precio = datos?.plans.find((opcion) => opcion.id === contenido.id);
+            const plan = { ...contenido, precio };
+            return (
+              <div className="col-md-6" key={plan.name}>
+                <article className={`card h-100 ${styles.plan}`}>
+                  <div className="card-body d-flex flex-column">
+                    <h3>{plan.name}</h3>
+                    <p>{plan.description}</p>
+                    {precio && precio.anual === precio.mensual * 10 && (
+                      <p>El plan anual incluye 2 meses bonificados.</p>
+                    )}
+                    <ul>
+                      {plan.features.map((feature) => (
+                        <li key={feature}>
+                          <span aria-hidden="true">✓</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <ConoceMasButton plan={plan} />
+                    <CheckoutButton plan={plan} />
+                  </div>
+                </article>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

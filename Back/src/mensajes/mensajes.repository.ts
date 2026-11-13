@@ -32,7 +32,9 @@ export async function listarCanales(
       nombre: true,
       solicitudId: true,
       ultimaEntradaAt: true,
+      flujoInstagram: { select: { pausadoAt: true } },
       mensajes: {
+        where: { ecoInstagram: false },
         select: camposMensaje,
         orderBy: ordenMensajes,
         take: cantidadMensajes + 1,
@@ -50,6 +52,9 @@ export async function listarCanales(
     nombre: c.nombre,
     asunto: "Mensaje directo",
     solicitudId: c.solicitudId,
+    ...(a.administra && a.estudioId && c.canal === "INSTAGRAM" && {
+      botActivo: !c.flujoInstagram?.pausadoAt,
+    }),
     ventanaHasta: new Date(
       c.ultimaEntradaAt.getTime() + ventanaRespuesta,
     ).toISOString(),
@@ -65,7 +70,7 @@ export async function historialInstagram(a: AmbitoConsultas, conversacionId: str
     select: { id: true, fecha: true },
   });
   const filas = await prisma.mensajeCanal.findMany({
-    where: { ...ambito, ...anterioresA(cursor) },
+    where: { ...ambito, ecoInstagram: false, ...anterioresA(cursor) },
     select: camposMensaje,
     orderBy: ordenMensajes,
     take: tamanoPaginaMensajes + 1,
@@ -90,7 +95,7 @@ export async function guardarMensajeCanal(d: {
   proveedorId: string;
   texto: string;
   fecha: Date;
-} & ({ propio: true } | { propio: false; destinatario: string })) {
+} & ({ propio: true } | { propio: false; destinatario: string; bot?: { accion?: string } })) {
   return prisma.$transaction(
     async (tx) => {
       const ambito = { estudioId: d.estudioId, artistaId: d.artistaId };
@@ -116,7 +121,13 @@ export async function guardarMensajeCanal(d: {
       });
       if (hilo.estudioId !== d.estudioId || hilo.artistaId !== d.artistaId)
         return;
-      if (d.propio) await bloquearConversacionCanal(tx, hilo.id);
+      const entrante = d.propio ? undefined : d.bot;
+      if (d.propio || entrante) await bloquearConversacionCanal(tx, hilo.id);
+      const flujo = entrante && await tx.flujoInstagram.findUnique({
+        where: { conversacionId: hilo.id },
+        select: { pausadoAt: true },
+      });
+      const bot = flujo && flujo.pausadoAt ? undefined : entrante;
       const { count } = await tx.mensajeCanal.createMany({
         data: [
           {
@@ -126,6 +137,7 @@ export async function guardarMensajeCanal(d: {
             propio: d.propio,
             estado: d.propio ? "ENVIADO" : "RECIBIDO",
             fecha: d.fecha,
+            ...(bot && { botPendiente: true, accionBot: bot.accion }),
           },
         ],
         skipDuplicates: true,
@@ -136,6 +148,11 @@ export async function guardarMensajeCanal(d: {
         data: { ultimaActividad: d.fecha },
       });
       if (d.propio) return;
+      if (bot)
+        await tx.conversacionCanal.update({
+          where: { id: hilo.id },
+          data: { botResponderAt: new Date(Date.now() + 10_000) },
+        });
       await tx.conversacionCanal.updateMany({
         where: { id: hilo.id, ultimaEntradaAt: { lt: d.fecha } },
         data: { ultimaEntradaAt: d.fecha },
