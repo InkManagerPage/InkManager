@@ -24,6 +24,10 @@ export async function cerrarSesion(): Promise<void> {
   await apiFetch('/auth/logout', { method: 'POST' });
 }
 
+export async function eliminarMiCuenta(): Promise<void> {
+  await apiFetch('/auth/cuenta', { method: 'DELETE' });
+}
+
 export async function solicitarCorreoCuenta(email: string, verificar = false): Promise<string> {
   const response = await apiFetch(
     verificar ? '/auth/resend-verification' : '/auth/forgot-password',

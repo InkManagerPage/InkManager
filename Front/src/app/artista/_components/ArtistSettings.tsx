@@ -5,6 +5,7 @@ import { CuentasAsociadas } from '@/components/panel/CuentasAsociadas';
 import { EnlaceFormulario } from '@/components/panel/EnlaceFormulario';
 import { usePanelData } from '@/hooks/usePanelData';
 import { PageHeader, PanelIcon } from './PanelUI';
+import { BotonEliminarCuenta } from '@/components/panel/BotonEliminarCuenta';
 import styles from '@/components/panel/workspace.module.css';
 export function ArtistSettings() {
   const { usuario } = useAuth();
@@ -79,6 +80,7 @@ export function ArtistSettings() {
           </Link>
         </div>
       </section>
+      <BotonEliminarCuenta rol="ARTISTA" />
     </>
   );
 }

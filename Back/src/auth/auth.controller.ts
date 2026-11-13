@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { HttpError } from "../errors/http-error.js";
 import { duracionSesionSegundos, origenesPermitidos } from "../config/auth.js";
-import { iniciarSesion, cerrarSesion } from "./auth.service.js";
+import { iniciarSesion, cerrarSesion, eliminarCuenta as eliminarCuentaService } from "./auth.service.js";
 export async function login(req: Request, res: Response): Promise<void> {
   res.set("Cache-Control", "no-store");
 
@@ -80,5 +80,40 @@ export async function logout(req: Request, res: Response): Promise<void> {
 
     console.error("Error al cerrar sesión.");
     res.status(500).json({ error: "No pudimos cerrar sesión." });
+  }
+}
+
+export async function eliminarCuenta(req: Request, res: Response): Promise<void> {
+  res.set("Cache-Control", "no-store");
+
+  try {
+    const origen = req.get("Origin");
+
+    if (origen && !origenesPermitidos.includes(origen)) {
+      throw new HttpError(403, "Origen no permitido.");
+    }
+
+    if (!req.usuario?.id) {
+      throw new HttpError(401, "Debés iniciar sesión.");
+    }
+
+    await eliminarCuentaService(req.usuario.id);
+
+    res.clearCookie("inkmanager_session", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    res.status(200).json({ message: "Cuenta eliminada correctamente." });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+
+    console.error("Error al eliminar la cuenta:", error);
+    res.status(500).json({ error: "No pudimos eliminar la cuenta." });
   }
 }

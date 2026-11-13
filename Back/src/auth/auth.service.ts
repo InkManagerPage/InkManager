@@ -9,6 +9,7 @@ import { validarLogin } from "./auth.validation.js";
 import { crearToken, verificarToken } from "./auth.tokens.js";
 import { abrirSesion, validarSesion } from "../sesiones/sesiones.service.js";
 import { revocarSesion } from "../sesiones/sesiones.repository.js";
+import { prisma } from "../config/prisma.js";
 
 const hashAlternativo = bcrypt.hashSync(crypto.randomUUID(), 12);
 
@@ -76,4 +77,39 @@ export async function cerrarSesion(token: unknown): Promise<void> {
 
     throw error;
   }
+}
+
+export async function eliminarCuenta(usuarioId: string): Promise<void> {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true },
+  });
+
+  if (!usuario) {
+    throw new HttpError(404, "No encontramos la cuenta.");
+  }
+
+  const sufijoAnonimo = crypto.randomUUID().slice(0, 8);
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Revocar todas las sesiones del usuario
+    await tx.sesion.updateMany({
+      where: { usuarioId, revocadaAt: null },
+      data: { revocadaAt: new Date() },
+    });
+
+    // 2. Anonimizar y marcar como suspendido (soft delete)
+    await tx.usuario.update({
+      where: { id: usuarioId },
+      data: {
+        email: `eliminado_${sufijoAnonimo}@anonimo.inkmanager.com`,
+        nombre: "Usuario eliminado",
+        nombreArtistico: null,
+        telefono: null,
+        password: null,
+        googleId: null,
+        suspendidoAt: new Date(),
+      },
+    });
+  });
 }

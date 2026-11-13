@@ -10,6 +10,7 @@ interface AuthContextValue {
   reintentar: () => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  eliminarCuenta: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,6 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
     setError('');
   }
+  async function eliminarCuenta() {
+    consulta.current?.abort();
+    await auth.eliminarMiCuenta();
+    setUsuario(null);
+    setError('');
+    window.location.assign('/?cuenta_eliminada=true');
+  }
   return (
     <AuthContext.Provider
       value={{
@@ -70,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         login,
         logout,
+        eliminarCuenta,
       }}
     >
       {children}

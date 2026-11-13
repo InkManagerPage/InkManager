@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import { AuthProvider } from '@/store/AuthProvider';
 import { GoogleAuthNotice } from '@/components/auth/GoogleAuthNotice';
+import { CuentaEliminadaNotice } from '@/components/auth/CuentaEliminadaNotice';
 import { UnsavedChangesProvider } from '@/components/forms/UnsavedChanges';
 
 const plex = localFont({
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             {children}
             <Suspense fallback={null}>
               <GoogleAuthNotice />
+              <CuentaEliminadaNotice />
             </Suspense>
           </AuthProvider>
         </UnsavedChangesProvider>

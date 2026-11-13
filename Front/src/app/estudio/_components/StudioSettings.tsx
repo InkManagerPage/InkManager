@@ -11,6 +11,7 @@ import { mutarPanel } from '@/hooks/usePanelData';
 import { useConsultas } from '@/hooks/useConsultas';
 import type { PerfilEstudio } from '@/types/panel-estudio';
 import { useStudio } from './StudioProvider';
+import { BotonEliminarCuenta } from '@/components/panel/BotonEliminarCuenta';
 import styles from '@/components/panel/workspace.module.css';
 import studio from './studio.module.css';
 
@@ -246,6 +247,7 @@ export function StudioSettings() {
           <PanelSubmitButton>Guardar configuración</PanelSubmitButton>
         </div>
       </PanelForm>
+      <BotonEliminarCuenta rol="ESTUDIO_ADMIN" />
     </>
   );
 }
