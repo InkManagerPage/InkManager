@@ -12,6 +12,8 @@ export const estudiosMock = [
     pais: 'AR',
     zonaHoraria: 'America/Argentina/Buenos_Aires',
     emailContacto: 'contacto@inmortaltattoo.test',
+    adminEmail: 'admin.inmortal@mock.inkmanager.com',
+    adminNombre: 'Gerónimo Inmortal',
   },
   {
     slug: 'sierras-ink-cba',
@@ -22,6 +24,8 @@ export const estudiosMock = [
     pais: 'AR',
     zonaHoraria: 'America/Argentina/Cordoba',
     emailContacto: 'info@sierrasink.test',
+    adminEmail: 'admin.sierras@mock.inkmanager.com',
+    adminNombre: 'Ignacio Sierras',
   },
   {
     slug: 'gran-via-tattoo-madrid',
@@ -32,6 +36,8 @@ export const estudiosMock = [
     pais: 'ES',
     zonaHoraria: 'Europe/Madrid',
     emailContacto: 'madrid@granviatattoo.test',
+    adminEmail: 'admin.granvia@mock.inkmanager.com',
+    adminNombre: 'Carlos Gran Vía',
   },
   {
     slug: 'gotico-ink-bcn',
@@ -42,6 +48,8 @@ export const estudiosMock = [
     pais: 'ES',
     zonaHoraria: 'Europe/Madrid',
     emailContacto: 'bcn@goticoink.test',
+    adminEmail: 'admin.gotico@mock.inkmanager.com',
+    adminNombre: 'Jordi Gótico',
   },
   {
     slug: 'tenochtitlan-tattoo-cdmx',
@@ -52,6 +60,8 @@ export const estudiosMock = [
     pais: 'MX',
     zonaHoraria: 'America/Mexico_City',
     emailContacto: 'contacto@tenochtitlantattoo.test',
+    adminEmail: 'admin.tenochtitlan@mock.inkmanager.com',
+    adminNombre: 'Cuauhtémoc Tenoch',
   },
   {
     slug: 'andes-tattoo-stgo',
@@ -62,6 +72,8 @@ export const estudiosMock = [
     pais: 'CL',
     zonaHoraria: 'America/Santiago',
     emailContacto: 'stgo@andestattoo.test',
+    adminEmail: 'admin.andes@mock.inkmanager.com',
+    adminNombre: 'Rodrigo Andes',
   },
   {
     slug: 'monserrate-ink-bogota',
@@ -72,6 +84,8 @@ export const estudiosMock = [
     pais: 'CO',
     zonaHoraria: 'America/Bogota',
     emailContacto: 'bogota@monserrateink.test',
+    adminEmail: 'admin.monserrate@mock.inkmanager.com',
+    adminNombre: 'Camilo Monserrate',
   },
 ];
 
@@ -357,9 +371,34 @@ async function main() {
   console.log('🚀 Iniciando carga de mocks geográficos...');
   const passwordHash = bcrypt.hashSync('Password123!', 10);
 
-  // 1. Crear / Actualizar Estudios
+  // 1. Crear / Actualizar Administradores de Estudio y sus Estudios
   const estudiosPorSlug = new Map<string, string>();
   for (const item of estudiosMock) {
+    // 1.a. Crear o actualizar el usuario administrador del estudio
+    const admin = await prisma.usuario.upsert({
+      where: { email: item.adminEmail },
+      update: {
+        password: passwordHash,
+        nombre: item.adminNombre,
+        rol: Rol.ESTUDIO_ADMIN,
+        ciudad: item.ciudad,
+        ciudadId: item.ciudadId,
+        pais: item.pais,
+        direccion: item.direccion,
+      },
+      create: {
+        email: item.adminEmail,
+        password: passwordHash,
+        nombre: item.adminNombre,
+        rol: Rol.ESTUDIO_ADMIN,
+        ciudad: item.ciudad,
+        ciudadId: item.ciudadId,
+        pais: item.pais,
+        direccion: item.direccion,
+      },
+    });
+
+    // 1.b. Crear o actualizar el estudio vinculándole su propietario
     const estudio = await prisma.estudio.upsert({
       where: { slug: item.slug },
       update: {
@@ -370,6 +409,7 @@ async function main() {
         pais: item.pais,
         zonaHoraria: item.zonaHoraria,
         emailContacto: item.emailContacto,
+        propietarioId: admin.id,
       },
       create: {
         slug: item.slug,
@@ -380,10 +420,18 @@ async function main() {
         pais: item.pais,
         zonaHoraria: item.zonaHoraria,
         emailContacto: item.emailContacto,
+        propietarioId: admin.id,
       },
     });
+
+    // 1.c. Asociar el estudio al usuario admin
+    await prisma.usuario.update({
+      where: { id: admin.id },
+      data: { estudioId: estudio.id },
+    });
+
     estudiosPorSlug.set(item.slug, estudio.id);
-    console.log(`  🏛️ Estudio listo: ${estudio.nombre} (${item.ciudad}, ${item.pais})`);
+    console.log(`  🏛️ Estudio listo: ${estudio.nombre} | Admin: ${admin.email}`);
   }
 
   // 2. Crear / Actualizar Artistas
