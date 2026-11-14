@@ -291,6 +291,30 @@ test("health y reseñas públicas", async () => {
   assert.deepEqual(await (await request("/resenas")).json(), []);
 });
 
+test("el límite de checkout es por cuenta y devuelve un error JSON", async () => {
+  function cookieArtista() {
+    const id = randomUUID();
+    const sesionId = randomUUID();
+    users.set(id, { id, rol: "ARTISTA", email: id + "@example.test", estudioId: null });
+    sessions.set(sesionId, {
+      id: sesionId,
+      usuarioId: id,
+      revocadaAt: null,
+      expiraAt: new Date(Date.now() + 60000),
+    });
+    return "inkmanager_session=" + crearToken(id, sesionId);
+  }
+  const datosInvalidos = { plan: "INDIVIDUAL", ciclo: "INVALIDO" };
+  const primera = cookieArtista();
+  for (let intento = 0; intento < 10; intento++) {
+    assert.equal((await post("/pagos/crear-suscripcion", datosInvalidos, primera)).status, 400);
+  }
+  const limitada = await post("/pagos/crear-suscripcion", datosInvalidos, primera);
+  assert.equal(limitada.status, 429);
+  assert.match((await limitada.json()).error, /límite de intentos de pago/);
+  assert.equal((await post("/pagos/crear-suscripcion", datosInvalidos, cookieArtista())).status, 400);
+});
+
 test("la prueba del asistente usa el negocio de la sesión y devuelve su formulario público", async (t) => {
   const ruta = "/asistente/prueba";
   const estudio = { id: "estudio-qa", propietarioId: "titular-qa", slug: "estudio-qa" };

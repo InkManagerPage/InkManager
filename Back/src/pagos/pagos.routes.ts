@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { requerirSesion } from "../middlewares/autenticacion.js";
 import { requerirRoles } from "../middlewares/roles.js";
 import { tieneAccesoAlPanel } from "./acceso-plan.js";
@@ -16,8 +16,15 @@ const router = Router();
 const limitarOperacionesPago = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
+  keyGenerator: (req) =>
+    req.usuario
+      ? "cuenta:" + req.usuario.id
+      : "ip:" + ipKeyGenerator(req.ip ?? req.socket.remoteAddress ?? ""),
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    error: "Alcanzaste el límite de intentos de pago. Volvé a intentar en unos minutos.",
+  },
 });
 
 router.get("/planes", listarPlanes);
