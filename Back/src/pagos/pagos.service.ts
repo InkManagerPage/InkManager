@@ -204,9 +204,23 @@ function rutaPreferencia(id: string): string {
   return "/checkout/preferences/" + encodeURIComponent(id);
 }
 
+async function consultarPreferenciaPendiente(id: string) {
+  try {
+    return await solicitarMercadoPago<PreferenceResponse>(rutaPreferencia(id));
+  } catch (error) {
+    if (error instanceof ErrorMercadoPago && [401, 403, 404].includes(error.estadoProveedor)) {
+      throw new HttpError(
+        409,
+        "Hay un intento de pago anterior que Mercado Pago no permite verificar. Contactá a soporte para revisarlo antes de iniciar otro.",
+      );
+    }
+    throw error;
+  }
+}
+
 async function cerrarPreferenciaPendiente(id: string, referencia: string) {
   const ruta = rutaPreferencia(id);
-  const actual = await solicitarMercadoPago<PreferenceResponse>(ruta);
+  const actual = await consultarPreferenciaPendiente(id);
   if (actual.id !== id || actual.external_reference !== referencia) {
     throw new HttpError(502, "Mercado Pago no devolvió los datos del checkout pendiente.");
   }
@@ -339,7 +353,7 @@ export async function crearSuscripcion(
       );
     }
     if (intento.ciclo === CicloSuscripcion.ANUAL || esPreferenciaMercadoPago(intento.mercadoPagoId)) {
-      const preferencia = await solicitarMercadoPago<PreferenceResponse>(rutaPreferencia(intento.mercadoPagoId));
+      const preferencia = await consultarPreferenciaPendiente(intento.mercadoPagoId);
       if (preferencia.id !== intento.mercadoPagoId || preferencia.external_reference !== intento.id)
         throw new HttpError(502, "Mercado Pago no confirmó la referencia del intento anterior.");
       const fin = fechaValida(preferencia.expiration_date_to);

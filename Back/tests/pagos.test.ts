@@ -285,6 +285,38 @@ test("crea un checkout anual con pago único al precio configurado por el servid
   }
 });
 
+test("un checkout pendiente de otro vendedor conserva el intento y explica el bloqueo", async (t) => {
+  const restores = [
+    reemplazar(prisma.suscripcion, "findFirst", async () => null),
+    reemplazar(prisma.suscripcion, "findMany", async () => [{
+      id: "intento-anterior",
+      plan: "ESTUDIO",
+      ciclo: "MENSUAL",
+      mercadoPagoId: "123-22222222-2222-4222-8222-222222222222",
+    }]),
+    reemplazar(prisma.suscripcion, "create", async () => assert.fail("No debe iniciar un checkout nuevo")),
+    reemplazar(prisma.suscripcion, "updateMany", async () => assert.fail("No debe cerrar el intento anterior")),
+    reemplazar(process.env, "MERCADOPAGO_ACCESS_TOKEN", "credencial-de-prueba"),
+    reemplazar(process.env, "MERCADOPAGO_WEBHOOK_SECRET", "secreto-de-prueba"),
+    reemplazar(process.env, "MERCADOPAGO_WEBHOOK_URL", "https://example.test/webhook"),
+  ];
+  t.after(() => restores.reverse().forEach((restaurar) => restaurar()));
+  t.mock.method(globalThis, "fetch", async (url: string, init: RequestInit) => {
+    assert.match(url, /\/checkout\/preferences\//);
+    assert.equal(init.method, "GET");
+    return Response.json({ message: "caller.id invalid" }, { status: 401 });
+  });
+
+  await assert.rejects(
+    crearSuscripcion(
+      { id: "titular", nombre: "Estudio", email: "titular@example.test", rol: "ESTUDIO_ADMIN", estudioId: "estudio" },
+      { plan: "ESTUDIO", ciclo: "MENSUAL" },
+    ),
+    (error: unknown) => error instanceof HttpError && error.status === 409 &&
+      error.message.includes("Mercado Pago no permite verificar"),
+  );
+});
+
 test("permite otro checkout cuando Mercado Pago confirma que el anterior está cerrado", async () => {
   const actualizaciones: Array<{
     where: Record<string, unknown>;
